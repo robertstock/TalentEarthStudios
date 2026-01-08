@@ -1,0 +1,235 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  TALENT
+  ADMIN
+}
+
+enum UserStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum PortfolioType {
+  IMAGE
+  VIDEO
+  LINK
+}
+
+enum TeamMemberStatus {
+  INVITED
+  ACTIVE
+  REMOVED
+}
+
+enum ProjectAssignedType {
+  INDIVIDUAL
+  TEAM
+}
+
+enum ProjectStatus {
+  DRAFT
+  SENT
+  QUOTE_RECEIVED
+  CLOSED
+}
+
+enum QuoteStatus {
+  SUBMITTED
+  REVISED
+  ACCEPTED_INTERNAL
+  REJECTED_INTERNAL
+}
+
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  passwordHash  String?
+  role          UserRole    @default(TALENT)
+  status        UserStatus  @default(DRAFT)
+
+  firstName     String
+  lastName      String
+
+  isTeamLeader  Boolean     @default(false)
+  isFeatured    Boolean     @default(false)
+
+  profile       TalentProfile?
+  portfolio     PortfolioItem[]
+  teamMemberships TeamMember[]
+  ledTeams      Team[]      @relation("TeamLeader")
+
+  createdProjects ProjectRequest[] @relation("ProjectCreator")
+  assignedProjects ProjectRequest[]
+  submittedQuotes Quote[]
+
+  auditLogs     AuditLog[]  @relation("AuditActor")
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model TalentProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  publicSlug         String  @unique
+  profileImage       String?
+  headline           String?
+  bio                String?
+  location           String?
+  primaryDiscipline  String?
+  skills             String[]
+  industries         String[]
+  languages          String[]
+
+  websiteInternal    String?
+  socialsInternal    Json?
+
+  approvalNotes      String?
+
+  updatedAt          DateTime @updatedAt
+}
+
+model PortfolioItem {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type          PortfolioType
+  title         String?
+  description   String?
+  assetUrl      String
+  thumbnailUrl  String?
+  isPublic      Boolean       @default(true)
+  sortOrder     Int           @default(0)
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Team {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  description   String?
+  leaderUserId  String
+  leader        User     @relation("TeamLeader", fields: [leaderUserId], references: [id])
+
+  status        String   @default("ACTIVE")
+  members       TeamMember[]
+
+  assignedProjects ProjectRequest[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model TeamMember {
+  id          String            @id @default(cuid())
+  teamId      String
+  userId      String
+  status      TeamMemberStatus  @default(INVITED)
+  roleInTeam  String?
+
+  team        Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model ProjectRequest {
+  id              String             @id @default(cuid())
+  createdByAdminId String
+  createdByAdmin   User               @relation("ProjectCreator", fields: [createdByAdminId], references: [id])
+
+  title           String
+  description     String
+  category        String?
+  timeline        String
+  budgetRange     String?
+  dueDateForQuote DateTime?
+
+  assignedType    ProjectAssignedType
+  assignedUserId  String?
+  assignedTeamId  String?
+
+  assignedUser    User?               @relation(fields: [assignedUserId], references: [id])
+  assignedTeam    Team?               @relation(fields: [assignedTeamId], references: [id])
+
+  status          ProjectStatus       @default(DRAFT)
+
+  attachments     ProjectAttachment[]
+  quotes          Quote[]
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+}
+
+model ProjectAttachment {
+  id              String   @id @default(cuid())
+  projectRequestId String
+  projectRequest  ProjectRequest @relation(fields: [projectRequestId], references: [id], onDelete: Cascade)
+
+  fileName        String
+  mimeType        String
+  size            Int
+  storageKey      String
+  uploadedByAdminId String
+
+  createdAt       DateTime @default(now())
+}
+
+model Quote {
+  id              String      @id @default(cuid())
+  projectRequestId String
+  projectRequest  ProjectRequest @relation(fields: [projectRequestId], references: [id], onDelete: Cascade)
+
+  submittedByUserId String
+  submittedByUser  User        @relation(fields: [submittedByUserId], references: [id])
+
+  amount          Int
+  currency        String       @default("USD")
+  breakdown       Json?
+  assumptions     String?
+  turnaroundTime  String?
+  status          QuoteStatus  @default(SUBMITTED)
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  company     String?
+  message     String
+  talentSlug  String?
+  teamSlug    String?
+  status      String   @default("NEW")
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String
+  actor       User     @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  action      String
+  entityType  String
+  entityId    String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
