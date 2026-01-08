@@ -55,6 +55,8 @@ model User {
   id            String      @id @default(cuid())
   email         String      @unique
   passwordHash  String?
+  resetToken    String?
+  resetTokenExpiry DateTime?
   role          UserRole    @default(TALENT)
   status        UserStatus  @default(DRAFT)
 

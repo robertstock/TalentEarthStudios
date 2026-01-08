@@ -1,11 +1,11 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function SignInPage() {
+function SignInForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get("callbackUrl") || "/";
@@ -67,7 +67,12 @@ export default function SignInPage() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs font-medium uppercase tracking-wider text-gray-500">Password</label>
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-medium uppercase tracking-wider text-gray-500">Password</label>
+                            <Link href="/auth/forgot-password" className="text-xs text-blue-400 hover:text-blue-300">
+                                Forgot password?
+                            </Link>
+                        </div>
                         <input
                             type="password"
                             required
@@ -126,5 +131,13 @@ export default function SignInPage() {
                 </p>
             </div>
         </div>
+    );
+}
+
+export default function SignInPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <SignInForm />
+        </Suspense>
     );
 }

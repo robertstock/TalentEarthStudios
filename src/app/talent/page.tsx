@@ -8,10 +8,15 @@ export const metadata: Metadata = {
 };
 
 export default async function TalentDirectory() {
-    const talents = await prisma.user.findMany({
-        where: { role: 'TALENT', status: 'APPROVED' },
-        include: { profile: true },
-    });
+    let talents: any[] = [];
+    try {
+        talents = await prisma.user.findMany({
+            where: { role: 'TALENT', status: 'APPROVED' },
+            include: { profile: true },
+        });
+    } catch (e) {
+        console.warn("Could not fetch talents from DB, falling back to mocks", e);
+    }
 
     // MOCK: Override for Jane Doe to make her look like a real user
     talents.forEach(talent => {

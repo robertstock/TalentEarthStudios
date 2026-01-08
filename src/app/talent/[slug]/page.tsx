@@ -9,21 +9,26 @@ interface PageProps {
 }
 
 async function getTalentBySlug(slug: string) {
-    return await db.user.findFirst({
-        where: {
-            profile: {
-                publicSlug: slug
+    try {
+        return await db.user.findFirst({
+            where: {
+                profile: {
+                    publicSlug: slug
+                },
+                status: "APPROVED"
             },
-            status: "APPROVED"
-        },
-        include: {
-            profile: true,
-            portfolio: {
-                where: { isPublic: true },
-                orderBy: { sortOrder: 'asc' }
+            include: {
+                profile: true,
+                portfolio: {
+                    where: { isPublic: true },
+                    orderBy: { sortOrder: 'asc' }
+                }
             }
-        }
-    });
+        });
+    } catch (e) {
+        console.warn("Could not fetch talent from DB", e);
+        return null;
+    }
 }
 
 export default async function TalentProfilePage(props: PageProps) {

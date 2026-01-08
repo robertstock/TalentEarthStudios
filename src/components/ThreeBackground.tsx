@@ -86,7 +86,7 @@ export default function ThreeBackground() {
             vertexShader,
             fragmentShader,
             transparent: true,
-            extensions: { derivatives: true }
+            extensions: { derivatives: true } as any
         });
         const earth = new THREE.Mesh(geometry, material);
         scene.add(earth);

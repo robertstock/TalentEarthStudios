@@ -28,6 +28,28 @@ export const authOptions: NextAuthOptions = {
                 if (!credentials?.email || !credentials?.password) {
                     return null;
                 }
+
+                // DEMO MODE: Allow default admin login without DB
+                if (credentials.email === "finley@talentearth.com" && credentials.password === "password123") {
+                    return {
+                        id: "demo-admin",
+                        email: "finley@talentearth.com",
+                        name: "Finley (Demo)",
+                        role: "ADMIN",
+                        image: null,
+                    };
+                }
+
+                // DEMO MODE: Allow default talent login without DB
+                if (credentials.email === "talent@example.com" && credentials.password === "password123") {
+                    return {
+                        id: "demo-talent",
+                        email: "talent@example.com",
+                        name: "Jane Doe (Demo)",
+                        role: "TALENT",
+                        image: null,
+                    };
+                }
                 const user = await db.user.findUnique({
                     where: { email: credentials.email },
                     include: { profile: true }
