@@ -28,10 +28,60 @@ async function getTalentBySlug(slug: string) {
 
 export default async function TalentProfilePage(props: PageProps) {
     const params = await props.params;
-    const talent = await getTalentBySlug(params.slug);
+    let talent = await getTalentBySlug(params.slug);
+
+    // MOCK: Check if it's a mock talent if not found in DB
+    if (!talent) {
+        const { MOCK_TALENTS } = await import('@/lib/mock-data');
+        const mockTalent = MOCK_TALENTS.find(t => t.profile.publicSlug === params.slug);
+
+        if (mockTalent) {
+            // Transform mock talent to match the Prisma return type structure roughly if needed
+            // The MOCK_TALENTS structure is already close enough for reading properties
+            // We just need to ensure portfolio is handled if we access it.
+            // In the mock data I defined portfolio as optional array.
+            talent = {
+                ...mockTalent,
+                // Ensure default values for required DB fields if accessed securely
+                id: mockTalent.id,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                emailVerified: null,
+                image: null,
+                passwordHash: null,
+                portfolio: mockTalent.portfolio || [],
+                profile: {
+                    ...mockTalent.profile,
+                    id: "mock-profile-" + mockTalent.id,
+                    userId: mockTalent.id,
+                    websiteExternal: null,
+                    instagram: null,
+                    linkedin: null,
+                    twitter: null,
+                    // satisfy other required fields of Profile model if checked strictly
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                }
+            } as any;
+        }
+    }
 
     if (!talent || !talent.profile) {
         notFound();
+    }
+
+    // MOCK: Override for Jane Doe to make her look like a real user
+    if (talent.firstName === 'Jane' && talent.lastName === 'Doe') {
+        talent.lastName = 'Simpson';
+        talent.profile.profileImage = '/jane-simpson.png';
+
+        if (!talent.profile.bio || talent.profile.bio.includes("No bio")) {
+            talent.profile.bio = "Award-winning filmmaker and visual storyteller with over 10 years of experience in commercial and narrative cinema. Specializing in creating emotionally resonant content for global brands and independent films. Based in Los Angeles, but available for travel worldwide.";
+        }
+
+        if (talent.profile.skills.length === 0) {
+            talent.profile.skills = ["Cinematography", "Directing", "Color Grading", "Visual Storytelling", "Post-Production"];
+        }
     }
 
     return (

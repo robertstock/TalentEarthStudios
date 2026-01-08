@@ -1,5 +1,7 @@
+import TeamsFilter from "@/components/TeamsFilter";
 import Link from "next/link";
-import { db as prisma } from "@/lib/db";
+// // import { db as prisma } from "@/lib/db";
+import { MOCK_TEAMS } from "@/lib/mock-data";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -7,10 +9,20 @@ export const metadata: Metadata = {
     description: "Operational units.",
 };
 
-export default async function TeamsPage() {
-    const teams = await prisma.team.findMany({
-        include: { members: true },
-    });
+interface PageProps {
+    searchParams: {
+        type?: string;
+    }
+}
+
+export default async function TeamsPage({ searchParams }: PageProps) {
+    const { type } = await searchParams;
+
+    let teams = MOCK_TEAMS;
+
+    if (type) {
+        teams = teams.filter(t => t.type === type);
+    }
 
     return (
         <div className="relative z-10 w-full min-h-screen pt-20 md:pt-24 pb-12">
@@ -19,14 +31,7 @@ export default async function TeamsPage() {
                 <aside className="w-full md:w-64 flex-shrink-0 pt-0 md:pt-4">
                     <div className="md:sticky md:top-32 space-y-8 select-none">
                         <h2 className="text-xl font-light text-white md:hidden mb-4">Operational Units</h2>
-                        <div className="hidden md:block">
-                            <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4 border-b border-slate-800 pb-2">Unit Type</h4>
-                            <div className="space-y-2">
-                                <label className="flex items-center gap-3 cursor-pointer group"><div className="w-3 h-3 border border-slate-600 bg-slate-600"></div><span className="text-sm text-white">Fabrication</span></label>
-                                <label className="flex items-center gap-3 cursor-pointer group"><div className="w-3 h-3 border border-slate-600 group-hover:border-white transition-colors"></div><span className="text-sm text-slate-400 group-hover:text-white transition-colors">VFX / Post</span></label>
-                                <label className="flex items-center gap-3 cursor-pointer group"><div class="w-3 h-3 border border-slate-600 group-hover:border-white transition-colors"></div><span className="text-sm text-slate-400 group-hover:text-white transition-colors">Systems</span></label>
-                            </div>
-                        </div>
+                        <TeamsFilter />
                     </div>
                 </aside>
 
@@ -42,11 +47,25 @@ export default async function TeamsPage() {
                                 <article className="bg-wme-panel border border-wme-border p-6 hover:border-slate-600 transition-all duration-300 cursor-pointer h-full">
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="flex -space-x-2">
-                                            {/* Member placeholders */}
-                                            <div className="w-8 h-8 rounded-full bg-slate-800 border border-wme-panel overflow-hidden"></div>
-                                            <div className="w-8 h-8 rounded-full bg-slate-700 border border-wme-panel overflow-hidden"></div>
+                                            {team.members.slice(0, 4).map((member: any, i) => (
+                                                <div key={i} className="w-8 h-8 rounded-full border border-wme-panel overflow-hidden bg-slate-800 relative">
+                                                    {/* Ideally we use Next/Image but simple img tag is safer related to domains config */}
+                                                    {member?.profile?.profileImage && (
+                                                        <img
+                                                            src={member.profile.profileImage}
+                                                            alt={member.lastName}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {team.members.length > 4 && (
+                                                <div className="w-8 h-8 rounded-full bg-slate-800 border border-wme-panel flex items-center justify-center text-[10px] text-white font-medium">
+                                                    +{team.members.length - 4}
+                                                </div>
+                                            )}
                                         </div>
-                                        <span className="text-[10px] uppercase tracking-wider text-green-900 bg-green-900/20 px-2 py-1 border border-green-900/30">Available</span>
+                                        <span className={`text-[10px] uppercase tracking-wider px-2 py-1 border ${team.status === 'Available' ? 'text-green-900 bg-green-900/20 border-green-900/30' : 'text-slate-400 bg-slate-800/50 border-slate-700'}`}>{team.status}</span>
                                     </div>
                                     <h3 className="text-white font-medium text-xl mb-1 group-hover:text-blue-200 transition-colors">{team.name}</h3>
                                     <p className="text-slate-500 text-xs uppercase tracking-wider mb-6">Operational Unit</p>
@@ -57,7 +76,7 @@ export default async function TeamsPage() {
                                         </div>
                                         <div className="bg-wme-base p-3 border border-wme-border">
                                             <span className="block text-[10px] text-slate-600 font-mono mb-1">FOCUS</span>
-                                            <span className="text-sm text-slate-300">General</span>
+                                            <span className="text-sm text-slate-300">{team.type}</span>
                                         </div>
                                     </div>
                                     <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
