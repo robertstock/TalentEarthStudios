@@ -8,8 +8,9 @@ Finley Pro is a mobile-first web/app platform designed to streamline the project
 ## Goals
 1. **Streamline Intake**: Enable RPMs to capture project details accurately using versioned question sets.
 2. **Automate SOW**: Reduce administrative burden by generating professional SOWs directly from intake data.
-3. **Enhance Accuracy**: Capture meeting audio and transcripts to ensure no details are missed.
-4. ** accelerate Approval**: Provide a seamless digital workflow for internal review and client approval.
+3. **AI-Powered Analysis**: Integrate with a custom ChatGPT via API to analyze intakes and assist in SOW generation.
+4. **Enhance Accuracy**: Capture meeting audio and transcripts to ensure no details are missed.
+5. **Accelerate Approval**: Provide a seamless digital workflow for internal review and client approval.
 
 ## Non-Goals (Out of Scope for MVP)
 - E-signatures (Planned for Phase 2)
@@ -24,6 +25,9 @@ Finley Pro is a mobile-first web/app platform designed to streamline the project
 - **Client**: Reviews SOWs, requests revisions, or approves.
 
 ## Constraints
+- **Cross-Platform Native**: Must be deployable to both **Apple App Store** and **Google Play Store** (Android).
+- **Standalone AI**: Must integrate with Custom GPT via API directly; no dependency on external ChatGPT app or separate loading.
+- **Future-Proofing**: Backend API must be designed to support a future public website integration.
 - **Mobile-First**: RPM interface must be optimized for mobile (iOS priority).
 - **Security**: Audio and transcripts must be encrypted; signed URLs for access.
 - **Compliance**: Strict consent capture required before recording audio.

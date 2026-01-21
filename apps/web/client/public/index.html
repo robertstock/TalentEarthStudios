@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WME+ | Execution Layer</title>
+
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind = {
+            config: {
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            sans: ['Inter', 'sans-serif'],
+                        },
+                        colors: {
+                            wme: {
+                                base: '#030508',    // Near black
+                                surface: '#0B0F15', // Dark navy gray
+                                panel: '#11161F',   // Lighter panel
+                                border: '#1E2530',  // Subtle border
+                                text: '#94A3B8',    // Muted text
+                                highlight: '#E2E8F0' // Restrained white
+                            }
+                        },
+                        letterSpacing: {
+                            widest: '.15em',
+                        },
+                        screens: {
+                            'xs': '475px',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            background-color: #030508;
+            color: #94A3B8;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: default;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .select-text {
+            user-select: text;
+            -webkit-user-select: text;
+            cursor: text;
+        }
+
+        button,
+        nav,
+        a,
+        .cursor-pointer {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        input {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            cursor: text;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+            /* Thinner on mobile */
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #030508;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1E2530;
+            border-radius: 3px;
+        }
+
+        .grid-bg {
+            background-image: linear-gradient(#1E2530 1px, transparent 1px),
+                linear-gradient(90deg, #1E2530 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center top;
+            opacity: 0.1;
+        }
+
+        .glass-panel {
+            background: rgba(17, 22, 31, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .profile-img {
+            filter: grayscale(100%) contrast(110%);
+            transition: filter 0.5s ease;
+        }
+
+        .group:hover .profile-img {
+            filter: grayscale(0%) contrast(100%);
+        }
+
+        input[type="checkbox"]:checked+div {
+            background-color: #475569;
+            border-color: #cbd5e1;
+        }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 768px) {
+            .mobile-full-height {
+                min-height: calc(100vh - 80px);
+                /* Account for nav */
+            }
+        }
+    </style>
+</head>
+
+<body class="antialiased selection:bg-slate-700 selection:text-white">
+
+    <!-- 3D Background -->
+    <div id="canvas-container"></div>
+
+    <!-- Navigation -->
+    <nav
+        class="fixed top-0 w-full z-50 px-6 md:px-8 py-6 flex justify-between items-center mix-blend-difference select-none bg-gradient-to-b from-black/50 to-transparent md:bg-none">
+        <!-- Logo -->
+        <div class="text-white font-medium tracking-tight text-xl md:text-2xl z-50 cursor-pointer flex items-center gap-2"
+            onclick="navigateTo('home')">
+            <div class="w-2 h-2 bg-white rounded-full md:hidden animate-pulse"></div>
+            <span>WME<span class="text-slate-500 font-light">+</span></span>
+        </div>
+
+        <!-- Desktop Menu -->
+        <div class="hidden md:flex gap-8 text-xs font-medium tracking-widest uppercase text-slate-400">
+            <button onclick="navigateTo('home')"
+                class="hover:text-white transition-colors duration-300 focus:outline-none">Overview</button>
+            <button onclick="navigateTo('talent')"
+                class="hover:text-white transition-colors duration-300 focus:outline-none">Talent</button>
+            <button onclick="navigateTo('teams')"
+                class="hover:text-white transition-colors duration-300 focus:outline-none">Teams</button>
+            <button onclick="navigateTo('projects')"
+                class="hover:text-white transition-colors duration-300 focus:outline-none">Projects</button>
+        </div>
+
+        <!-- Mobile Menu Toggle -->
+        <button id="mobile-menu-btn" class="md:hidden text-white focus:outline-none z-50 p-2 -mr-2">
+            <i class="ph ph-list text-2xl"></i>
+        </button>
+    </nav>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu"
+        class="fixed inset-0 z-40 bg-wme-base/95 backdrop-blur-xl flex flex-col justify-center items-center opacity-0 pointer-events-none transition-all duration-300 transform translate-y-4">
+        <div class="flex flex-col gap-8 text-center">
+            <button onclick="mobileNavTo('home')"
+                class="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Overview</button>
+            <button onclick="mobileNavTo('talent')"
+                class="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Talent</button>
+            <button onclick="mobileNavTo('teams')"
+                class="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Teams</button>
+            <button onclick="mobileNavTo('projects')"
+                class="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Projects</button>
+        </div>
+        <div class="absolute bottom-12 text-[10px] text-slate-600 font-mono">
+            SYSTEM STATUS: ONLINE
+        </div>
+    </div>
+
+    <!-- VIEW: HOME -->
+    <main id="view-home" class="relative z-10 w-full min-h-screen hidden opacity-0 transition-opacity duration-500">
+
+        <!-- Hero Section -->
+        <section class="min-h-screen flex items-center px-6 md:px-16 lg:px-24 pt-20 md:pt-0">
+            <div class="max-w-3xl w-full">
+                <!-- Mobile-optimized Headline -->
+                <h1
+                    class="text-4xl xs:text-5xl md:text-6xl lg:text-7xl font-light text-white leading-tight mb-6 md:mb-8 select-none">
+                    A representation layer<br>
+                    <span class="text-slate-500">for those who create.</span>
+                </h1>
+
+                <p
+                    class="text-base md:text-xl text-slate-400 font-light leading-relaxed max-w-xl md:max-w-2xl border-l border-slate-800 pl-4 md:pl-6 select-text">
+                    Designers, engineers, fabricators, and operators represented through a managed execution system
+                    built for real production.
+                </p>
+
+                <div
+                    class="mt-8 md:mt-12 flex flex-wrap gap-4 md:gap-6 text-[10px] md:text-xs uppercase tracking-widest text-slate-500 select-none">
+                    <div
+                        class="flex items-center gap-2 px-3 py-1.5 bg-green-900/10 border border-green-900/20 rounded-full md:bg-transparent md:border-none md:p-0 md:rounded-none">
+                        <div class="w-1.5 h-1.5 bg-green-500 md:bg-green-900 rounded-full animate-pulse"></div>
+                        System Active
+                    </div>
+                    <div
+                        class="flex items-center gap-2 px-3 py-1.5 bg-slate-800/30 border border-slate-700/30 rounded-full md:bg-transparent md:border-none md:p-0 md:rounded-none">
+                        <div class="w-1.5 h-1.5 bg-slate-400 md:bg-slate-600 rounded-full"></div>
+                        Global Nodes: 247
+                    </div>
+                </div>
+
+                <!-- Scroll Hint (Mobile) -->
+                <div class="absolute bottom-8 left-0 w-full flex justify-center md:hidden animate-bounce opacity-50">
+                    <i class="ph ph-caret-down text-slate-500"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- Information Panels -->
+        <section class="min-h-screen bg-gradient-to-b from-transparent via-wme-base/90 to-wme-base pb-32">
+            <div class="max-w-7xl mx-auto px-6 sm:px-12 pt-12 md:pt-32 space-y-12 md:space-y-16">
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div
+                        class="glass-panel p-6 md:p-8 min-h-[240px] md:min-h-[320px] flex flex-col justify-between group hover:border-slate-700 transition-colors duration-500 cursor-default">
+                        <div class="text-xs font-mono text-slate-600 mb-4">01 // REPRESENTATION</div>
+                        <div>
+                            <h3 class="text-white text-lg font-normal mb-3">Managed Talent</h3>
+                            <p class="text-sm text-slate-400 leading-relaxed font-light select-text">
+                                We represent the technical and creative architects behind global production. Not a
+                                roster of faces, but a network of verified capabilities.
+                            </p>
+                        </div>
+                        <div class="w-full h-px bg-slate-800 mt-6 md:mt-8 group-hover:bg-slate-600 transition-colors">
+                        </div>
+                    </div>
+
+                    <div
+                        class="glass-panel p-6 md:p-8 min-h-[240px] md:min-h-[320px] flex flex-col justify-between group hover:border-slate-700 transition-colors duration-500 cursor-default">
+                        <div class="text-xs font-mono text-slate-600 mb-4">02 // ASSEMBLY</div>
+                        <div>
+                            <h3 class="text-white text-lg font-normal mb-3">Team Construction</h3>
+                            <p class="text-sm text-slate-400 leading-relaxed font-light select-text">
+                                Deploy complete operational units. From experiential fabrication to virtual production,
+                                teams are scoped and deployed as single entities.
+                            </p>
+                        </div>
+                        <div class="w-full h-px bg-slate-800 mt-6 md:mt-8 group-hover:bg-slate-600 transition-colors">
+                        </div>
+                    </div>
+
+                    <div
+                        class="glass-panel p-6 md:p-8 min-h-[240px] md:min-h-[320px] flex flex-col justify-between group hover:border-slate-700 transition-colors duration-500 cursor-default">
+                        <div class="text-xs font-mono text-slate-600 mb-4">03 // DELIVERY</div>
+                        <div>
+                            <h3 class="text-white text-lg font-normal mb-3">Oversight & Scope</h3>
+                            <p class="text-sm text-slate-400 leading-relaxed font-light select-text">
+                                WME+ acts as the operating layer. Contracts, insurance, and technical riders are
+                                standardized, removing friction from complex builds.
+                            </p>
+                        </div>
+                        <div class="w-full h-px bg-slate-800 mt-6 md:mt-8 group-hover:bg-slate-600 transition-colors">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 md:p-8 border border-wme-border">
+                    <div class="text-xs font-mono text-slate-600 mb-4">EXECUTION DOMAINS</div>
+                    <div class="flex flex-wrap gap-2 text-[10px] md:text-xs font-mono text-slate-400 select-none">
+                        <span class="px-3 py-1 border border-slate-800 bg-wme-panel">Build</span>
+                        <span class="px-3 py-1 border border-slate-800 bg-wme-panel">Fabrication</span>
+                        <span class="px-3 py-1 border border-slate-800 bg-wme-panel">Technical Direction</span>
+                        <span class="px-3 py-1 border border-slate-800 bg-wme-panel">Systems</span>
+                        <span class="px-3 py-1 border border-slate-800 bg-wme-panel">Media</span>
+                        <span class="px-3 py-1 border border-slate-800 bg-wme-panel">Interactive</span>
+                        <span class="px-3 py-1 border border-slate-800 bg-wme-panel">Installation</span>
+                        <span class="px-3 py-1 border border-slate-800 bg-wme-panel">Operations</span>
+                        <span class="px-3 py-1 border border-slate-800 bg-wme-panel">Compliance</span>
+                        <span class="px-3 py-1 border border-slate-800 bg-wme-panel">Specialized</span>
+                    </div>
+                </div>
+
+                <div class="text-center pb-12">
+                    <button onclick="navigateTo('talent')"
+                        class="text-xs uppercase tracking-[0.2em] text-white border border-slate-700 px-8 py-4 hover:bg-white hover:text-black transition-all duration-500 focus:outline-none w-full md:w-auto">
+                        Access The System
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- VIEW: TALENT -->
+    <main id="view-talent"
+        class="relative z-10 w-full min-h-screen bg-wme-base hidden opacity-0 transition-opacity duration-500 pt-20 md:pt-24 pb-12">
+        <div class="absolute inset-0 grid-bg pointer-events-none z-0"></div>
+        <div class="max-w-[1600px] mx-auto px-4 md:px-6 relative z-10 h-full flex flex-col md:flex-row gap-6 md:gap-8">
+
+            <!-- Redesigned Sidebar for Mobile -->
+            <aside class="w-full md:w-64 flex-shrink-0 pt-0 md:pt-4">
+                <div class="md:sticky md:top-32 select-none">
+                    <!-- Mobile Header / Filter Toggle -->
+                    <div class="flex justify-between items-center md:block mb-4 md:mb-0">
+                        <h2 class="text-xl md:text-2xl font-light text-white md:hidden">Talent Index</h2>
+                        <button id="mobile-filter-toggle"
+                            class="md:hidden flex items-center gap-2 text-xs uppercase tracking-widest text-slate-400 border border-slate-800 px-3 py-2 bg-wme-panel">
+                            <i class="ph ph-sliders"></i> Filter
+                        </button>
+                    </div>
+
+                    <!-- Search & Filter Container -->
+                    <div id="filter-container"
+                        class="hidden md:block bg-wme-panel md:bg-transparent p-4 md:p-0 border border-wme-border md:border-none mb-6 md:mb-0">
+                        <div>
+                            <h4
+                                class="hidden md:block text-xs font-bold text-white uppercase tracking-widest mb-4 border-b border-slate-800 pb-2">
+                                Index</h4>
+                            <div class="mb-6">
+                                <label class="text-[10px] font-mono text-slate-600 block mb-2">SEARCH</label>
+                                <div
+                                    class="flex items-center gap-2 border border-slate-800 bg-wme-base md:bg-wme-panel px-3 py-3 md:py-2">
+                                    <i class="ph ph-magnifying-glass text-slate-600 text-xs"></i>
+                                    <input id="talent-search" type="text" placeholder="Name, role, capability"
+                                        class="w-full bg-transparent outline-none text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none" />
+                                </div>
+                            </div>
+
+                            <!-- Domains Checkboxes -->
+                            <div class="mt-6 md:mt-0">
+                                <label class="text-[10px] font-mono text-slate-600 block mb-3">EXECUTION DOMAINS</label>
+                                <div id="domain-filters" class="grid grid-cols-2 md:grid-cols-1 gap-2 md:space-y-2">
+                                </div>
+                                <button id="clear-filters"
+                                    class="mt-4 text-[10px] uppercase tracking-widest text-slate-500 hover:text-white transition-colors focus:outline-none w-full md:w-auto text-left"
+                                    type="button">Clear Filters</button>
+                            </div>
+                        </div>
+                        <div class="pt-8 mt-8 border-t border-slate-800 hidden md:block">
+                            <div class="text-[10px] text-slate-600 font-mono">SYSTEM STATUS: ONLINE<br>LATENCY: 12ms
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="flex-1">
+                <div class="hidden md:flex justify-between items-end mb-8 border-b border-slate-800 pb-4">
+                    <h2 class="text-2xl font-light text-white">Talent Index</h2>
+                    <span class="text-xs font-mono text-slate-500">SHOWING UNITS</span>
+                </div>
+                <div class="md:hidden flex justify-between items-center mb-4 text-[10px] font-mono text-slate-500">
+                    <span>LIVE RESULTS</span>
+                    <span id="mobile-count">SHOWING ALL</span>
+                </div>
+
+                <div id="talent-grid"
+                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 pb-20 md:pb-0"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- VIEW: TEAMS -->
+    <main id="view-teams"
+        class="relative z-10 w-full min-h-screen bg-wme-base hidden opacity-0 transition-opacity duration-500 pt-20 md:pt-24 pb-12">
+        <div class="absolute inset-0 grid-bg pointer-events-none z-0"></div>
+        <div class="max-w-[1600px] mx-auto px-4 md:px-6 relative z-10 h-full flex flex-col md:flex-row gap-6 md:gap-8">
+            <aside class="w-full md:w-64 flex-shrink-0 pt-0 md:pt-4">
+                <div class="md:sticky md:top-32 space-y-8 select-none">
+                    <h2 class="text-xl font-light text-white md:hidden mb-4">Operational Units</h2>
+                    <div class="hidden md:block">
+                        <h4
+                            class="text-xs font-bold text-white uppercase tracking-widest mb-4 border-b border-slate-800 pb-2">
+                            Unit Type</h4>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <div class="w-3 h-3 border border-slate-600 bg-slate-600"></div><span
+                                    class="text-sm text-white">Fabrication</span>
+                            </label>
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <div class="w-3 h-3 border border-slate-600 group-hover:border-white transition-colors">
+                                </div><span class="text-sm text-slate-400 group-hover:text-white transition-colors">VFX
+                                    / Post</span>
+                            </label>
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <div class="w-3 h-3 border border-slate-600 group-hover:border-white transition-colors">
+                                </div><span
+                                    class="text-sm text-slate-400 group-hover:text-white transition-colors">Systems</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+            <div class="flex-1">
+                <div class="hidden md:flex justify-between items-end mb-8 border-b border-slate-800 pb-4">
+                    <h2 class="text-2xl font-light text-white">Operational Units</h2>
+                    <span class="text-xs font-mono text-slate-500">SHOWING 7 TEAMS</span>
+                </div>
+                <!-- Dynamic Teams Grid -->
+                <div id="team-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20 md:pb-0"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- VIEW: PROJECTS -->
+    <main id="view-projects"
+        class="relative z-10 w-full min-h-screen bg-wme-base hidden opacity-0 transition-opacity duration-500 pt-20 md:pt-24 pb-12">
+        <div class="absolute inset-0 grid-bg pointer-events-none z-0"></div>
+        <div class="max-w-[1600px] mx-auto px-4 md:px-6 relative z-10 h-full">
+            <div class="flex justify-between items-end mb-6 md:mb-12 border-b border-slate-800 pb-4">
+                <h2 class="text-xl md:text-2xl font-light text-white">Active Scope</h2>
+                <span class="text-[10px] md:text-xs font-mono text-slate-500">Q1 2026 EXECUTION</span>
+            </div>
+            <!-- Dynamic Projects Grid -->
+            <div id="project-grid" class="grid grid-cols-1 gap-3 md:gap-4 pb-20 md:pb-0"></div>
+        </div>
+    </main>
+
+    <!-- VIEW: PROFILE (Unified for Talent, Teams, Projects) -->
+    <main id="view-profile"
+        class="relative z-10 w-full min-h-screen bg-wme-base hidden opacity-0 transition-opacity duration-500 pt-20 md:pt-24 pb-12">
+        <div class="absolute inset-0 grid-bg pointer-events-none z-0"></div>
+        <div class="max-w-5xl mx-auto px-4 md:px-6 relative z-10">
+
+            <div class="flex justify-between items-center mb-6 md:mb-8">
+                <button onclick="returnFromProfile();" id="back-btn"
+                    class="flex items-center gap-2 text-xs uppercase tracking-widest text-slate-500 hover:text-white group focus:outline-none bg-wme-panel md:bg-transparent px-3 py-2 md:p-0 border border-wme-border md:border-none rounded-sm md:rounded-none">
+                    <i class="ph ph-arrow-left group-hover:-translate-x-1 transition-transform"></i>
+                    Return
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 pb-20">
+                <!-- Profile Left -->
+                <div class="col-span-1">
+                    <div
+                        class="w-full aspect-square bg-slate-800 mb-6 overflow-hidden border border-wme-border relative shadow-2xl">
+                        <img id="profile-img-lg" src=""
+                            class="w-full h-full object-cover filter grayscale contrast-125 select-none transition-all duration-700"
+                            alt="Profile">
+                        <div id="profile-img-overlay"
+                            class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div
+                            class="flex justify-between md:block border-b border-slate-800 md:border-none pb-4 md:pb-0">
+                            <div>
+                                <span class="text-[10px] font-mono text-slate-600 block mb-1">STATUS</span>
+                                <span id="profile-status"
+                                    class="text-xs uppercase tracking-wider text-green-500">Available</span>
+                            </div>
+                            <div class="text-right md:text-left">
+                                <span class="text-[10px] font-mono text-slate-600 block mb-1 md:mt-6">LOCATION</span>
+                                <span id="profile-location" class="text-sm text-slate-300">Los Angeles, CA</span>
+                            </div>
+                        </div>
+
+                        <div id="rate-block">
+                            <span class="text-[10px] font-mono text-slate-600 block mb-1">RATE CARD</span>
+                            <span id="profile-rate" class="text-sm text-slate-300">Tier 1 // Senior</span>
+                        </div>
+                        <button id="action-btn"
+                            class="w-full py-4 md:py-3 bg-white text-black md:bg-transparent md:text-white md:border md:border-slate-700 text-xs uppercase tracking-widest font-bold md:font-normal hover:bg-white hover:text-black transition-colors focus:outline-none sticky bottom-4 shadow-lg md:static md:shadow-none">
+                            Request Hold
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Profile Right -->
+                <div class="col-span-1 md:col-span-2">
+                    <div
+                        class="flex flex-col md:flex-row justify-between items-start border-b border-slate-800 pb-6 mb-8 gap-2 md:gap-0">
+                        <div>
+                            <h1 id="profile-name" class="text-3xl md:text-4xl font-light text-white mb-2 select-text">
+                                Name</h1>
+                            <p id="profile-role" class="text-slate-500 text-sm uppercase tracking-widest">Role</p>
+                        </div>
+                        <span id="profile-id"
+                            class="text-xs font-mono text-slate-700 bg-wme-panel px-2 py-1 md:bg-transparent md:p-0">ID:
+                            000</span>
+                    </div>
+
+                    <div class="space-y-12 select-text">
+                        <section>
+                            <h3 class="text-xs font-bold text-white uppercase tracking-widest mb-4">Overview</h3>
+                            <p id="profile-bio" class="text-slate-400 font-light leading-relaxed text-sm md:text-base">
+                                Bio goes here.</p>
+                        </section>
+
+                        <section id="capabilities-section">
+                            <h3 class="text-xs font-bold text-white uppercase tracking-widest mb-4">Capabilities</h3>
+                            <div id="profile-tags" class="flex flex-wrap gap-2"></div>
+                        </section>
+
+                        <!-- Team Roster Section (Hidden by default) -->
+                        <section id="roster-section" class="hidden">
+                            <h3 class="text-xs font-bold text-white uppercase tracking-widest mb-4">Key Personnel</h3>
+                            <div id="profile-roster" class="flex gap-4 overflow-x-auto pb-2"></div>
+                        </section>
+
+                        <!-- Project Risks Section (Hidden by default) -->
+                        <section id="risks-section" class="hidden">
+                            <h3 class="text-xs font-bold text-white uppercase tracking-widest mb-4">Primary Risks</h3>
+                            <div id="profile-risks" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                        </section>
+
+                        <section>
+                            <h3 class="text-xs font-bold text-white uppercase tracking-widest mb-4" id="work-label">
+                                Selected Work</h3>
+                            <div id="profile-work" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- TALENT DATA ---
+        const talentDB = {
+            'alex': { name: 'Alex Chen', role: 'Technical Director', id: '994-A', location: 'Los Angeles, CA', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=900&auto=format&fit=crop', domains: ['Technical Direction', 'Interactive', 'Media'], bio: 'Technical direction for real time pipelines and interactive systems.', tags: ['TouchDesigner', 'UE5', 'Notch', 'Python', 'Media Servers'], rate: 'Tier 1 // Senior', selectedWork: ['Tour Content Pipeline', 'Immersive Retail Flagship'] },
+            'mina': { name: 'Mina Park', role: 'Technical Director', id: '477-T', location: 'San Francisco, CA', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=900&auto=format&fit=crop', domains: ['Technical Direction', 'Systems'], bio: 'Senior TD focused on scalable deployment patterns for interactive exhibits.', tags: ['Unreal Engine', 'Disguise', 'C++', 'Network Design'], rate: 'Tier 1 // Senior', selectedWork: ['Museum Rollout Program', 'Multi Site Media Standard'] },
+            'diego': { name: 'Diego Alvarez', role: 'Realtime Pipeline Lead', id: '318-D', location: 'Austin, TX', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=900&auto=format&fit=crop', domains: ['Technical Direction', 'Media'], bio: 'Realtime pipeline lead with emphasis on low latency playback systems.', tags: ['Disguise', 'Notch', 'NDI', 'SMPTE', 'Failover'], rate: 'Tier 2 // Lead', selectedWork: ['Stadium Redundancy Stack', 'Low Latency Playback'] },
+            'naomi': { name: 'Naomi Kline', role: 'Technical Producer', id: '604-P', location: 'Chicago, IL', status: 'Limited Availability', statusColor: 'text-yellow-500', img: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=900&auto=format&fit=crop', domains: ['Technical Direction', 'Operations'], bio: 'Technical producer bridging design intent and field execution.', tags: ['Scoping', 'Change Control', 'Technical Riders', 'Vendor Coordination'], rate: 'Tier 2 // Lead', selectedWork: ['Venue Technical Packages', 'Change Control System'] },
+            'jun': { name: 'Jun Watanabe', role: 'Systems TD', id: '155-S', location: 'Tokyo, JP', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=900&auto=format&fit=crop', domains: ['Technical Direction', 'Systems'], bio: 'Systems technical direction with emphasis on venue integration.', tags: ['Signal Flow', 'Routing', 'Commissioning', 'Documentation'], rate: 'Tier 1 // Senior', selectedWork: ['Control Room Integration', 'Permanent Install Routing'] },
+            'kira': { name: 'Kira Solano', role: 'Interactive Creative Technologist', id: '712-I', location: 'Brooklyn, NY', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1550525811-e5869dd03032?q=80&w=900&auto=format&fit=crop', domains: ['Interactive', 'Media'], bio: 'Interactive systems designer building robust sensor driven experiences.', tags: ['TouchDesigner', 'Computer Vision', 'Depth Sensors', 'OSC'], rate: 'Tier 2 // Lead', selectedWork: ['Public CV Install', 'Sensor Calibration Toolkit'] },
+            'oliver': { name: 'Oliver Grant', role: 'Interactive Engineer', id: '588-I', location: 'Vancouver, BC', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?q=80&w=900&auto=format&fit=crop', domains: ['Interactive', 'Systems'], bio: 'Interactive engineer specializing in hardware and software integration.', tags: ['C#', 'Unity', 'Serial IO', 'Diagnostics'], rate: 'Tier 2 // Lead', selectedWork: ['Exhibit Diagnostics Suite', 'Device Abstraction Layer'] },
+            'priya': { name: 'Priya Nair', role: 'Experience Prototyper', id: '903-X', location: 'Seattle, WA', status: 'Limited Availability', statusColor: 'text-yellow-500', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=900&auto=format&fit=crop', domains: ['Interactive', 'Installation'], bio: 'Rapid prototyping for interactive exhibits focusing on feasibility.', tags: ['Rapid Prototyping', 'Arduino', 'Node', 'Installation Planning'], rate: 'Tier 3 // Senior', selectedWork: ['Feasibility Sprint', 'Prototype to Production'] },
+            'hassan': { name: 'Hassan Malik', role: 'Realtime Interaction Designer', id: '274-R', location: 'Dubai, AE', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1520975682030-1c25d7c1b5b6?q=80&w=900&auto=format&fit=crop', domains: ['Interactive', 'Media'], bio: 'Realtime interaction design with emphasis on frame budget.', tags: ['UE5', 'Blueprint', 'Latency', 'Input Pipelines'], rate: 'Tier 2 // Lead', selectedWork: ['Low Latency Interaction', 'Frame Budget Pass'] },
+            'mei': { name: 'Mei Tan', role: 'Creative Technologist', id: '661-C', location: 'Singapore, SG', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=900&auto=format&fit=crop', domains: ['Interactive', 'Specialized'], bio: 'Creative technologist for novel interaction modalities.', tags: ['Haptics', 'Spatial Audio', 'Interaction Design'], rate: 'Tier 3 // Senior', selectedWork: ['Haptics Pilot', 'Operator Controls UI'] },
+            'elena': { name: 'Elena Rostova', role: 'Audio Engineer', id: '339-A', location: 'Berlin, DE', status: 'Limited Availability', statusColor: 'text-yellow-500', img: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=900&auto=format&fit=crop', domains: ['Media', 'Systems'], bio: 'FOH and systems engineer for touring and festival environments.', tags: ['L-Acoustics', 'DiGiCo', 'RF Coordination', 'Dante'], rate: 'Tier 1 // Senior', selectedWork: ['Festival Mainstage', 'Tour Package Build'] },
+            'grant': { name: 'Grant Holloway', role: 'Media Server Engineer', id: '510-M', location: 'Las Vegas, NV', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=900&auto=format&fit=crop', domains: ['Media', 'Systems'], bio: 'Media server engineering for high pixel density builds.', tags: ['Disguise', 'Resolume', 'Playback', 'Redundancy'], rate: 'Tier 2 // Lead', selectedWork: ['Redundant Playback Stack', 'Operator Handoff'] },
+            'anya': { name: 'Anya Petrov', role: 'Video Systems Engineer', id: '109-V', location: 'Prague, CZ', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=900&auto=format&fit=crop', domains: ['Media', 'Compliance'], bio: 'Video systems engineering with emphasis on signal integrity.', tags: ['SDI', 'Fiber', 'EDID', 'Signal Integrity'], rate: 'Tier 2 // Lead', selectedWork: ['Signal Integrity Audit', 'Patching Standards'] },
+            'samira': { name: 'Samira Idris', role: 'Broadcast Audio A2', id: '784-B', location: 'Atlanta, GA', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?q=80&w=900&auto=format&fit=crop', domains: ['Media', 'Operations'], bio: 'Broadcast audio support for live events.', tags: ['Broadcast Audio', 'RF', 'Comms', 'Patch Discipline'], rate: 'Tier 3 // Senior', selectedWork: ['Live Broadcast Support', 'RF Troubleshooting'] },
+            'tariq': { name: 'Tariq Mensah', role: 'Content Operations Lead', id: '402-O', location: 'Toronto, ON', status: 'Limited Availability', statusColor: 'text-yellow-500', img: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=900&auto=format&fit=crop', domains: ['Media', 'Operations'], bio: 'Content operations leadership for complex run of show timelines.', tags: ['Content Ops', 'Versioning', 'Approvals', 'Ingest'], rate: 'Tier 2 // Lead', selectedWork: ['Ingest and Versioning', 'Approval Pipeline'] },
+            'jun-sys': { name: 'Jun Watanabe', role: 'Systems TD', id: '155-S', location: 'Tokyo, JP', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=900&auto=format&fit=crop', domains: ['Systems', 'Installation'], bio: 'Systems integration for permanent installs and control rooms.', tags: ['Routing', 'Monitoring', 'Signal Flow', 'Commissioning'], rate: 'Tier 1 // Senior', selectedWork: ['Control Room Integration', 'Routing Standards'] },
+            'luka': { name: 'Luka Novak', role: 'Network Engineer', id: '230-N', location: 'Amsterdam, NL', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=900&auto=format&fit=crop', domains: ['Systems', 'Compliance'], bio: 'Network design for show critical systems.', tags: ['VLAN', 'QoS', 'Redundancy', 'Switching'], rate: 'Tier 2 // Lead', selectedWork: ['Show Network Topology', 'VLAN Plan'] },
+            'rachel': { name: 'Rachel Im', role: 'Controls Engineer', id: '911-C', location: 'Seoul, KR', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=900&auto=format&fit=crop', domains: ['Systems', 'Specialized'], bio: 'Controls engineering for automation and safety interlocks.', tags: ['PLC', 'State Machines', 'Safety Interlocks', 'HMI'], rate: 'Tier 1 // Senior', selectedWork: ['Automation Control Layer', 'Operator HMI'] },
+            'ben': { name: 'Ben Caldwell', role: 'Systems Engineer', id: '645-E', location: 'Denver, CO', status: 'Limited Availability', statusColor: 'text-yellow-500', img: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=900&auto=format&fit=crop', domains: ['Systems', 'Technical Direction'], bio: 'Systems engineer bridging media, networks, and control.', tags: ['Signal Flow', 'Diagnostics', 'Documentation', 'Redundancy'], rate: 'Tier 2 // Lead', selectedWork: ['Field Diagnostics', 'Handoff Documentation'] },
+            'ines': { name: 'Ines Duarte', role: 'Show Control Engineer', id: '502-SC', location: 'Lisbon, PT', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=900&auto=format&fit=crop', domains: ['Systems', 'Interactive'], bio: 'Show control engineering for permanent installs.', tags: ['Show Control', 'Timecode', 'Logging', 'Operator Tools'], rate: 'Tier 2 // Lead', selectedWork: ['Multi Zone Show Control', 'Logging Layer'] },
+            'tess': { name: 'Tess Morgan', role: 'Fabrication Supervisor', id: '701-F', location: 'Los Angeles, CA', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=900&auto=format&fit=crop', domains: ['Fabrication', 'Build'], bio: 'Fabrication supervision across scenic, steel, and mechanism builds.', tags: ['Shop QA', 'Scenic', 'Steel', 'Mechanisms'], rate: 'Tier 2 // Lead', selectedWork: ['Shop Build Package', 'Field Fit Verification'] },
+            'emil': { name: 'Emil Sørensen', role: 'Lead Welder / Steel', id: '333-W', location: 'Copenhagen, DK', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=900&auto=format&fit=crop', domains: ['Fabrication', 'Compliance'], bio: 'Steel fabrication and structural support for touring builds.', tags: ['Steel', 'Welding', 'Load Paths', 'Rigging Interfaces'], rate: 'Tier 3 // Senior', selectedWork: ['Structural Support Build', 'Rigging Interface Plates'] },
+            'monique': { name: 'Monique Laurent', role: 'Scenic Fabricator', id: '818-SF', location: 'Montreal, QC', status: 'Limited Availability', statusColor: 'text-yellow-500', img: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=900&auto=format&fit=crop', domains: ['Fabrication', 'Installation'], bio: 'Scenic fabrication focused on premium finishes and repeatable assembly.', tags: ['Scenic', 'Finishes', 'Tour Pack', 'Assembly Docs'], rate: 'Tier 3 // Senior', selectedWork: ['Tour Pack Scenic', 'Finish Standards'] },
+            'kenji': { name: 'Kenji Sato', role: 'Automation Fabrication Lead', id: '590-AF', location: 'Osaka, JP', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=900&auto=format&fit=crop', domains: ['Fabrication', 'Specialized'], bio: 'Automation fabrication and integration for moving scenic.', tags: ['Kinetics', 'Mechanisms', 'Serviceability', 'Integration'], rate: 'Tier 2 // Lead', selectedWork: ['Kinetic Scenic Build', 'Serviceability Review'] },
+            'harper': { name: 'Harper Reed', role: 'Shop Manager', id: '412-SM', location: 'Nashville, TN', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=900&auto=format&fit=crop', domains: ['Fabrication', 'Operations'], bio: 'Shop operations manager focused on throughput, QA gates.', tags: ['Scheduling', 'QA Gates', 'Throughput', 'Vendor Coordination'], rate: 'Tier 2 // Lead', selectedWork: ['QA Gates System', 'Shop Schedule Control'] },
+            'omar': { name: 'Omar Nasser', role: 'Site Superintendent', id: '207-BD', location: 'Riyadh, SA', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=900&auto=format&fit=crop', domains: ['Build', 'Operations'], bio: 'Site superintendent for large scale builds and fast turn installs.', tags: ['Site Management', 'Safety', 'Schedule', 'Coordination'], rate: 'Tier 1 // Senior', selectedWork: ['Stadium Install Lead', 'Multi Trade Coordination'] },
+            'valeria': { name: 'Valeria Cruz', role: 'Build Coordinator', id: '665-BC', location: 'Mexico City, MX', status: 'Limited Availability', statusColor: 'text-yellow-500', img: 'https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=900&auto=format&fit=crop', domains: ['Build', 'Operations'], bio: 'Build coordination for experiential installs.', tags: ['Schedules', 'Punch Lists', 'Vendor Check In', 'Deliveries'], rate: 'Tier 3 // Senior', selectedWork: ['Install Punch List', 'Vendor Check In System'] },
+            'shawn': { name: 'Shawn Patel', role: 'Rigging Lead', id: '504-RG', location: 'Las Vegas, NV', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=900&auto=format&fit=crop', domains: ['Build', 'Compliance'], bio: 'Rigging lead for touring and broadcast installs.', tags: ['Rigging', 'Loads', 'Safety', 'Documentation'], rate: 'Tier 2 // Lead', selectedWork: ['Rigging Plan', 'Load Documentation'] },
+            'sienna': { name: 'Sienna Ward', role: 'Construction Manager', id: '118-CM', location: 'Boston, MA', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?q=80&w=900&auto=format&fit=crop', domains: ['Build', 'Compliance'], bio: 'Construction manager for complex environments.', tags: ['Permitting', 'Inspections', 'Compliance', 'Scheduling'], rate: 'Tier 1 // Senior', selectedWork: ['Permitting Package', 'Inspection Coordination'] },
+            'mason': { name: 'Mason Lee', role: 'Field Engineer', id: '392-FE', location: 'Salt Lake City, UT', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=900&auto=format&fit=crop', domains: ['Build', 'Systems'], bio: 'Field engineering for integration heavy installs.', tags: ['Test Plans', 'Validation', 'Integration', 'On Site Troubleshooting'], rate: 'Tier 3 // Senior', selectedWork: ['Interface Validation', 'Field Test Plan'] },
+            'nina': { name: 'Nina Volkov', role: 'Installation Lead', id: '742-IN', location: 'Stockholm, SE', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?q=80&w=900&auto=format&fit=crop', domains: ['Installation', 'Operations'], bio: 'Installation lead for premium environments.', tags: ['Field Sequencing', 'Trade Coordination', 'Documentation', 'Quality Control'], rate: 'Tier 2 // Lead', selectedWork: ['Premium Flagship Install', 'Field Sequencing Plan'] },
+            'toby': { name: 'Toby Kim', role: 'Touring Install Foreman', id: '616-TI', location: 'Seoul, KR', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=900&auto=format&fit=crop', domains: ['Installation', 'Build'], bio: 'Touring install foreman for fast changeovers.', tags: ['Touring', 'Load In', 'Changeovers', 'Crew Management'], rate: 'Tier 2 // Lead', selectedWork: ['Tour Load In System', 'Crew Briefing Pack'] },
+            'camila': { name: 'Camila Reyes', role: 'Finishes Specialist', id: '285-FN', location: 'Miami, FL', status: 'Limited Availability', statusColor: 'text-yellow-500', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=900&auto=format&fit=crop', domains: ['Installation', 'Fabrication'], bio: 'Finishes and fit specialist for premium builds.', tags: ['Finishes', 'Fit', 'Continuity', 'On Site Adjustments'], rate: 'Tier 3 // Senior', selectedWork: ['Premium Finish Pass', 'Continuity Review'] },
+            'roman': { name: 'Roman Ilyin', role: 'Install QA Lead', id: '901-QA', location: 'Warsaw, PL', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=900&auto=format&fit=crop', domains: ['Installation', 'Compliance'], bio: 'Installation QA lead defining acceptance criteria.', tags: ['Acceptance Criteria', 'Punch Lists', 'Verification', 'QA Workflow'], rate: 'Tier 2 // Lead', selectedWork: ['Acceptance Criteria Pack', 'Punch List Workflow'] },
+            'aya': { name: 'Aya Nakamura', role: 'On Site Coordinator', id: '330-OS', location: 'Paris, FR', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=900&auto=format&fit=crop', domains: ['Installation', 'Operations'], bio: 'On site coordination for installations, vendor arrivals.', tags: ['Coordination', 'Schedules', 'Vendor Arrivals', 'Field Rhythm'], rate: 'Tier 3 // Senior', selectedWork: ['Vendor Arrival Plan', 'Field Schedule Control'] },
+            'sarah': { name: 'Sarah O\'Connor', role: 'Show Runner / EP', id: '221-B', location: 'New York, NY', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=900&auto=format&fit=crop', domains: ['Operations', 'Compliance'], bio: 'Executive producer focused on high stakes live events.', tags: ['Budgeting', 'Union Logistics', 'Safety', 'Crisis Management'], rate: 'Tier 1 // Senior', selectedWork: ['Global Tour Ops', 'Union Labor Plan'] },
+            'bruno': { name: 'Bruno Silva', role: 'Operations Director', id: '842-OD', location: 'São Paulo, BR', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=900&auto=format&fit=crop', domains: ['Operations', 'Build'], bio: 'Operations director for complex multi site projects.', tags: ['Staffing Plans', 'Escalations', 'Scheduling', 'Vendor Coordination'], rate: 'Tier 1 // Senior', selectedWork: ['Multi Site Ops Plan', 'Escalation Tree'] },
+            'imani': { name: 'Imani Brooks', role: 'Tour Manager', id: '114-TM', location: 'Philadelphia, PA', status: 'Limited Availability', statusColor: 'text-yellow-500', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=900&auto=format&fit=crop', domains: ['Operations', 'Media'], bio: 'Tour management for high tempo productions.', tags: ['Advancing', 'Crew Coordination', 'Venue Constraints', 'Run of Show'], rate: 'Tier 2 // Lead', selectedWork: ['Advance Package', 'Crew Coordination Plan'] },
+            'noah': { name: 'Noah Stein', role: 'Logistics Lead', id: '509-LL', location: 'Rotterdam, NL', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=900&auto=format&fit=crop', domains: ['Operations', 'Compliance'], bio: 'Logistics lead for international deployments.', tags: ['Freight', 'Customs', 'Routing', 'Packing Standards'], rate: 'Tier 2 // Lead', selectedWork: ['Customs Plan', 'Freight Routing'] },
+            'zara': { name: 'Zara Haddad', role: 'Scheduling Coordinator', id: '678-SC', location: 'London, UK', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=900&auto=format&fit=crop', domains: ['Operations', 'Installation'], bio: 'Scheduling coordinator specializing in install calendars.', tags: ['Dependencies', 'Sequencing', 'Daily Reports', 'Install Calendars'], rate: 'Tier 3 // Senior', selectedWork: ['Install Calendar', 'Dependency Map'] },
+            'ruth': { name: 'Ruth Ellison', role: 'Safety Officer', id: '332-SO', location: 'Dallas, TX', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?q=80&w=900&auto=format&fit=crop', domains: ['Compliance', 'Build'], bio: 'Safety officer for large installs and live events.', tags: ['Safety Plans', 'Briefings', 'Permits', 'Inspections'], rate: 'Tier 2 // Lead', selectedWork: ['Safety Plan', 'Daily Briefings'] },
+            'andrej': { name: 'Andrej Kovac', role: 'Structural Reviewer', id: '920-SR', location: 'Vienna, AT', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=900&auto=format&fit=crop', domains: ['Compliance', 'Fabrication'], bio: 'Structural review for temporary and touring builds.', tags: ['Loads', 'Interfaces', 'Documentation', 'Signoff Packages'], rate: 'Tier 1 // Senior', selectedWork: ['Load Path Review', 'Interface Signoff'] },
+            'celeste': { name: 'Celeste Nguyen', role: 'Permitting Specialist', id: '144-PS', location: 'San Jose, CA', status: 'Limited Availability', statusColor: 'text-yellow-500', img: 'https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=900&auto=format&fit=crop', domains: ['Compliance', 'Installation'], bio: 'Permitting specialist for complex venues.', tags: ['Permitting', 'Submissions', 'Inspections', 'Venue Compliance'], rate: 'Tier 2 // Lead', selectedWork: ['Permit Submission', 'Inspection Calendar'] },
+            'edgar': { name: 'Edgar Hill', role: 'Insurance and Risk Liaison', id: '611-IR', location: 'Newark, NJ', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=900&auto=format&fit=crop', domains: ['Compliance', 'Operations'], bio: 'Insurance and risk liaison for productions.', tags: ['COIs', 'Coverage', 'Vendor Compliance', 'Contract Requirements'], rate: 'Tier 2 // Lead', selectedWork: ['COI Workflow', 'Coverage Alignment'] },
+            'leila': { name: 'Leila Farah', role: 'Accessibility Advisor', id: '508-AA', location: 'Washington, DC', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=900&auto=format&fit=crop', domains: ['Compliance', 'Specialized'], bio: 'Accessibility advisor for public facing installations.', tags: ['ADA', 'Wayfinding', 'Interaction Review', 'Public Space Design'], rate: 'Tier 3 // Senior', selectedWork: ['Accessibility Review', 'Wayfinding Plan'] },
+            'maya': { name: 'Maya Okoye', role: 'Kinetic Sculptor', id: '270-KS', location: 'Detroit, MI', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=900&auto=format&fit=crop', domains: ['Specialized', 'Fabrication'], bio: 'Kinetic sculpture and mechanism design for experiential environments.', tags: ['Kinetics', 'Mechanism Design', 'Serviceability', 'Safety'], rate: 'Tier 2 // Lead', selectedWork: ['Kinetic Feature Build', 'Mechanism Design'] },
+            'evan': { name: 'Evan Cho', role: 'Robotics Integration Engineer', id: '991-RI', location: 'San Diego, CA', status: 'Limited Availability', statusColor: 'text-yellow-500', img: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=900&auto=format&fit=crop', domains: ['Specialized', 'Systems'], bio: 'Robotics integration for show environments.', tags: ['Robotics', 'Motion Envelopes', 'Operator Controls', 'Test Plans'], rate: 'Tier 1 // Senior', selectedWork: ['Robotics Integration', 'Motion Envelope Spec'] },
+            'sofia': { name: 'Sofia Marin', role: 'Spatial Audio Designer', id: '402-SA', location: 'Barcelona, ES', status: 'On Contract', statusColor: 'text-slate-500', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=900&auto=format&fit=crop', domains: ['Specialized', 'Media'], bio: 'Spatial audio design for immersive installations.', tags: ['Spatial Audio', 'Speaker Mapping', 'Tuning', 'Operator Deliverables'], rate: 'Tier 2 // Lead', selectedWork: ['Speaker Mapping Plan', 'Spatial Mix Design'] },
+            'hugo': { name: 'Hugo Fontaine', role: 'Materials Specialist', id: '175-MS', location: 'Lyon, FR', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=900&auto=format&fit=crop', domains: ['Specialized', 'Fabrication'], bio: 'Materials specialist advising on durability, flame ratings.', tags: ['Flame Ratings', 'Durability', 'Environmental', 'Material Specs'], rate: 'Tier 3 // Senior', selectedWork: ['Material Spec Pack', 'Flame Rating Review'] },
+            'dalia': { name: 'Dalia Rios', role: 'Power and Safety Engineer', id: '610-PS', location: 'Phoenix, AZ', status: 'Available', statusColor: 'text-green-500', img: 'https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=900&auto=format&fit=crop', domains: ['Specialized', 'Compliance'], bio: 'Power distribution planning and electrical safety.', tags: ['Power Planning', 'Load Calculations', 'Single Line Diagrams'], rate: 'Tier 2 // Lead', selectedWork: ['Power Distribution Plan', 'Load Calculations'] }
+        };
+
+        const teamDB = {
+            "team-07": { name: "Unit 7: Fabrication", id: "TEAM-07", status: "Available", statusColor: "text-green-500", homeBase: "Global / Mobile", deployment: "Rapid deployment scenic and steel unit with integrated automation support.", domains: ["Fabrication", "Build", "Installation"], tags: ["Scenic", "Steel", "Automation", "Tour Pack", "Field Assembly"], stack: ["Shop QA Gates", "Weld and Finish", "Rigging Interfaces", "Pack Standards"], rosterPreview: ["https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=160&auto=format&fit=crop"], overview: "Builds touring safe scenic systems, structural packages, and field assembly plans. Operates with standardized QA gates and as built documentation.", selectedWork: ["Stadium Tour Scenic Package", "Kinetic Feature Build", "Flagship Retail Buildout", "Festival Mainstage Scenic"] },
+            "team-91": { name: "Echo Lab", id: "TEAM-91", status: "Available", statusColor: "text-green-500", homeBase: "Vancouver, BC", deployment: "Realtime and VFX unit for content pipelines and on site integration.", domains: ["Media", "Technical Direction", "Systems"], tags: ["UE5", "Houdini", "Disguise", "Optimizations", "Playback"], stack: ["Realtime Content", "Pipeline Tools", "On Site Commissioning", "Operator Handoff"], rosterPreview: ["https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?q=80&w=160&auto=format&fit=crop"], overview: "Delivers realtime and post assets, playback readiness, and on site tuning for low latency show conditions.", selectedWork: ["Realtime Tour Content", "Broadcast Graphics Package", "Interactive Exhibit Pipeline", "Live Render Playback Stack"] },
+            "team-12": { name: "Atlas Control", id: "TEAM-12", status: "On Contract", statusColor: "text-slate-500", homeBase: "Chicago, IL", deployment: "Show control and systems integration team for multi zone installs.", domains: ["Systems", "Interactive", "Installation"], tags: ["Show Control", "PLC", "Logging", "Operator Tools", "Commissioning"], stack: ["Deterministic Triggers", "Monitoring Dashboards", "Redundancy Plans", "As Built Docs"], rosterPreview: ["https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=160&auto=format&fit=crop"], overview: "Integrates media, sensors, and automation into a single operator friendly control layer with logging and clear failure states.", selectedWork: ["Multi Zone Attraction Control", "Museum Automation Layer", "Flagship Retail Control Room", "Permanent Install Monitoring"] },
+            "team-33": { name: "Northline Networks", id: "TEAM-33", status: "Available", statusColor: "text-green-500", homeBase: "Amsterdam, NL", deployment: "Network engineering unit for show critical media and control systems.", domains: ["Systems", "Compliance"], tags: ["VLAN", "QoS", "Redundancy", "Monitoring", "Topology"], stack: ["Addressing Standards", "Segmentation", "Failover Testing", "Alerts"], rosterPreview: ["https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=160&auto=format&fit=crop"], overview: "Designs stable networks for media, control, and comms, with monitoring and predictable addressing for touring and permanent builds.", selectedWork: ["Stadium Tour Network", "Permanent Install VLAN Plan", "Media Server Backbone", "Monitoring and Alerts Rollout"] },
+            "team-44": { name: "Signal House", id: "TEAM-44", status: "Limited Availability", statusColor: "text-yellow-500", homeBase: "Prague, CZ", deployment: "Video systems and signal integrity team for complex routing and test procedures.", domains: ["Media", "Systems", "Compliance"], tags: ["SDI", "Fiber", "EDID", "Testing", "Documentation"], stack: ["Signal Integrity Audits", "Patching Standards", "Field Test Plans", "As Built Schematics"], rosterPreview: ["https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=160&auto=format&fit=crop"], overview: "Ensures clean signal paths and predictable routing across venues, with documentation that operators can execute.", selectedWork: ["Signal Audit for Arena Tour", "Fiber Routing Plan", "Field Test Procedure Pack", "Broadcast Patch Standards"] },
+            "team-58": { name: "Cinder Scenic", id: "TEAM-58", status: "Available", statusColor: "text-green-500", homeBase: "Nashville, TN", deployment: "Scenic unit specialized in premium finishes and touring pack standards.", domains: ["Fabrication", "Installation", "Build"], tags: ["Scenic", "Finishes", "Tour Pack", "Assembly Docs", "QC"], stack: ["Finish Standards", "Repeatable Assembly", "Punch Lists", "Field Adjustments"], rosterPreview: ["https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=160&auto=format&fit=crop"], overview: "Builds high finish scenic with touring ready packaging, clear assembly documentation, and quality control gates.", selectedWork: ["Premium Retail Buildout", "Touring Scenic Package", "Awards Show Scenic", "Corporate Summit Scenic"] },
+            "team-73": { name: "Bluephase Audio", id: "TEAM-73", status: "On Contract", statusColor: "text-slate-500", homeBase: "Berlin, DE", deployment: "Touring audio and RF unit for multi stage and broadcast environments.", domains: ["Media", "Operations", "Compliance"], tags: ["RF", "Dante", "System Tuning", "Comms", "Broadcast Audio"], stack: ["RF Coordination", "Comms Deployment", "Patch Discipline", "Show Day Support"], rosterPreview: ["https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?q=80&w=160&auto=format&fit=crop", "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?q=80&w=160&auto=format&fit=crop"], overview: "Delivers reliable audio and RF in congested environments, with strong comms discipline and rapid troubleshooting.", selectedWork: ["Festival RF Coordination", "Broadcast Audio Support", "Arena Tour FOH Systems", "Corporate Multi Room Audio"] }
+        };
+
+        const projectDB = {
+            "meridian": { name: "Project: Meridian", id: "PRJ-MRD", status: "In Production", statusColor: "text-yellow-500", region: "Global", window: "Q1 2026", summary: "Global stadium tour infrastructure with custom automation rig and high resolution content delivery pipeline.", domains: ["Build", "Fabrication", "Media", "Systems", "Operations", "Compliance"], teams: ["team-07", "team-33", "team-73"], overview: "Touring system deployment combining scenic build, show control integration, media redundancy, and field logistics.", risks: ["Venue variance", "Freight timing", "RF congestion", "Load path approvals"], milestones: ["Design freeze", "Shop build complete", "Rehearsals", "First show", "Tour rollout"] },
+            "void": { name: "Exhibition: Void", id: "PRJ-VOID", status: "Scoping", statusColor: "text-blue-500", region: "London, UK", window: "Q2 2026", summary: "Permanent immersive installation requiring interaction design, projection mapping, and long run stability.", domains: ["Installation", "Interactive", "Media", "Systems", "Compliance"], teams: ["team-12", "team-44"], overview: "Permanent environment with multi zone triggers, mapping alignment, operator tooling, and stable routing.", risks: ["Permitting timelines", "Long run maintenance", "Calibration drift", "Operator training"], milestones: ["Feasibility", "System design", "Prototype validation", "Install", "Commissioning"] },
+            "arcade": { name: "Project: Arcade", id: "PRJ-ARC", status: "In Production", statusColor: "text-yellow-500", region: "Los Angeles, CA", window: "Q1 2026", summary: "Brand flagship activation with sensor driven interactions and real time content playback.", domains: ["Interactive", "Media", "Technical Direction", "Installation", "Operations"], teams: ["team-91", "team-12", "team-58"], overview: "Interactive floor with computer vision inputs, realtime content engine, and touring ready scenic components.", risks: ["Foot traffic variance", "Sensor occlusion", "Latency targets", "Install window"], milestones: ["Prototype complete", "Content lock", "Fabrication", "Install", "Launch"] },
+            "horizon": { name: "Project: Horizon", id: "PRJ-HZN", status: "Planning", statusColor: "text-slate-400", region: "Dubai, AE", window: "Q3 2026", summary: "Large scale outdoor spectacle with synchronized lighting, video, and automated scenic movement.", domains: ["Build", "Fabrication", "Systems", "Media", "Compliance", "Operations"], teams: ["team-07", "team-33", "team-44"], overview: "Outdoor system with redundancy, environmental protections, structural signoffs, and strict safety posture.", risks: ["Heat and weather", "Structural approvals", "Power distribution", "Permitting"], milestones: ["Engineering", "Procurement", "Shop build", "Site build", "Show commissioning"] },
+            "atlas": { name: "Program: Atlas Rollout", id: "PRJ-ATL", status: "In Production", statusColor: "text-yellow-500", region: "North America", window: "2026", summary: "Multi site rollout program standardizing media, network, and control packages across 12 locations.", domains: ["Systems", "Operations", "Compliance", "Media", "Installation"], teams: ["team-33", "team-12", "team-44"], overview: "Standard package with repeatable documentation, commissioning checklists, and operator training materials.", risks: ["Site variance", "Vendor consistency", "Timeline drift", "Training adoption"], milestones: ["Standard definition", "Pilot site", "Iteration", "Rollout waves", "Closeout"] },
+            "cipher": { name: "Project: Cipher", id: "PRJ-CYP", status: "Scoping", statusColor: "text-blue-500", region: "New York, NY", window: "Q2 2026", summary: "Broadcast event requiring RF dense planning, comms discipline, and rapid changeover workflows.", domains: ["Media", "Operations", "Compliance", "Systems"], teams: ["team-73", "team-33"], overview: "Broadcast stack with RF coordination, comms deployment, and monitoring for show day conditions.", risks: ["RF congestion", "Tight rehearsals", "Talent turnover", "Venue constraints"], milestones: ["Advance", "RF survey", "Rehearsals", "Live show", "Postmortem"] }
+        };
+
+        // --- DOMAIN FILTERING ---
+        const DOMAINS = ["Build", "Fabrication", "Technical Direction", "Systems", "Media", "Interactive", "Installation", "Operations", "Compliance", "Specialized"];
+        let activeDomains = new Set();
+
+        function renderDomainFilters() {
+            const wrap = document.getElementById("domain-filters");
+            if (!wrap) return;
+            wrap.innerHTML = "";
+            DOMAINS.forEach(domain => {
+                const row = document.createElement("label");
+                row.className = "flex items-center gap-3 cursor-pointer group select-none py-1 md:py-0";
+                const box = document.createElement("div");
+                box.className = "w-3 h-3 border border-slate-600 transition-colors " + (activeDomains.has(domain) ? "bg-slate-600" : "");
+                const text = document.createElement("span");
+                text.className = activeDomains.has(domain) ? "text-sm text-white" : "text-sm text-slate-400 group-hover:text-white transition-colors";
+                text.textContent = domain;
+                const input = document.createElement("input");
+                input.type = "checkbox";
+                input.checked = activeDomains.has(domain);
+                input.className = "hidden";
+                const toggle = () => {
+                    activeDomains.has(domain) ? activeDomains.delete(domain) : activeDomains.add(domain);
+                    renderDomainFilters();
+                    applyTalentFilters();
+                };
+                input.addEventListener("change", toggle);
+                row.addEventListener("click", (e) => { e.preventDefault(); toggle(); });
+                row.appendChild(box);
+                row.appendChild(text);
+                row.appendChild(input);
+                wrap.appendChild(row);
+            });
+        }
+
+        function applyTalentFilters() {
+            const searchEl = document.getElementById("talent-search");
+            const q = (searchEl?.value || "").trim().toLowerCase();
+            const cards = document.querySelectorAll("#view-talent article[data-domains]");
+            let shown = 0;
+            cards.forEach(card => {
+                const domains = (card.getAttribute("data-domains") || "").split(",").map(s => s.trim()).filter(Boolean);
+                const haystack = [card.getAttribute("data-name") || "", card.getAttribute("data-role") || "", card.getAttribute("data-tags") || "", domains.join(" ")].join(" ").toLowerCase();
+                const matchesSearch = !q || haystack.includes(q);
+                const matchesDomains = activeDomains.size === 0 || domains.some(d => activeDomains.has(d));
+                const visible = matchesSearch && matchesDomains;
+                card.style.display = visible ? "" : "none";
+                if (visible) shown += 1;
+            });
+            const counter = document.querySelector("#view-talent .font-mono.text-slate-500");
+            if (counter) counter.textContent = `SHOWING ${shown} UNITS`;
+
+            const mobileCount = document.getElementById('mobile-count');
+            if (mobileCount) mobileCount.textContent = `SHOWING ${shown}`;
+        }
+
+        function initTalentFilters() {
+            const searchEl = document.getElementById("talent-search");
+            const clearBtn = document.getElementById("clear-filters");
+            renderDomainFilters();
+            if (searchEl) searchEl.addEventListener("input", () => applyTalentFilters());
+            if (clearBtn) clearBtn.addEventListener("click", () => { activeDomains = new Set(); if (searchEl) searchEl.value = ""; renderDomainFilters(); applyTalentFilters(); });
+
+            // Mobile Filter Toggle
+            const toggle = document.getElementById("mobile-filter-toggle");
+            const container = document.getElementById("filter-container");
+            if (toggle && container) {
+                toggle.addEventListener("click", () => {
+                    container.classList.toggle("hidden");
+                    toggle.classList.toggle("bg-slate-800");
+                });
+            }
+
+            applyTalentFilters();
+        }
+
+        // --- RENDER HELPERS ---
+        function statusBadge(status) {
+            if ((status || '').toLowerCase().includes('available') || (status || '').toLowerCase().includes('production')) return `<span class="text-[10px] uppercase tracking-wider text-green-900 bg-green-900/20 px-2 py-1 border border-green-900/30">${status}</span>`;
+            if ((status || '').toLowerCase().includes('contract') || (status || '').toLowerCase().includes('planning')) return `<span class="text-[10px] uppercase tracking-wider text-slate-600 border border-slate-800 px-2 py-1">${status}</span>`;
+            if ((status || '').toLowerCase().includes('scoping')) return `<span class="text-[10px] uppercase tracking-wider text-blue-900 bg-blue-900/20 px-2 py-1 border border-blue-900/30">${status}</span>`;
+            return `<span class="text-[10px] uppercase tracking-wider text-yellow-900 bg-yellow-900/20 px-2 py-1 border border-yellow-900/30">${status}</span>`;
+        }
+
+        function renderTalentFromDB() {
+            const grid = document.getElementById('talent-grid');
+            if (!grid) return;
+            const entries = Object.entries(talentDB);
+            grid.innerHTML = entries.map(([key, t]) => {
+                const domains = (t.domains || []).join(',');
+                const tags = (t.tags || []).join(' ');
+                return `<article onclick="openProfile('${key}', 'talent')" data-name="${(t.name || '').replace(/"/g, '&quot;')}" data-role="${(t.role || '').replace(/"/g, '&quot;')}" data-tags="${tags.replace(/"/g, '&quot;')}" data-domains="${domains.replace(/"/g, '&quot;')}" class="bg-wme-panel border border-wme-border p-5 hover:border-slate-600 transition-all duration-300 group cursor-pointer overflow-hidden">
+                    <div class="flex justify-between items-start mb-4"><div class="w-16 h-16 bg-slate-800 overflow-hidden border border-wme-border"><img src="${t.img}" class="w-full h-full object-cover profile-img" alt="${t.name}"></div>${statusBadge(t.status)}</div>
+                    <h3 class="text-white font-medium text-lg mb-1 group-hover:text-blue-200 transition-colors">${t.name}</h3><p class="text-slate-500 text-xs uppercase tracking-wider mb-4">${t.role}</p>
+                    <div class="space-y-3 mb-6"><div class="flex items-start gap-2"><i class="ph ph-wrench text-slate-600 mt-0.5 text-xs"></i><p class="text-sm text-slate-400 leading-tight">${(t.tags || []).slice(0, 2).join(', ')}</p></div><div class="flex items-start gap-2"><i class="ph ph-buildings text-slate-600 mt-0.5 text-xs"></i><p class="text-sm text-slate-400 leading-tight">${(t.domains || []).slice(0, 2).join(', ')}</p></div></div>
+                    <div class="pt-4 border-t border-slate-800 flex justify-between items-center"><span class="text-[10px] text-slate-600 font-mono">ID: ${t.id}</span><i class="ph ph-caret-right text-slate-600 group-hover:text-white transition-colors"></i></div></article>`;
+            }).join('');
+        }
+
+        function renderTeams() {
+            const grid = document.getElementById('team-grid');
+            if (!grid) return;
+            const entries = Object.entries(teamDB);
+            grid.innerHTML = entries.map(([key, t]) => {
+                // Team avatar: use first roster preview image
+                const avatar = t.rosterPreview && t.rosterPreview.length ? t.rosterPreview[0] : '';
+                // Roster bubbles
+                let rosterHtml = '';
+                if (t.rosterPreview) {
+                    rosterHtml = '<div class="flex -space-x-2">' + t.rosterPreview.slice(0, 3).map(src => `<div class="w-8 h-8 rounded-full bg-slate-800 border border-wme-panel overflow-hidden"><img src="${src}" class="w-full h-full object-cover"></div>`).join('') + '</div>';
+                }
+
+                return `<article onclick="openProfile('${key}', 'team')" class="bg-wme-panel border border-wme-border p-6 hover:border-slate-600 transition-all duration-300 group cursor-pointer">
+                    <div class="flex justify-between items-start mb-4">${rosterHtml}${statusBadge(t.status)}</div>
+                    <h3 class="text-white font-medium text-xl mb-1 group-hover:text-blue-200 transition-colors">${t.name}</h3><p class="text-slate-500 text-xs uppercase tracking-wider mb-6">${t.deployment}</p>
+                    <div class="grid grid-cols-2 gap-4 mb-6"><div class="bg-wme-base p-3 border border-wme-border"><span class="block text-[10px] text-slate-600 font-mono mb-1">BASE</span><span class="text-sm text-slate-300">${t.homeBase.split('/')[0]}</span></div><div class="bg-wme-base p-3 border border-wme-border"><span class="block text-[10px] text-slate-600 font-mono mb-1">FOCUS</span><span class="text-sm text-slate-300">${t.domains[0]}</span></div></div>
+                    <div class="pt-4 border-t border-slate-800 flex justify-between items-center"><span class="text-[10px] text-slate-600 font-mono">ID: ${t.id}</span><span class="text-xs text-white border-b border-transparent group-hover:border-white transition-all">View Manifest</span></div></article>`;
+            }).join('');
+        }
+
+        function renderProjects() {
+            const grid = document.getElementById('project-grid');
+            if (!grid) return;
+            const entries = Object.entries(projectDB);
+            grid.innerHTML = entries.map(([key, p]) => {
+                return `<div onclick="openProfile('${key}', 'project')" class="bg-wme-panel border border-wme-border p-6 flex flex-col md:flex-row items-center gap-6 hover:border-slate-600 transition-colors group cursor-pointer">
+                    <div class="w-full md:w-48 h-24 bg-slate-800 flex items-center justify-center text-slate-600 font-mono text-xs border border-wme-border">CONFIDENTIAL</div>
+                    <div class="flex-1"><div class="flex items-center gap-3 mb-2"><h3 class="text-white text-lg font-medium group-hover:text-blue-200 transition-colors">${p.name}</h3>${statusBadge(p.status)}</div><p class="text-slate-400 text-sm max-w-2xl">${p.summary}</p></div>
+                    <div class="text-right hidden md:block"><div class="text-[10px] text-slate-500 font-mono mb-1">EXECUTION WINDOW</div><div class="text-white text-sm">${p.window}</div></div><i class="ph ph-caret-right text-slate-600 group-hover:text-white transition-colors ml-4 hidden md:block"></i></div>`;
+            }).join('');
+        }
+
+        // --- NAVIGATION STATE ---
+        let lastView = 'home';
+
+        // --- MOBILE MENU ---
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        let mobileMenuOpen = false;
+
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenuOpen = !mobileMenuOpen;
+            if (mobileMenuOpen) {
+                mobileMenu.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                mobileMenuBtn.innerHTML = '<i class="ph ph-x text-2xl"></i>';
+            } else {
+                mobileMenu.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                mobileMenuBtn.innerHTML = '<i class="ph ph-list text-2xl"></i>';
+            }
+        });
+
+        function mobileNavTo(view) {
+            mobileMenuOpen = false;
+            mobileMenu.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            mobileMenuBtn.innerHTML = '<i class="ph ph-list text-2xl"></i>';
+            navigateTo(view);
+        }
+
+
+        // --- OPEN PROFILE (ADAPTIVE) ---
+        function openProfile(key, type) {
+            let data;
+
+            // Set return path based on source type
+            if (type === 'talent') lastView = 'talent';
+            else if (type === 'team') lastView = 'teams';
+            else if (type === 'project') lastView = 'projects';
+
+            // Reset sections visibility
+            document.getElementById('roster-section').classList.add('hidden');
+            document.getElementById('risks-section').classList.add('hidden');
+            document.getElementById('work-label').innerText = 'Selected Work';
+            document.getElementById('rate-block').classList.remove('hidden');
+            document.getElementById('action-btn').innerText = 'Request Hold';
+
+            // 1. Fetch Data based on Type
+            if (type === 'talent') {
+                data = talentDB[key];
+            } else if (type === 'team') {
+                data = teamDB[key];
+                // Map team fields to generic fields
+                data.location = data.homeBase;
+                data.bio = data.overview;
+                // Use first roster image as main
+                data.img = data.rosterPreview && data.rosterPreview.length ? data.rosterPreview[0] : '';
+                // Hide Rate, Show Stack as Tags
+                document.getElementById('rate-block').classList.add('hidden');
+                document.getElementById('action-btn').innerText = 'Request Unit';
+                // Show Roster
+                const rosterContainer = document.getElementById('profile-roster');
+                rosterContainer.innerHTML = (data.rosterPreview || []).map(src => `<div class="w-12 h-12 bg-slate-800 rounded-full border border-wme-border overflow-hidden flex-shrink-0"><img src="${src}" class="w-full h-full object-cover"></div>`).join('');
+                document.getElementById('roster-section').classList.remove('hidden');
+            } else if (type === 'project') {
+                data = projectDB[key];
+                // Map project fields
+                data.location = `${data.region} // ${data.window}`;
+                data.role = 'Active Scope';
+                data.bio = data.summary + ' ' + data.overview;
+                data.img = ''; // No image for project, handle placeholder
+                data.tags = data.domains;
+                data.selectedWork = data.milestones; // Reuse work section for Milestones
+
+                document.getElementById('work-label').innerText = 'Key Milestones';
+                document.getElementById('rate-block').classList.add('hidden');
+                document.getElementById('action-btn').innerText = 'View Brief';
+
+                // Show Risks
+                const risksContainer = document.getElementById('profile-risks');
+                risksContainer.innerHTML = (data.risks || []).map(risk => `<div class="bg-wme-base border border-red-900/30 p-3"><span class="text-[10px] text-red-400 font-mono block mb-1">RISK FACTOR</span><span class="text-sm text-slate-300">${risk}</span></div>`).join('');
+                document.getElementById('risks-section').classList.remove('hidden');
+            }
+
+            if (!data) return;
+
+            // 2. Populate DOM
+            document.getElementById('profile-name').innerText = data.name;
+            document.getElementById('profile-role').innerText = data.role || (type === 'team' ? 'Operational Unit' : 'Talent');
+            document.getElementById('profile-id').innerText = `ID: ${data.id}`;
+            document.getElementById('profile-location').innerText = data.location;
+
+            const statusEl = document.getElementById('profile-status');
+            statusEl.innerHTML = statusBadge(data.status); // Use badge HTML directly
+
+            document.getElementById('profile-bio').innerText = data.bio;
+
+            // Image handling
+            const imgEl = document.getElementById('profile-img-lg');
+            const overlay = document.getElementById('profile-img-overlay');
+            if (data.img) {
+                imgEl.src = data.img;
+                imgEl.classList.remove('hidden');
+                overlay.classList.remove('hidden');
+            } else {
+                // Placeholder for projects
+                imgEl.src = '';
+                imgEl.classList.add('hidden');
+                overlay.classList.add('hidden');
+                // Could add a fallback div color here if desired
+            }
+
+            // Rate (Only for talent)
+            if (type === 'talent') {
+                const rateSlot = document.getElementById('profile-rate');
+                if (rateSlot) rateSlot.innerText = data.rate;
+            }
+
+            // Tags / Stack / Domains
+            const tagsContainer = document.getElementById('profile-tags');
+            tagsContainer.innerHTML = '';
+            // For teams, combine stack + tags? Or just tags. Let's use tags + domains.
+            // For Projects, use domains.
+            let displayTags = data.tags || data.domains || [];
+            if (type === 'team' && data.stack) displayTags = [...displayTags, ...data.stack];
+
+            // Dedup
+            displayTags = [...new Set(displayTags)];
+
+            displayTags.forEach(tag => {
+                const span = document.createElement('span');
+                span.className = 'px-3 py-1 bg-wme-panel border border-wme-border text-xs text-slate-400 font-mono';
+                span.innerText = tag;
+                tagsContainer.appendChild(span);
+            });
+
+            // Work / Milestones
+            const workContainer = document.getElementById('profile-work');
+            workContainer.innerHTML = '';
+            const items = data.selectedWork || [];
+            items.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = 'bg-wme-panel border border-wme-border p-4 h-24 flex items-center justify-center text-center text-xs text-slate-400 font-mono uppercase leading-relaxed';
+                div.innerText = item;
+                workContainer.appendChild(div);
+            });
+
+            // 3. Switch View
+            setActiveView('profile');
+        }
+
+        function returnFromProfile() {
+            navigateTo(lastView);
+        }
+
+        // --- VIEW MANAGER ---
+        const views = {
+            home: document.getElementById('view-home'),
+            talent: document.getElementById('view-talent'),
+            teams: document.getElementById('view-teams'),
+            projects: document.getElementById('view-projects'),
+            profile: document.getElementById('view-profile')
+        };
+
+        const canvasContainer = document.getElementById('canvas-container');
+        const TRANSITION_MS = 500;
+        let isTransitioning = false;
+
+        function setActiveView(viewName) {
+            if (isTransitioning) return;
+            const target = views[viewName];
+            if (!target || !target.classList.contains('hidden')) return;
+
+            isTransitioning = true;
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+
+            const current = Object.values(views).find(v => !v.classList.contains('hidden'));
+
+            const showTarget = () => {
+                target.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    target.classList.remove('opacity-0');
+                    if (viewName === 'home') {
+                        canvasContainer.style.opacity = '1';
+                    } else {
+                        canvasContainer.style.opacity = '0';
+                    }
+                    setTimeout(() => { isTransitioning = false; }, TRANSITION_MS);
+                });
+            };
+
+            if (current) {
+                current.classList.add('opacity-0');
+                setTimeout(() => {
+                    current.classList.add('hidden');
+                    showTarget();
+                }, 350);
+            } else {
+                showTarget();
+            }
+        }
+
+        window.navigateTo = setActiveView;
+        window.returnFromProfile = returnFromProfile;
+        // window.openProfile is defined above
+
+        // Initialize
+        window.addEventListener('load', () => {
+            initThreeJS();
+            renderTalentFromDB();
+            renderTeams();
+            renderProjects();
+            setActiveView('home');
+            initTalentFilters();
+        });
+
+        // --- THREE.JS ---
+        const initThreeJS = () => {
+            const container = document.getElementById('canvas-container');
+            if (!container) return;
+            const scene = new THREE.Scene();
+            // Removed default fog, using shader background instead
+
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 20;
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // --- 1. EARTH GEOMETRY & SHADER (UPDATED: SCANLINE) ---
+            const geometry = new THREE.SphereGeometry(10, 128, 128);
+
+            const vertexShader = `
+                varying vec2 vUv;
+                varying vec3 vNormal;
+                varying vec3 vViewPosition;
+                varying vec3 vPosition;
+
+                void main() {
+                    vUv = uv;
+                    vNormal = normalize(normalMatrix * normal);
+                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                    vViewPosition = -mvPosition.xyz;
+                    vPosition = position; // Pass local position for scanline
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `;
+
+            const fragmentShader = `
+                uniform float uTime;
+                varying vec2 vUv;
+                varying vec3 vNormal;
+                varying vec3 vViewPosition;
+                varying vec3 vPosition;
+
+                void main() {
+                    // Grid Logic
+                    float gridDensity = 40.0;
+                    vec2 grid = abs(fract(vUv * gridDensity - 0.5) - 0.5) / fwidth(vUv * gridDensity);
+                    float line = min(grid.x, grid.y);
+                    float lineAlpha = 1.0 - min(line, 1.0);
+                    
+                    // Lighting / Fresnel
+                    vec3 normal = normalize(vNormal);
+                    vec3 viewDir = normalize(vViewPosition);
+                    float fresnel = pow(1.0 - dot(normal, viewDir), 2.5);
+
+                    // --- NEW: SCANLINE EFFECT ---
+                    // A wave moving vertically down the object space
+                    float scanSpeed = 2.0;
+                    float scanFrequency = 0.5;
+                    float scan = sin(vPosition.y * 0.5 + uTime * scanSpeed);
+                    
+                    // Sharpen the scan line
+                    float scanMask = smoothstep(0.95, 1.0, scan);
+                    
+                    // Secondary wider scan glow
+                    float scanGlow = smoothstep(0.0, 1.0, scan) * 0.3;
+
+                    // Colors
+                    vec3 baseColor = vec3(0.01, 0.02, 0.05);
+                    vec3 gridColor = vec3(0.1, 0.25, 0.45);
+                    vec3 scanColor = vec3(0.4, 0.6, 1.0); // Bright Blue for scan
+                    
+                    // Composition
+                    vec3 finalColor = baseColor;
+                    
+                    // Grid visible normally
+                    finalColor += gridColor * lineAlpha * 0.2; 
+                    
+                    // Grid lit up by scan
+                    finalColor += scanColor * lineAlpha * scanMask * 0.8;
+                    
+                    // General Scan Glow
+                    finalColor += scanColor * scanGlow * 0.05;
+
+                    // Fresnel Rim
+                    finalColor += gridColor * fresnel * 0.5;
+                    finalColor += scanColor * fresnel * scanGlow * 0.5; // Rim gets brighter during scan
+
+                    gl_FragColor = vec4(finalColor, 0.95);
+                }
+            `;
+
+            const material = new THREE.ShaderMaterial({
+                uniforms: { uTime: { value: 0 } },
+                vertexShader,
+                fragmentShader,
+                transparent: true,
+                extensions: { derivatives: true }
+            });
+            const earth = new THREE.Mesh(geometry, material);
+            scene.add(earth);
+
+            // --- 2. ATMOSPHERE GLOW (NEW) ---
+            const atmoGeo = new THREE.SphereGeometry(10.5, 64, 64);
+            const atmoMat = new THREE.ShaderMaterial({
+                uniforms: {},
+                vertexShader: `
+                    varying vec3 vNormal;
+                    varying vec3 vViewPosition;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                        vViewPosition = -mvPosition.xyz;
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vNormal;
+                    varying vec3 vViewPosition;
+                    void main() {
+                        vec3 normal = normalize(vNormal);
+                        vec3 viewDir = normalize(vViewPosition);
+                        float dotProduct = dot(normal, viewDir);
+                        // Inverse fresnel for edge glow
+                        float factor = pow(0.6 - dotProduct, 4.0);
+                        gl_FragColor = vec4(0.1, 0.2, 0.4, factor * 0.4);
+                    }
+                `,
+                transparent: true,
+                side: THREE.BackSide,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const atmo = new THREE.Mesh(atmoGeo, atmoMat);
+            scene.add(atmo);
+
+
+            // --- 3. BACKGROUND DIGITAL NEBULA (NEW) ---
+            // A huge sphere surrounding the scene with slow moving noise
+            const bgGeo = new THREE.SphereGeometry(100, 32, 32);
+            const bgMat = new THREE.ShaderMaterial({
+                uniforms: { uTime: { value: 0 } },
+                side: THREE.BackSide,
+                vertexShader: `
+                    varying vec3 vWorldPosition;
+                    void main() {
+                        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                        vWorldPosition = worldPosition.xyz;
+                        gl_Position = projectionMatrix * viewMatrix * worldPosition;
+                    }
+                `,
+                fragmentShader: `
+                    uniform float uTime;
+                    varying vec3 vWorldPosition;
+                    
+                    // Simple pseudo-noise function
+                    float random (in vec2 st) {
+                        return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+                    }
+                    
+                    // 2D Noise based on value noise
+                    float noise (in vec2 st) {
+                        vec2 i = floor(st);
+                        vec2 f = fract(st);
+                        float a = random(i);
+                        float b = random(i + vec2(1.0, 0.0));
+                        float c = random(i + vec2(0.0, 1.0));
+                        float d = random(i + vec2(1.0, 1.0));
+                        vec2 u = f * f * (3.0 - 2.0 * f);
+                        return mix(a, b, u.x) + (c - a)* u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+                    }
+
+                    void main() {
+                        // Normalize position to use as UV
+                        vec2 uv = vWorldPosition.xy * 0.01; // Scale down
+                        
+                        // Moving noise layers
+                        float n1 = noise(uv + uTime * 0.05);
+                        float n2 = noise(uv * 2.0 - uTime * 0.03);
+                        
+                        float combined = mix(n1, n2, 0.5);
+                        
+                        // Vignette
+                        float vignette = 1.0 - length(vWorldPosition.xy) * 0.005;
+                        
+                        vec3 skyColor = vec3(0.01, 0.03, 0.06); // Deep blue-black
+                        vec3 cloudColor = vec3(0.05, 0.1, 0.15); // Slightly lighter
+                        
+                        vec3 finalColor = mix(skyColor, cloudColor, combined * 0.3);
+                        
+                        gl_FragColor = vec4(finalColor * vignette, 1.0);
+                    }
+                `
+            });
+            const backgroundSphere = new THREE.Mesh(bgGeo, bgMat);
+            scene.add(backgroundSphere);
+
+
+            // --- 4. NETWORK WIREFRAME (Parallax Layer) ---
+            const wireGeo = new THREE.SphereGeometry(10.1, 64, 64);
+            const wireMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, transparent: true, opacity: 0.03 });
+            const network = new THREE.Mesh(wireGeo, wireMat);
+            scene.add(network);
+
+
+            // --- 5. TALENT NODES (Illuminated Points) ---
+            const nodesCount = 150;
+            const nodesGeo = new THREE.BufferGeometry();
+            const nodesPos = [];
+            const nodesPhase = [];
+
+            for (let i = 0; i < nodesCount; i++) {
+                const phi = Math.acos(-1 + (2 * i) / nodesCount);
+                const theta = Math.sqrt(nodesCount * Math.PI) * phi;
+                const r = 10.08;
+
+                const x = r * Math.cos(theta) * Math.sin(phi);
+                const y = r * Math.sin(theta) * Math.sin(phi);
+                const z = r * Math.cos(phi);
+
+                nodesPos.push(x, y, z);
+                nodesPhase.push(Math.random() * Math.PI * 2);
+            }
+
+            nodesGeo.setAttribute('position', new THREE.Float32BufferAttribute(nodesPos, 3));
+            nodesGeo.setAttribute('aPhase', new THREE.Float32BufferAttribute(nodesPhase, 1));
+
+            const nodesMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    uTime: { value: 0 },
+                    uColor: { value: new THREE.Color(0x60a5fa) }
+                },
+                vertexShader: `
+                    attribute float aPhase;
+                    varying float vAlpha;
+                    uniform float uTime;
+                    void main() {
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                        gl_Position = projectionMatrix * mvPosition;
+                        gl_PointSize = 6.0 * (30.0 / -mvPosition.z);
+                        float blink = sin(uTime * 1.5 + aPhase);
+                        vAlpha = smoothstep(0.6, 1.0, blink); 
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 uColor;
+                    varying float vAlpha;
+                    void main() {
+                        if (length(gl_PointCoord - vec2(0.5)) > 0.5) discard;
+                        float strength = 1.0 - (length(gl_PointCoord - vec2(0.5)) * 2.0);
+                        strength = pow(strength, 1.5);
+                        gl_FragColor = vec4(uColor, vAlpha * strength);
+                    }
+                `,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            const talentNodes = new THREE.Points(nodesGeo, nodesMaterial);
+            scene.add(talentNodes);
+
+
+            // --- 6. TWINKLING STARS (UPDATED) ---
+            const starGeo = new THREE.BufferGeometry();
+            const starCount = 800;
+            const starPos = [];
+            const starPhase = [];
+            const starSize = [];
+
+            for (let i = 0; i < starCount; i++) {
+                const x = (Math.random() - 0.5) * 150;
+                const y = (Math.random() - 0.5) * 150;
+                const z = (Math.random() - 0.5) * 150;
+                // Push away from center
+                if (Math.abs(x) < 20 && Math.abs(y) < 20 && Math.abs(z) < 20) continue;
+
+                starPos.push(x, y, z);
+                starPhase.push(Math.random() * Math.PI * 2);
+                starSize.push(Math.random() * 1.5 + 0.5);
+            }
+
+            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+            starGeo.setAttribute('aPhase', new THREE.Float32BufferAttribute(starPhase, 1));
+            starGeo.setAttribute('aSize', new THREE.Float32BufferAttribute(starSize, 1));
+
+            const starShaderMat = new THREE.ShaderMaterial({
+                uniforms: {
+                    uTime: { value: 0 },
+                    uColor: { value: new THREE.Color(0x94a3b8) } // Slate-400
+                },
+                vertexShader: `
+                    attribute float aPhase;
+                    attribute float aSize;
+                    varying float vAlpha;
+                    uniform float uTime;
+                    void main() {
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                        gl_Position = projectionMatrix * mvPosition;
+                        
+                        // Size attenuation
+                        gl_PointSize = aSize * (20.0 / -mvPosition.z);
+                        
+                        // Subtle Twinkle
+                        float blink = sin(uTime * 0.5 + aPhase);
+                        // Map -1..1 to 0.3..1.0 opacity
+                        vAlpha = 0.3 + 0.7 * (blink * 0.5 + 0.5); 
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 uColor;
+                    varying float vAlpha;
+                    void main() {
+                        // Soft circle
+                        float dist = length(gl_PointCoord - vec2(0.5));
+                        if (dist > 0.5) discard;
+                        
+                        // Falloff
+                        float strength = 1.0 - (dist * 2.0);
+                        gl_FragColor = vec4(uColor, vAlpha * strength);
+                    }
+                `,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            const stars = new THREE.Points(starGeo, starShaderMat);
+            scene.add(stars);
+
+
+            // --- POSITIONING & RESIZE ---
+            const updatePosition = () => {
+                if (window.innerWidth > 1024) {
+                    earth.position.set(4, -6, 0);
+                    earth.scale.set(1.4, 1.4, 1.4);
+                } else {
+                    // Mobile: Push way down to footer area, scale down
+                    earth.position.set(0, -9, 0);
+                    earth.scale.set(1.0, 1.0, 1.0);
+                }
+                atmo.position.copy(earth.position); atmo.scale.copy(earth.scale);
+                network.position.copy(earth.position); network.scale.copy(earth.scale);
+                talentNodes.position.copy(earth.position); talentNodes.scale.copy(earth.scale);
+            };
+            updatePosition();
+
+            // --- ANIMATION LOOP ---
+            const animate = () => {
+                requestAnimationFrame(animate);
+
+                const time = performance.now() * 0.001;
+
+                // Update Uniforms
+                material.uniforms.uTime.value = time;
+                nodesMaterial.uniforms.uTime.value = time;
+                starShaderMat.uniforms.uTime.value = time;
+                bgMat.uniforms.uTime.value = time;
+
+                // Rotations
+                earth.rotation.y += 0.0005;
+                atmo.rotation.y += 0.0005;
+                talentNodes.rotation.y += 0.0005;
+                network.rotation.y += 0.0006; // Slight parallax
+                stars.rotation.y -= 0.0001;
+                backgroundSphere.rotation.z += 0.0002; // Very slow rotation of the "universe"
+
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                updatePosition();
+            });
+        };
+    </script>
+</body>
+
+</html>

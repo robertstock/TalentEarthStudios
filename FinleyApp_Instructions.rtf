@@ -1,0 +1,626 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 .SFNS-Semibold;\f1\fnil\fcharset0 .SFNS-Regular;\f2\fnil\fcharset0 HelveticaNeue-Bold;
+}
+{\colortbl;\red255\green255\blue255;\red14\green14\blue14;}
+{\*\expandedcolortbl;;\cssrgb\c6700\c6700\c6700;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs58 \cf2 Finley Pro App Blueprint (Programmer Handoff)
+\f1\b0\fs42 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 1) Product Summary
+\f1\b0\fs42 \
+\
+Finley Pro is a mobile-first web/app platform for Regional Project Managers (RPMs) to intake client projects in the field, using category-based guided question sets, optional meeting audio recording (with explicit client consent), automatic transcription, RPM review/editing, internal admin review, and generation of a polished Statement of Work (SOW). The SOW then cycles with the client for approval/revision. After sign-off, operations assigns the project to a team, issues a quote, collects a deposit, and moves the job into production.\
+\
+
+\f0\b\fs48 2) Users, Roles, Permissions
+\f1\b0\fs42 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 2.1 Roles
+\f1\b0\fs42 \
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	1.	
+\f2\b RPM (Field User)
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Create new project intake\
+	\'95	Select category + run question flow\
+	\'95	Optionally record meeting audio (consent required)\
+	\'95	View transcript, edit notes\
+	\'95	Submit intake for review\
+	\'95	View SOW status, share SOW with client (link/PDF)\
+	\'95	Receive client revision requests, update intake and resubmit\
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	2.	
+\f2\b Admin Reviewer (TalentEarthStudios Internal)
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Review intake completeness and accuracy\
+	\'95	Request changes from RPM\
+	\'95	Approve intake for SOW generation\
+	\'95	Generate SOW (template-based + content insertion)\
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	3.	
+\f2\b Ops / Producer
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Assign project to team/vendor\
+	\'95	Create quote and deposit request\
+	\'95	Track production milestone statuses\
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	4.	
+\f2\b Client (External)
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	View SOW\
+	\'95	Approve or request revision\
+	\'95	Optionally sign electronically (phase 2)\
+	\'95	Pay deposit (phase 2)\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 2.2 Permission Rules (Minimum)
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	RPM sees only projects assigned to them (or created by them).\
+	\'95	Admin sees all intakes and can edit system templates/question sets (if enabled).\
+	\'95	Client access is limited to a secure link for a specific project version.\
+	\'95	Audio recordings and transcripts are restricted to project participants + Admin.\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 3) Core Workflows
+\f1\b0\fs42 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 3.1 Intake Workflow (RPM)
+\f1\b0\fs42 \
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	1.	RPM logs in\
+	2.	Tap 
+\f2\b New Project
+\f1\b0 \
+	3.	Choose 
+\f2\b Project Category
+\f1\b0 \
+	4.	System loads 
+\f2\b Question Set
+\f1\b0  (versioned)\
+	5.	RPM captures answers via:\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Typed responses\
+	\'95	Dropdown / multi-select / date / number fields\
+	\'95	Photo upload (optional)\
+	\'95	File upload (optional)\
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	6.	If client permits:\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	RPM taps 
+\f2\b Record Meeting
+\f1\b0 \
+	\'95	System displays consent confirmation + timestamp capture\
+	\'95	Audio recorded and stored securely\
+	\'95	Live or post-meeting transcription runs automatically\
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	7.	RPM reviews transcript and/or notes\
+	8.	RPM taps 
+\f2\b Submit for Review
+\f1\b0 \
+	9.	Status becomes 
+\f2\b Submitted
+\f1\b0 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 3.2 Review Workflow (Admin)
+\f1\b0\fs42 \
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	1.	Admin opens 
+\f2\b Submitted
+\f1\b0  queue\
+	2.	Opens intake: checks required fields + coherence\
+	3.	Admin actions:\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	
+\f2\b Request Changes
+\f1\b0  (adds comments + required fixes)\
+	\'95	
+\f2\b Approve Intake
+\f1\b0 \
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	4.	If changes requested, status becomes 
+\f2\b Needs RPM Update
+\f1\b0 \
+	5.	If approved, status becomes 
+\f2\b Approved for SOW
+\f1\b0 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 3.3 SOW Generation Workflow (Admin)
+\f1\b0\fs42 \
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	1.	Admin selects SOW template based on category\
+	2.	System merges intake fields + transcript summary into SOW structure\
+	3.	Admin edits final SOW content (rich editor)\
+	4.	Admin publishes 
+\f2\b SOW Version v1
+\f1\b0 \
+	5.	Status becomes 
+\f2\b SOW Sent to Client
+\f1\b0 \
+	6.	System generates share link (or PDF export)\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 3.4 Client Approval / Revision
+\f1\b0\fs42 \
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	1.	Client opens link\
+	2.	Client options:\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	
+\f2\b Approve
+\f1\b0 \
+	\'95	
+\f2\b Request Revision
+\f1\b0  (comment fields + mark sections)\
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	3.	If revision requested: status becomes 
+\f2\b Client Revision Requested
+\f1\b0 \
+	4.	RPM/Admin updates intake/SOW and publishes new version (v2, v3\'85)\
+	5.	When approved: status becomes 
+\f2\b Client Approved
+\f1\b0 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 3.5 Post-Approval Operations (Phase 2 if needed)
+\f1\b0\fs42 \
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	1.	Ops assigns internal team/vendor\
+	2.	Quote issued\
+	3.	Deposit collected\
+	4.	Project moves to 
+\f2\b In Production
+\f1\b0 \
+	5.	Milestones tracked (optional)\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 4) App Screens (MVP)
+\f1\b0\fs42 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 4.1 Authentication
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Login\
+	\'95	Forgot password\
+	\'95	Role-based routing\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 4.2 RPM Home
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	\'93New Project\'94 CTA\
+	\'95	Project list with statuses:\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Draft, Submitted, Needs RPM Update, Approved for SOW, SOW Sent, Revision Requested, Client Approved, Quoted, Deposit Paid, In Production, Closed\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Quick filters: Status, Category, Last updated, Client name\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 4.3 New Project Wizard
+\f1\b0\fs42 \
+\
+Step 1: Client basics\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Client company, contact name, email, phone\
+	\'95	Meeting date/time\
+	\'95	Location (optional GPS capture)\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\li260\sl324\slmult1\pardirnatural\partightenfactor0
+\cf2 Step 2: Category selection\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Category list + search\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\li260\sl324\slmult1\pardirnatural\partightenfactor0
+\cf2 Step 3: Question set runner\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Paginated or sectioned questions\
+	\'95	Autosave draft\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\li260\sl324\slmult1\pardirnatural\partightenfactor0
+\cf2 Step 4: Meeting audio capture (optional)\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Consent screen + \'93Start Recording\'94\
+	\'95	Stop recording\
+	\'95	Upload state\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\li260\sl324\slmult1\pardirnatural\partightenfactor0
+\cf2 Step 5: Transcript review (if audio used)\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Transcript viewer + edit mode\
+	\'95	Highlight key items (optional)\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\li260\sl324\slmult1\pardirnatural\partightenfactor0
+\cf2 Step 6: Submit\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Completion check + missing required fields list\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 4.4 Admin Review Console (Web-first recommended)
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Queue: Submitted / Needs Review\
+	\'95	Intake detail view:\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	All answers\
+	\'95	Transcript\
+	\'95	Attachments\
+	\'95	Audit log\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Actions:\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Request Changes (comment + assign to RPM)\
+	\'95	Approve\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 4.5 SOW Builder (Admin)
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Template selection\
+	\'95	Rich text editor with merge fields\
+	\'95	Version control and publish\
+	\'95	Export PDF\
+	\'95	Generate client link\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 4.6 Client SOW View (Web)
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Read-only SOW\
+	\'95	Approve button\
+	\'95	Request revision form\
+	\'95	Version history (optional)\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 5) Data Model (Proposed)
+\f1\b0\fs42 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 5.1 Entities
+\f1\b0\fs42 \
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	1.	
+\f2\b User
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, role, name, email, phone, active, created_at\
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	2.	
+\f2\b Client
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, company_name, primary_contact_name, email, phone\
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	3.	
+\f2\b Project
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, client_id, created_by_user_id (RPM)\
+	\'95	category_id\
+	\'95	status\
+	\'95	created_at, updated_at\
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	4.	
+\f2\b Category
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, name, description\
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	5.	
+\f2\b QuestionSet
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, category_id, version, active_flag\
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	6.	
+\f2\b Question
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, question_set_id\
+	\'95	type (text, number, single_select, multi_select, date, file, photo)\
+	\'95	prompt, required_flag, options_json, ordering, help_text\
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	7.	
+\f2\b Answer
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, project_id, question_id\
+	\'95	value_text/value_json, created_at, updated_at\
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	8.	
+\f2\b MeetingRecording
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, project_id, consent_captured_by_user_id\
+	\'95	consent_timestamp, audio_url, duration_seconds\
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	9.	
+\f2\b Transcript
+\f1\b0 \
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, project_id, recording_id\
+	\'95	raw_text, edited_text, created_at, updated_at\
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	10.	
+\f2\b AdminReview
+\f1\b0 \
+\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, project_id, reviewer_user_id\
+	\'95	decision (changes_requested/approved)\
+	\'95	comments, created_at\
+\
+\pard\tqr\tx480\tx640\li640\fi-640\sl324\slmult1\sb240\partightenfactor0
+\cf2 	11.	
+\f2\b SOW
+\f1\b0 \
+\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, project_id\
+	\'95	version_number\
+	\'95	status (draft/published)\
+	\'95	body_richtext\
+	\'95	pdf_url\
+	\'95	share_token (for client link)\
+	\'95	created_by_user_id, created_at\
+\
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	12.	
+\f2\b ClientResponse
+\f1\b0 \
+\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, sow_id, response_type (approved/revision_requested)\
+	\'95	comments, created_at\
+\
+\pard\tqr\tx540\tx700\li700\fi-700\sl324\slmult1\sb240\partightenfactor0
+\cf2 	13.	
+\f2\b AuditLog
+\f1\b0 \
+\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	id, project_id, actor_user_id\
+	\'95	action_type, details_json, timestamp\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 6) Status Machine (Authoritative)
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Draft (RPM creating)\
+	\'95	Submitted (RPM submitted for review)\
+	\'95	Needs RPM Update (Admin requested changes)\
+	\'95	Approved for SOW (Admin approved intake)\
+	\'95	SOW Draft (Admin generating)\
+	\'95	SOW Sent to Client (Published and shared)\
+	\'95	Client Revision Requested\
+	\'95	Client Approved\
+	\'95	Quoted (phase 2)\
+	\'95	Deposit Paid (phase 2)\
+	\'95	In Production (phase 2)\
+	\'95	Closed\
+\
+Rules:\
+	\'95	RPM can move Draft \uc0\u8594  Submitted.\
+	\'95	Admin can move Submitted \uc0\u8594  Needs RPM Update OR Approved for SOW.\
+	\'95	Admin can move Approved for SOW \uc0\u8594  SOW Sent to Client (publishing SOW).\
+	\'95	Client can move SOW Sent \uc0\u8594  Client Approved OR Client Revision Requested.\
+	\'95	Admin/RPM can move Client Revision Requested \uc0\u8594  SOW Sent to Client (new version).\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 7) Audio + Transcription Requirements
+\f1\b0\fs42 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 7.1 Consent
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Hard requirement: explicit \'93Client consent obtained\'94 checkbox + timestamp saved before recording starts.\
+	\'95	Store: consent timestamp, RPM user id, optional typed note (\'93consent granted verbally at start of meeting\'94).\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 7.2 Recording
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Mobile: record in-app (preferred) or upload external file (fallback)\
+	\'95	Must handle interruptions and resumable upload.\
+	\'95	Store audio in secure object storage with signed URLs.\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 7.3 Transcription
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Trigger automatically after upload complete.\
+	\'95	Output raw transcript + allow RPM edits to produce \'93Edited Transcript\'94.\
+	\'95	Keep raw transcript immutable for audit.\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 7.4 Optional Summaries (Nice-to-have)
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Generate a structured meeting summary:\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Scope overview\
+	\'95	Deliverables\
+	\'95	Timeline\
+	\'95	Budget\
+	\'95	Dependencies\
+	\'95	Risks/assumptions\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 8) Question Set System
+\f1\b0\fs42 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 8.1 Requirements
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Question sets are built by subject matter experts and are versioned.\
+	\'95	A project stores the question set version used at the time of intake (no breaking changes).\
+	\'95	Each category can have multiple active/inactive versions; only one \'93active\'94 for new projects.\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 8.2 Question Types (MVP)
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Short text, long text\
+	\'95	Number\
+	\'95	Single select\
+	\'95	Multi select\
+	\'95	Date\
+	\'95	File/photo upload\
+	\'95	\'93Required\'94 enforcement\
+	\'95	\'93Conditional logic\'94 (phase 2): show question B if answer to A meets condition\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 9) SOW Generation
+\f1\b0\fs42 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 9.1 Templates
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Template per category (or template family)\
+	\'95	Merge rules:\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Map specific answers into defined sections\
+	\'95	Insert transcript summary in \'93Meeting Notes\'94 section\
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Output:\
+\pard\tqr\tx500\tx660\li660\fi-660\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Rich text view\
+	\'95	PDF export\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 9.2 Versioning
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Every publish creates new immutable version\
+	\'95	Client link always points to latest published version, but version history is stored\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 10) Non-Functional Requirements
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	
+\f2\b Mobile-first UI
+\f1\b0  for RPM (iOS priority)\
+	\'95	Offline mode (optional MVP-lite): local draft caching + sync when online\
+	\'95	Secure storage for audio, files, client links\
+	\'95	Audit log for changes and approvals\
+	\'95	Role-based access control\
+	\'95	Encryption in transit and at rest for recordings and transcripts\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 11) Technical Architecture (Recommended)
+\f1\b0\fs42 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 11.1 App Layers
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Mobile app (RPM): React Native / Swift (choose one)\
+	\'95	Web admin portal: React/Next.js\
+	\'95	Backend API: Node/Express or Python/FastAPI\
+	\'95	DB: PostgreSQL\
+	\'95	Storage: S3-compatible object storage for audio/files\
+	\'95	Auth: JWT + refresh tokens or managed auth (Auth0/Cognito/Firebase Auth)\
+	\'95	Transcription: integrate speech-to-text provider (vendor choice)\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs44 \cf2 11.2 Key Integrations (Phase 2)
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	E-signature for SOW approval\
+	\'95	Payments for deposit\
+	\'95	CRM sync (HubSpot/Salesforce)\
+	\'95	Notification system: email/SMS/push\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 12) Notifications (MVP)
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	RPM notified when Admin requests changes\
+	\'95	Admin notified when RPM submits intake\
+	\'95	RPM/Admin notified when client requests revision or approves SOW\
+	\'95	Email links for client SOW access\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 13) Implementation Plan (MVP Build Order)
+\f1\b0\fs42 \
+\pard\tqr\tx360\tx520\li520\fi-520\sl324\slmult1\sb240\partightenfactor0
+\cf2 	1.	Auth + roles\
+	2.	Category + QuestionSet + Question + Answer system\
+	3.	RPM intake UI with autosave drafts\
+	4.	Admin review console + status workflow\
+	5.	SOW template + editor + publish + PDF export + share link\
+	6.	Client approval/revision web view\
+	7.	Audio recording + upload + transcription + transcript editor\
+	8.	Notifications + audit logging\
+	9.	Hardening: permissions, security, testing, logging\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 14) Acceptance Criteria (MVP)
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	RPM can create a project, select category, complete required questions, and submit.\
+	\'95	Admin can review, request changes, or approve intake.\
+	\'95	Admin can generate and publish SOW version v1 from a template.\
+	\'95	Client can view SOW and either approve or request revision.\
+	\'95	Version v2 can be published and client can approve.\
+	\'95	Consent is captured before recording; transcript is generated and editable.\
+	\'95	All status transitions follow the defined state machine.\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\sl324\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs48 \cf2 15) Open Decisions for Programmer (Document as Assumptions)
+\f1\b0\fs42 \
+\pard\tqr\tx100\tx260\li260\fi-260\sl324\slmult1\sb240\partightenfactor0
+\cf2 	\'95	Mobile stack: React Native vs native iOS\
+	\'95	Transcription vendor selection + cost constraints\
+	\'95	Offline support depth\
+	\'95	Client authentication vs tokenized link access\
+	\'95	E-signature and payments included in MVP or phase 2}

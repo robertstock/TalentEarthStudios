@@ -1,0 +1,433 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  TALENT
+  ADMIN
+}
+
+enum UserStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum PortfolioType {
+  IMAGE
+  VIDEO
+  LINK
+}
+
+enum TeamMemberStatus {
+  INVITED
+  ACTIVE
+  REMOVED
+}
+
+enum ProjectAssignedType {
+  INDIVIDUAL
+  TEAM
+}
+
+enum ProjectStatus {
+  DRAFT
+  SENT
+  QUOTE_RECEIVED
+  CLOSED
+}
+
+enum QuoteStatus {
+  SUBMITTED
+  REVISED
+  ACCEPTED_INTERNAL
+  REJECTED_INTERNAL
+}
+
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  passwordHash  String?
+  resetToken    String?
+  resetTokenExpiry DateTime?
+  role          UserRole    @default(TALENT)
+  status        UserStatus  @default(DRAFT)
+
+  firstName     String
+  lastName      String
+
+  isTeamLeader  Boolean     @default(false)
+  isFeatured    Boolean     @default(false)
+
+  profile       TalentProfile?
+  portfolio     PortfolioItem[]
+  teamMemberships TeamMember[]
+  ledTeams      Team[]      @relation("TeamLeader")
+
+  createdProjects Project[] @relation("ProjectCreator")
+  assignedProjects Project[]
+  submittedQuotes Quote[]
+
+  auditLogs     AuditLog[]  @relation("AuditActor")
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  recordingConsents MeetingRecording[]
+  reviews           AdminReview[]
+  sowsCreated       SOW[]
+}
+
+model TalentProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  publicSlug         String  @unique
+  profileImage       String?
+  headline           String?
+  bio                String?
+  location           String?
+  primaryDiscipline  String?
+  skills             String[]
+  industries         String[]
+  languages          String[]
+
+  websiteInternal    String?
+  socialsInternal    Json?
+
+  approvalNotes      String?
+
+  updatedAt          DateTime @updatedAt
+}
+
+model PortfolioItem {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type          PortfolioType
+  title         String?
+  description   String?
+  assetUrl      String
+  thumbnailUrl  String?
+  isPublic      Boolean       @default(true)
+  sortOrder     Int           @default(0)
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Team {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  description   String?
+  leaderUserId  String
+  leader        User     @relation("TeamLeader", fields: [leaderUserId], references: [id])
+
+  status        String   @default("ACTIVE")
+  members       TeamMember[]
+
+  assignedProjects Project[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  projects      Project[] @relation("ProjectTeam")
+  sows          SOW[]     @relation("SOWTeam")
+  talentMembers Talent[]
+}
+
+model TeamMember {
+  id          String            @id @default(cuid())
+  teamId      String
+  userId      String
+  status      TeamMemberStatus  @default(INVITED)
+  roleInTeam  String?
+
+  team        Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  projects    Project[]
+  questionSets QuestionSet[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model QuestionSet {
+  id         String     @id @default(cuid())
+  categoryId String
+  category   Category   @relation(fields: [categoryId], references: [id])
+  version    Int        @default(1)
+  active     Boolean    @default(true)
+  questions  Question[]
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+enum QuestionType {
+  SHORT_TEXT
+  LONG_TEXT
+  NUMBER
+  SINGLE_SELECT
+  MULTI_SELECT
+  DATE
+  FILE
+  PHOTO
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  questionSetId String
+  questionSet   QuestionSet  @relation(fields: [questionSetId], references: [id])
+  type          QuestionType
+  prompt        String
+  required      Boolean      @default(false)
+  optionsJson   String?
+  ordering      Int
+  helpText      String?
+  answers       Answer[]
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Answer {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id])
+  valueText   String?
+  valueJson   String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Project {
+  id              String             @id @default(cuid())
+  createdByAdminId String
+  createdByAdmin   User               @relation("ProjectCreator", fields: [createdByAdminId], references: [id])
+
+  title           String
+  description     String
+  categoryId      String?
+  category        Category?           @relation(fields: [categoryId], references: [id])
+  timeline        String
+  budgetRange     String?
+  dueDateForQuote DateTime?
+
+  assignedType    ProjectAssignedType
+  assignedUserId  String?
+  assignedTeamId  String?
+
+  assignedUser    User?               @relation(fields: [assignedUserId], references: [id])
+  assignedTeam    Team?               @relation(fields: [assignedTeamId], references: [id])
+
+  teamId          String?       
+  team            Team?         @relation("ProjectTeam", fields: [teamId], references: [id])
+  talentId        String?       
+  talent          Talent?       @relation("ProjectTalent", fields: [talentId], references: [id])
+
+  status          ProjectStatus       @default(DRAFT)
+
+  clientId        String?
+  client          Client?             @relation(fields: [clientId], references: [id])
+
+  attachments     ProjectAttachment[]
+  quotes          Quote[]
+  answers         Answer[]
+  recordings      MeetingRecording[]
+  transcripts     Transcript[]
+  adminReviews    AdminReview[]
+  sows            SOW[]
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+}
+
+model MeetingRecording {
+  id                   String   @id @default(cuid())
+  projectId            String
+  project              Project  @relation(fields: [projectId], references: [id])
+  consentCapturedById  String
+  consentCapturedBy    User     @relation(fields: [consentCapturedById], references: [id])
+  consentTimestamp     DateTime
+  audioUrl             String
+  durationSeconds      Int?
+  transcripts          Transcript[]
+
+  createdAt            DateTime @default(now())
+}
+
+model Transcript {
+  id          String           @id @default(cuid())
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id])
+  recordingId String
+  recording   MeetingRecording @relation(fields: [recordingId], references: [id])
+  rawText     String?          @db.Text
+  editedText  String?          @db.Text
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model ProjectAttachment {
+  id              String   @id @default(cuid())
+  projectRequestId String
+  project  Project @relation(fields: [projectRequestId], references: [id], onDelete: Cascade)
+
+  fileName        String
+  mimeType        String
+  size            Int
+  storageKey      String
+  uploadedByAdminId String
+
+  createdAt       DateTime @default(now())
+}
+
+model Quote {
+  id              String      @id @default(cuid())
+  projectRequestId String
+  project  Project @relation(fields: [projectRequestId], references: [id], onDelete: Cascade)
+
+  submittedByUserId String
+  submittedByUser  User        @relation(fields: [submittedByUserId], references: [id])
+
+  amount          Int
+  currency        String       @default("USD")
+  breakdown       Json?
+  assumptions     String?
+  turnaroundTime  String?
+  status          QuoteStatus  @default(SUBMITTED)
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  company     String?
+  message     String
+  talentSlug  String?
+  teamSlug    String?
+  status      String   @default("NEW")
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String
+  actor       User     @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  action      String
+  entityType  String
+  entityId    String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
+
+enum ReviewDecision {
+  CHANGES_REQUESTED
+  APPROVED
+}
+
+model AdminReview {
+  id             String         @id @default(cuid())
+  projectId      String
+  project        Project        @relation(fields: [projectId], references: [id])
+  reviewerId     String
+  reviewer       User           @relation(fields: [reviewerId], references: [id])
+  decision       ReviewDecision
+  comments       String?
+
+  createdAt      DateTime       @default(now())
+}
+
+enum SOWStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model SOW {
+  id            String    @id @default(cuid())
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id])
+  versionNumber Int
+  status        SOWStatus @default(DRAFT)
+  bodyRichText  String?   @db.Text
+  pdfUrl        String?
+  shareToken    String?   @unique
+  createdById   String
+  createdBy     User      @relation(fields: [createdById], references: [id])
+  
+  clientResponses ClientResponse[]
+
+  teamId          String?
+  team            Team?     @relation("SOWTeam", fields: [teamId], references: [id])
+  talentId        String?
+  talent          Talent?   @relation("SOWTalent", fields: [talentId], references: [id])
+
+  createdAt     DateTime @default(now())
+}
+
+enum ClientResponseType {
+  APPROVED
+  REVISION_REQUESTED
+}
+
+model ClientResponse {
+  id           String             @id @default(cuid())
+  sowId        String
+  sow          SOW                @relation(fields: [sowId], references: [id])
+  responseType ClientResponseType
+  comments     String?
+
+  createdAt    DateTime           @default(now())
+}
+
+model Talent {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  specialty   String?
+  bio         String?   @db.Text
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id])
+  projects    Project[] @relation("ProjectTalent")
+  sows        SOW[]     @relation("SOWTalent")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Client {
+  id                 String   @id @default(cuid())
+  companyName        String
+  primaryContactName String?
+  email              String?
+  phone              String?
+  projects           Project[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}

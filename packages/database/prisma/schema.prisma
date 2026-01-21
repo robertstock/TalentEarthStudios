@@ -1,0 +1,294 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  RPM
+  ADMIN
+  OPS
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  NEEDS_RPM_UPDATE
+  APPROVED_FOR_SOW
+  SOW_DRAFT
+  SOW_SENT_TO_CLIENT
+  CLIENT_REVISION_REQUESTED
+  CLIENT_APPROVED
+  QUOTED
+  DEPOSIT_PAID
+  IN_PRODUCTION
+  CLOSED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  phone     String?
+  role      Role     @default(RPM)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectsCreated Project[] @relation("CreatedBy")
+  projectsPaid    Project[] @relation("PaidBy")
+  reviews         AdminReview[]
+  sowsCreated     SOW[]
+  auditLogs       AuditLog[]
+  recordingConsents MeetingRecording[]
+  notifications   Notification[]
+}
+
+model Client {
+  id                 String   @id @default(uuid())
+  companyName        String
+  primaryContactName String?
+  email              String?
+  phone              String?
+  projects           Project[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  projects    Project[]
+  questionSets QuestionSet[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Project {
+  id              String        @id @default(uuid())
+  name            String
+  clientId        String
+  client          Client        @relation(fields: [clientId], references: [id])
+  createdById     String
+  createdBy       User          @relation("CreatedBy", fields: [createdById], references: [id])
+  categoryId      String
+  category        Category      @relation(fields: [categoryId], references: [id])
+  status          ProjectStatus @default(DRAFT)
+  
+  answers         Answer[]
+  recordings      MeetingRecording[]
+  transcripts     Transcript[]
+  adminReviews    AdminReview[]
+  sows            SOW[]
+  auditLogs       AuditLog[]
+  
+  teamId          String?       
+  team            Team?         @relation("ProjectTeam", fields: [teamId], references: [id])
+  talentId        String?       
+  talent          Talent?       @relation("ProjectTalent", fields: [talentId], references: [id])
+
+  // Financials
+  isPaid          Boolean       @default(false)
+  paidAt          DateTime?
+  finalRevenue    Float?        // The actual final amount paid by client
+  commissionPaid  Float?        // Snapshot of commission amount paid
+  paidByAdminId   String?       // ID of admin who marked as paid
+  paidByAdmin     User?         @relation("PaidBy", fields: [paidByAdminId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model QuestionSet {
+  id         String     @id @default(uuid())
+  categoryId String
+  category   Category   @relation(fields: [categoryId], references: [id])
+  version    Int        @default(1)
+  active     Boolean    @default(true)
+  questions  Question[]
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+enum QuestionType {
+  SHORT_TEXT
+  LONG_TEXT
+  NUMBER
+  SINGLE_SELECT
+  MULTI_SELECT
+  DATE
+  FILE
+  PHOTO
+}
+
+model Question {
+  id            String       @id @default(uuid())
+  questionSetId String
+  questionSet   QuestionSet  @relation(fields: [questionSetId], references: [id])
+  type          QuestionType
+  prompt        String
+  required      Boolean      @default(false)
+  optionsJson   String?      // Stores JSON options for select types
+  ordering      Int
+  helpText      String?
+  answers       Answer[]
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Answer {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id])
+  valueText   String?
+  valueJson   String?  // For complex values
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MeetingRecording {
+  id                   String   @id @default(uuid())
+  projectId            String
+  project              Project  @relation(fields: [projectId], references: [id])
+  consentCapturedById  String
+  consentCapturedBy    User     @relation(fields: [consentCapturedById], references: [id])
+  consentTimestamp     DateTime
+  audioUrl             String
+  durationSeconds      Int?
+  transcripts          Transcript[]
+
+  createdAt            DateTime @default(now())
+}
+
+model Transcript {
+  id          String           @id @default(uuid())
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id])
+  recordingId String
+  recording   MeetingRecording @relation(fields: [recordingId], references: [id])
+  rawText     String?          @db.Text
+  editedText  String?          @db.Text
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+enum ReviewDecision {
+  CHANGES_REQUESTED
+  APPROVED
+}
+
+model AdminReview {
+  id             String         @id @default(uuid())
+  projectId      String
+  project        Project        @relation(fields: [projectId], references: [id])
+  reviewerId     String
+  reviewer       User           @relation(fields: [reviewerId], references: [id])
+  decision       ReviewDecision
+  comments       String?
+
+  createdAt      DateTime       @default(now())
+}
+
+enum SOWStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model SOW {
+  id            String    @id @default(uuid())
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id])
+  versionNumber Int
+  status        SOWStatus @default(DRAFT)
+  bodyRichText  String?   @db.Text
+  pdfUrl        String?
+  shareToken    String?   @unique
+  createdById   String
+  createdBy     User      @relation(fields: [createdById], references: [id])
+  
+  clientResponses ClientResponse[]
+
+  teamId          String?
+  team            Team?     @relation("SOWTeam", fields: [teamId], references: [id])
+  talentId        String?
+  talent          Talent?   @relation("SOWTalent", fields: [talentId], references: [id])
+
+  createdAt     DateTime @default(now())
+}
+
+enum ClientResponseType {
+  APPROVED
+  REVISION_REQUESTED
+}
+
+model ClientResponse {
+  id           String             @id @default(uuid())
+  sowId        String
+  sow          SOW                @relation(fields: [sowId], references: [id])
+  responseType ClientResponseType
+  comments     String?
+
+  createdAt    DateTime           @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  actorId     String
+  actor       User     @relation(fields: [actorId], references: [id])
+  actionType  String
+  detailsJson String?
+
+  timestamp   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // 'PROJECT_UPDATE', 'SYSTEM', 'SOW_READY', etc.
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  metadata  String?  @db.Text // JSON string for deep links (e.g. { projectId: "..." })
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  email       String?
+  members     Talent[]
+  projects    Project[] @relation("ProjectTeam")
+  sows        SOW[]     @relation("SOWTeam")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Talent {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  specialty   String?
+  bio         String?   @db.Text
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id])
+  projects    Project[] @relation("ProjectTalent")
+  sows        SOW[]     @relation("SOWTalent")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
