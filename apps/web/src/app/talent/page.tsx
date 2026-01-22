@@ -19,6 +19,10 @@ export default async function TalentDirectory() {
     }
 
     // MOCK: Override for Jane Doe to make her look like a real user
+    // AND Deduplicate database talents by name/email
+    const seenNames = new Set();
+    const uniqueDbTalents: any[] = [];
+
     talents.forEach(talent => {
         if (talent.firstName === 'Jane' && (talent.lastName === 'Doe' || talent.lastName === 'Simpson')) {
             talent.lastName = 'Simpson';
@@ -29,23 +33,26 @@ export default async function TalentDirectory() {
                 }
             }
         }
+
+        const fullName = `${talent.firstName} ${talent.lastName}`.toLowerCase();
+        if (!seenNames.has(fullName) && !seenNames.has(talent.email.toLowerCase())) {
+            seenNames.add(fullName);
+            seenNames.add(talent.email.toLowerCase());
+            uniqueDbTalents.push(talent);
+        }
     });
 
     // MOCK: Inject additional profiles
     const { MOCK_TALENTS } = await import('@/lib/mock-data');
 
-    // Combine real (modified) talents with mock talents
+    // Combine unique DB talents with mock talents
     // Deduplicate by email OR name to avoid overlapping database and mock records
-    const existingEmails = new Set(talents.map(t => t.email.toLowerCase()));
-    const existingNames = new Set(talents.map(t => `${t.firstName} ${t.lastName}`.toLowerCase()));
-
     const uniqueMockTalents = MOCK_TALENTS.filter(t => {
-        const emailMatch = existingEmails.has(t.email.toLowerCase());
-        const nameMatch = existingNames.has(`${t.firstName} ${t.lastName}`.toLowerCase());
-        return !emailMatch && !nameMatch;
+        const nameKey = `${t.firstName} ${t.lastName}`.toLowerCase();
+        return !seenNames.has(t.email.toLowerCase()) && !seenNames.has(nameKey);
     });
 
-    const allTalents = [...talents, ...uniqueMockTalents];
+    const allTalents = [...uniqueDbTalents, ...uniqueMockTalents];
 
     return (
         <div className="relative z-10 w-full min-h-screen pt-20 md:pt-24 pb-12">
