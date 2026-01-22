@@ -30,7 +30,7 @@ export const MOCK_TALENTS: MockTalent[] = [
         profile: {
             headline: "Creative Director",
             bio: "Visionary Creative Director with a passion for bold aesthetics and brand storytelling. Expert in leading cross-functional teams to deliver award-winning campaigns.",
-            profileImage: "/mocks/sarah-jenkins.png",
+            profileImage: "/talent-faces/avatar-1.jpg",
             skills: ["Creative Direction", "Branding", "Campaign Strategy", "Team Leadership"],
             publicSlug: "sarah-jenkins",
             location: "New York, NY",
@@ -47,7 +47,7 @@ export const MOCK_TALENTS: MockTalent[] = [
         profile: {
             headline: "Art Director",
             bio: "Multidisciplinary Art Director specializing in digital experiences and editorial design. Bringing concepts to life through meticulous visual execution.",
-            profileImage: "/mocks/emily-chen.png",
+            profileImage: "/talent-faces/avatar-2.jpg",
             skills: ["Art Direction", "UI/UX", "Editorial Design", "Typography"],
             publicSlug: "emily-chen",
             location: "San Francisco, CA",
@@ -64,7 +64,7 @@ export const MOCK_TALENTS: MockTalent[] = [
         profile: {
             headline: "Senior Producer",
             bio: "Results-driven Senior Producer with a track record of managing complex productions on time and under budget. Expert in resource allocation and client management.",
-            profileImage: "/mocks/michelle-ross.png",
+            profileImage: "/talent-faces/avatar-3.jpg",
             skills: ["Production Management", "Budgeting", "Client Relations", "Agile Workflow"],
             publicSlug: "michelle-ross",
             location: "London, UK",
@@ -81,7 +81,7 @@ export const MOCK_TALENTS: MockTalent[] = [
         profile: {
             headline: "Sound Designer",
             bio: "Immersive Sound Designer creating sonic landscapes for film, games, and VR. Believes that audio is 50% of the experience.",
-            profileImage: "/mocks/david-okonjo.png",
+            profileImage: "/talent-faces/avatar-4.jpg",
             skills: ["Sound Design", "Audio Mixing", "Foley", "Composition"],
             publicSlug: "david-okonjo",
             location: "Berlin, Germany",
@@ -101,7 +101,7 @@ export const MOCK_TALENTS: MockTalent[] = [
         profile: {
             headline: "Film Editor",
             bio: "Detail-oriented Film Editor with a rhythm for storytelling. Experienced in narrative features, documentaries, and fast-paced commercial cuts.",
-            profileImage: "/mocks/marcus-thorne.png",
+            profileImage: "/talent-faces/avatar-6.jpg",
             skills: ["Video Editing", "Color Grading", "Narrative Structure", "After Effects"],
             publicSlug: "marcus-thorne",
             location: "Los Angeles, CA",
@@ -118,7 +118,7 @@ export const MOCK_TALENTS: MockTalent[] = [
         profile: {
             headline: "Motion Graphics Artist",
             bio: "Motion Graphics Artist blending 2D and 3D animation to create mesmerizing visual loops and explainer videos.",
-            profileImage: "/mocks/avatar-7.jpg",
+            profileImage: "/talent-faces/avatar-7.jpg",
             skills: ["Motion Graphics", "3D Animation", "Cinema 4D", "Illustration"],
             publicSlug: "elena-rodriguez",
             location: "Remote",
@@ -135,7 +135,7 @@ export const MOCK_TALENTS: MockTalent[] = [
         profile: {
             headline: "VFX Supervisor",
             bio: "VFX Supervisor with a keen eye for realism and spectacle. Bridging the gap between practical effects and digital enhancements.",
-            profileImage: "/mocks/avatar-8.jpg",
+            profileImage: "/talent-faces/avatar-8.jpg",
             skills: ["VFX Supervision", "Compositing", "Nuke", "On-set Supervision"],
             publicSlug: "james-miller",
             location: "Vancouver, BC",
@@ -152,7 +152,7 @@ export const MOCK_TALENTS: MockTalent[] = [
         profile: {
             headline: "Product Designer",
             bio: "User-centric Product Designer passionate about solving complex problems through intuitive interfaces. Advocate for accessibility and inclusive design.",
-            profileImage: "/mocks/avatar-9.jpg",
+            profileImage: "/talent-faces/avatar-9.jpg",
             skills: ["Product Design", "User Research", "Prototyping", "Design Systems"],
             publicSlug: "priya-patel",
             location: "Austin, TX",
@@ -169,7 +169,7 @@ export const MOCK_TALENTS: MockTalent[] = [
         profile: {
             headline: "Set Designer",
             bio: "Atmospheric Set Designer creating physical worlds that tell a story. Experienced in stage, film, and experiential event design.",
-            profileImage: "/mocks/avatar-10.jpg",
+            profileImage: "/talent-faces/avatar-10.jpg",
             skills: ["Set Design", "Drafting", "Concept Art", "Prop Styling"],
             publicSlug: "sofia-wagner",
             location: "Vienna, Austria",
@@ -186,7 +186,7 @@ export const MOCK_TALENTS: MockTalent[] = [
         profile: {
             headline: "Director",
             bio: "Award-winning filmmaker and visual storyteller.",
-            profileImage: "/jane-simpson.png",
+            profileImage: "/talent-faces/avatar-5.jpg",
             skills: ["Directing", "Screenwriting", "Visual Storytelling"],
             publicSlug: "jane-simpson",
             location: "Los Angeles, CA",

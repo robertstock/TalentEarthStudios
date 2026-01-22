@@ -6,8 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 interface Project {
     id: string;
-    name: string;
+    title?: string;
+    name?: string;
     status: string;
+    isPaid?: boolean;
     category?: {
         name: string;
     };
@@ -20,7 +22,8 @@ interface ProjectListProps {
     onRefresh: () => void;
 }
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: string, isPaid?: boolean) => {
+    if (isPaid) return WME.colors.success;
     switch (status) {
         case 'SUBMITTED': return WME.colors.success;
         case 'APPROVED_FOR_SOW': return WME.colors.accent;
@@ -41,14 +44,14 @@ const ProjectCard = ({ item, onPress }: { item: Project; onPress: () => void }) 
         ]}
         onPress={onPress}
     >
-        <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
+        <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status, item.isPaid) }]} />
         <View style={styles.cardContent}>
             <View style={styles.cardHeader}>
                 <View style={styles.titleRow}>
                     {needsAttention(item.status) && (
                         <Ionicons name="alert-circle" size={16} color="#FF6B35" style={{ marginRight: 6 }} />
                     )}
-                    <Text style={styles.title} allowFontScaling={false}>{item.name}</Text>
+                    <Text style={styles.title} allowFontScaling={false}>{item.title || item.name || 'Untitled Project'}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={WME.colors.textDim} />
             </View>
@@ -56,9 +59,10 @@ const ProjectCard = ({ item, onPress }: { item: Project; onPress: () => void }) 
             <View style={styles.cardFooter}>
                 <Text style={[
                     styles.statusText,
-                    needsAttention(item.status) && styles.statusTextAttention
+                    needsAttention(item.status) && styles.statusTextAttention,
+                    item.isPaid && { color: WME.colors.success }
                 ]} allowFontScaling={false}>
-                    {needsAttention(item.status) ? '⚠ CHANGES REQUESTED' : item.status.replace(/_/g, ' ')}
+                    {item.isPaid ? '✓ PAID' : needsAttention(item.status) ? '⚠ CHANGES REQUESTED' : item.status.replace(/_/g, ' ')}
                 </Text>
                 <Text style={styles.date} allowFontScaling={false}>{new Date(item.updatedAt).toLocaleDateString()}</Text>
             </View>

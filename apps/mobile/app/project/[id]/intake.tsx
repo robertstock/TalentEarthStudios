@@ -12,7 +12,8 @@ const MOCK_QUESTIONS = [
     { id: 'q1', type: 'SHORT_TEXT', prompt: 'Project Name', required: true, ordering: 1 },
     { id: 'q2', type: 'SINGLE_SELECT', prompt: 'Budget Range', required: true, optionsJson: JSON.stringify(['$5k - $10k', '$10k - $25k', '$25k+']), ordering: 2 },
     { id: 'q3', type: 'SINGLE_SELECT', prompt: 'Timeline', required: true, optionsJson: JSON.stringify(['Rush (<2 weeks)', 'Standard (3-4 weeks)', 'Flexible']), ordering: 3 },
-    { id: 'q4', type: 'LONG_TEXT', prompt: 'Project Description', required: false, ordering: 4 },
+    { id: 'q5', type: 'DATE', prompt: 'Target Delivery Date', required: false, ordering: 4 },
+    { id: 'q4', type: 'LONG_TEXT', prompt: 'Project Description', required: false, ordering: 5 },
 ];
 
 export default function IntakeForm() {
@@ -91,6 +92,21 @@ export default function IntakeForm() {
 
                 if (activeQS?.questions) {
                     const sortedQuestions = activeQS.questions.sort((a: any, b: any) => a.ordering - b.ordering);
+
+                    // Force ensure DATE is present if missing (safety net for mismatched seed data)
+                    const hasDate = sortedQuestions.find((q: any) => q.type === 'DATE');
+                    if (!hasDate) {
+                        sortedQuestions.push({
+                            id: 'q_date_fallback',
+                            type: 'DATE',
+                            prompt: 'Target Delivery Date',
+                            required: false,
+                            ordering: 4.5
+                        });
+                        // Re-sort to ensure correct placement
+                        sortedQuestions.sort((a: any, b: any) => a.ordering - b.ordering);
+                    }
+
                     setQuestions(sortedQuestions);
                 }
             } catch (error) {
@@ -167,6 +183,39 @@ export default function IntakeForm() {
         }
     };
 
+    // Sync orphan date answer (from DB real ID or legacy keys) to active date question
+    useEffect(() => {
+        const dateQ = questions.find(q => q.type === 'DATE');
+        // Only run if we have a date question and it doesn't have a value yet
+        if (dateQ && !answers[dateQ.id]) {
+            // 1. Check specific legacy keys
+            if (answers['q_Date']) {
+                setAnswers(prev => ({ ...prev, [dateQ.id]: prev['q_Date'] }));
+                return;
+            }
+            // 2. Check mock key
+            if (answers['q5']) {
+                setAnswers(prev => ({ ...prev, [dateQ.id]: prev['q5'] }));
+                return;
+            }
+
+            // 3. Find generic orphan date
+            const validQIds = new Set(questions.map(q => q.id));
+            const orphanAnswerKey = Object.keys(answers).find(key =>
+                !validQIds.has(key) &&
+                typeof answers[key] === 'string' &&
+                /^\d{2}\/\d{2}\/\d{4}$/.test(answers[key])
+            );
+
+            if (orphanAnswerKey) {
+                setAnswers(prev => ({
+                    ...prev,
+                    [dateQ.id]: prev[orphanAnswerKey]
+                }));
+            }
+        }
+    }, [questions, answers]);
+
     const handleDelete = () => {
         Alert.alert(
             'Delete Project',
@@ -208,7 +257,7 @@ export default function IntakeForm() {
 
         setSubmitting(true);
         try {
-            const nameQuestion = questions[0];
+            const nameQuestion = questions.find(q => q.prompt === 'Project Name') || questions[0];
             const projectName = answers[nameQuestion?.id] || `Project ${new Date().toLocaleDateString()}`;
 
             if (isEditing) {
@@ -241,7 +290,10 @@ export default function IntakeForm() {
                     }),
                 });
 
-                if (!response.ok) throw new Error('Failed to submit project');
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.message || `Failed to create project (Status: ${response.status})`);
+                }
 
                 Alert.alert(
                     'Project Submitted',
@@ -249,9 +301,9 @@ export default function IntakeForm() {
                     [{ text: 'OK', onPress: () => router.push('/(tabs)/projects') }]
                 );
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('SUBMIT_ERROR:', error);
-            Alert.alert('Error', 'Failed to submit project. Please try again.');
+            Alert.alert('Error', error.message || 'Failed to submit project. Please try again.');
         } finally {
             setSubmitting(false);
         }

@@ -27,7 +27,7 @@ export async function GET() {
 
         const teamIds = user.teamMemberships.map(tm => tm.teamId);
 
-        const requests = await db.projectRequest.findMany({
+        const requests = await db.project.findMany({
             where: {
                 OR: [
                     { assignedUserId: session.user.id },
@@ -38,7 +38,7 @@ export async function GET() {
                 assignedTeam: {
                     select: { name: true }
                 },
-                createdByAdmin: {
+                createdBy: {
                     select: { firstName: true, lastName: true }
                 }
             },

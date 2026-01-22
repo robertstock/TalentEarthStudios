@@ -23,98 +23,115 @@ export async function GET() {
 
 export async function POST(req: Request) {
     try {
+        console.log("POST /api/projects - Starting creation (v_cache_bust_1)");
         const body = await req.json();
         const { name, categoryId, answers } = body;
 
-        // Find default admin user to assign as creator (since mobile is unauthed)
-        const adminUser = await db.user.findFirst({
+        // 1. Ensure Admin User Exists (Fail-safe)
+        let adminUser = await db.user.findFirst({
             where: { role: 'ADMIN' }
         });
 
         if (!adminUser) {
-            return NextResponse.json({ message: "No admin user found to assign project to" }, { status: 500 });
+            adminUser = await db.user.findFirst();
+
+            if (!adminUser) {
+                console.log("No users found. Creating backup admin for project submission.");
+                adminUser = await db.user.create({
+                    data: {
+                        email: 'admin@finley.com',
+                        firstName: 'Admin',
+                        lastName: 'User',
+                        role: 'ADMIN'
+                    }
+                });
+            }
         }
 
-        // Find default client (Acme Corp)
-        const defaultClient = await db.client.findFirst({
+        // 2. Ensure Default Client Exists (Fail-safe)
+        let defaultClient = await db.client.findFirst({
             where: { companyName: 'Acme Corp' }
         });
 
-        // Parse answers to find Description, Budget, Timeline if needed
-        // We need to look up the question definitions to know which ID corresponds to which field
-        // But for now, let's rely on the answer values being passed.
-        // The mobile app sends answers keyed by question ID.
-        // We can try to find the "LONG_TEXT" answer for description.
+        if (!defaultClient) {
+            defaultClient = await db.client.create({
+                data: {
+                    companyName: 'Acme Corp',
+                    primaryContactName: 'Default Contact',
+                    email: 'contact@acme.com'
+                }
+            });
+        }
 
-        let description = "Mobile Project Submission";
-        let budget = null;
-        let timeline = "Standard";
-        let clientName = null;
+        // Prepare answer processing
+        let processedAnswers = Object.entries(answers || {});
 
-        // Fetch question types for this category to map answers correctly
+        // Fetch category for Date Mapping
         if (categoryId) {
             const category = await db.category.findUnique({
                 where: { id: categoryId },
                 include: { questionSets: { include: { questions: true } } }
             });
             const activeSet = category?.questionSets.find(qs => qs.active);
+
             if (activeSet) {
-                for (const q of activeSet.questions) {
-                    if (answers[q.id]) {
-                        if (q.type === 'LONG_TEXT') description = answers[q.id];
-                        if (q.prompt === 'Budget Range') budget = answers[q.id];
-                        if (q.prompt === 'Timeline') timeline = answers[q.id];
-                        if (q.prompt === 'Client Name') clientName = answers[q.id];
+                // Resolve Fallback Date ID
+                const fallbackDateEntry = processedAnswers.find(([key]) => key.startsWith('q_date_fallback'));
+                if (fallbackDateEntry) {
+                    const realDateQuestion = activeSet.questions.find(q => q.type === 'DATE' || q.prompt === 'Target Delivery Date');
+                    if (realDateQuestion) {
+                        processedAnswers = processedAnswers.map(([k, v]) =>
+                            k.startsWith('q_date_fallback') ? [realDateQuestion.id, v] : [k, v]
+                        );
                     }
                 }
             }
         }
 
-        // Determine Client
-        let clientIdToAssign = defaultClient?.id;
-
-        if (clientName) {
-            // Check if client exists by name
-            const existingClient = await db.client.findFirst({
-                where: { companyName: { equals: clientName, mode: 'insensitive' } }
-            });
-
-            if (existingClient) {
-                clientIdToAssign = existingClient.id;
-            } else {
-                // Create new client
-                const newClient = await db.client.create({
-                    data: {
-                        companyName: clientName,
-                        primaryContactName: 'Unknown', // Placeholder
-                    }
-                });
-                clientIdToAssign = newClient.id;
-            }
-        }
+        // Filter out invalid keys 
+        const validAnswers = processedAnswers.filter(([qId]) => qId && !qId.startsWith('q_'));
 
         const project = await db.project.create({
             data: {
-                title: name,
-                description: description,
-                timeline: timeline || "Standard",
-                budgetRange: budget,
-                assignedType: "INDIVIDUAL",
-                createdByAdminId: adminUser.id,
+                name: name,
+                // REMOVED: assignedType - field doesn't exist in schema
+                createdById: adminUser.id,
                 categoryId: categoryId,
-                status: "DRAFT",
-                clientId: clientIdToAssign,
+                status: "SUBMITTED",
+                clientId: defaultClient.id,
+                assignedType: "INDIVIDUAL", // Required by DB constraint
+                description: name, // Fallback for required field
+                timeline: "",      // Fallback for required field
 
-                // Create answers
                 answers: {
-                    create: Object.entries(answers || {}).map(([qId, val]) => ({
-                        questionId: qId,
-                        valueText: typeof val === 'string' ? val : JSON.stringify(val),
-                        valueJson: typeof val === 'object' ? JSON.stringify(val) : null
-                    }))
+                    create: validAnswers.map(([qId, val]) => {
+                        const valString = typeof val === 'string' ? val : (val ? JSON.stringify(val) : null);
+                        const valJson = (typeof val === 'object' && val !== null) ? JSON.stringify(val) : null;
+                        return {
+                            questionId: qId,
+                            valueText: valString,
+                            valueJson: valJson
+                        };
+                    })
                 }
             }
         });
+
+        // 3. Create Notification for Admin
+        try {
+            await db.notification.create({
+                data: {
+                    userId: adminUser.id,
+                    type: 'PROJECT_SUBMITTED',
+                    title: 'New Project Received',
+                    message: `Project "${name}" has been submitted.`,
+                    metadata: JSON.stringify({ projectId: project.id })
+                }
+            });
+        } catch (notifError) {
+            console.error("Failed to create notification:", notifError);
+            // Don't fail the request if notification fails
+        }
 
         return NextResponse.json(project);
     } catch (error) {

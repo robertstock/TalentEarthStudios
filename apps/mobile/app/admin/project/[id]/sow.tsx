@@ -288,7 +288,7 @@ export default function SOWGeneration() {
                                             color={ccRPM ? WME.colors.accent : WME.colors.textDim}
                                         />
                                         <Text style={[styles.checkboxLabel, ccRPM && { color: WME.colors.text }]} allowFontScaling={false}>
-                                            CC: RPM (You)
+                                            CC: RPM{(sow?.projectCreator?.name || sow?.projectCreator?.email) ? ` (${sow?.projectCreator?.name || sow?.projectCreator?.email})` : ''}
                                         </Text>
                                     </TouchableOpacity>
 

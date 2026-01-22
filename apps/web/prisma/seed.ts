@@ -24,32 +24,221 @@ async function main() {
     console.log({ admin })
 
     // Create dummy talent
-    const talentEmail = 'talent@example.com'
-    const talent = await prisma.user.upsert({
-        where: { email: talentEmail },
-        update: {},
-        create: {
-            email: talentEmail,
-            passwordHash: password,
-            firstName: 'Jane',
-            lastName: 'Doe',
-            role: 'TALENT',
-            status: 'APPROVED',
-            profile: {
-                create: {
-                    publicSlug: 'jane-d',
-                    headline: 'Senior Videographer',
-                    primaryDiscipline: 'Videography',
-                    skills: ['Director', 'Editor', 'Colorist'],
-                    location: 'Los Angeles, CA'
+    // --- DATA FROM WEBSITE (src/lib/mock-data.ts) ---
+    const MOCK_TALENTS = [
+        {
+            id: "mock-1",
+            firstName: "Sarah",
+            lastName: "Jenkins",
+            email: "sarah.jenkins@example.com",
+            headline: "Creative Director",
+            primaryDiscipline: "Creative Direction",
+            skills: ["Creative Direction", "Branding", "Campaign Strategy", "Team Leadership"],
+            location: "New York, NY"
+        },
+        {
+            id: "mock-2",
+            firstName: "Emily",
+            lastName: "Chen",
+            email: "emily.chen@example.com",
+            headline: "Art Director",
+            primaryDiscipline: "Art Direction",
+            skills: ["Art Direction", "UI/UX", "Editorial Design", "Typography"],
+            location: "San Francisco, CA"
+        },
+        {
+            id: "mock-3",
+            firstName: "Michelle",
+            lastName: "Ross",
+            email: "michelle.ross@example.com",
+            headline: "Senior Producer",
+            primaryDiscipline: "Production",
+            skills: ["Production Management", "Budgeting", "Client Relations", "Agile Workflow"],
+            location: "London, UK"
+        },
+        {
+            id: "mock-4",
+            firstName: "David",
+            lastName: "Okonjo",
+            email: "david.okonjo@example.com",
+            headline: "Sound Designer",
+            primaryDiscipline: "Sound Design",
+            skills: ["Sound Design", "Audio Mixing", "Foley", "Composition"],
+            location: "Berlin, Germany"
+        },
+        {
+            id: "mock-6",
+            firstName: "Marcus",
+            lastName: "Thorne",
+            email: "marcus.thorne@example.com",
+            headline: "Film Editor",
+            primaryDiscipline: "Editing",
+            skills: ["Video Editing", "Color Grading", "Narrative Structure", "After Effects"],
+            location: "Los Angeles, CA"
+        },
+        {
+            id: "mock-7",
+            firstName: "Elena",
+            lastName: "Rodriguez",
+            email: "elena.rodriguez@example.com",
+            headline: "Motion Graphics Artist",
+            primaryDiscipline: "Motion Graphics",
+            skills: ["Motion Graphics", "3D Animation", "Cinema 4D", "Illustration"],
+            location: "Remote"
+        },
+        {
+            id: "mock-8",
+            firstName: "James",
+            lastName: "Miller",
+            email: "james.miller@example.com",
+            headline: "VFX Supervisor",
+            primaryDiscipline: "Visual Effects",
+            skills: ["VFX Supervision", "Compositing", "Nuke", "On-set Supervision"],
+            location: "Vancouver, BC"
+        },
+        {
+            id: "mock-9",
+            firstName: "Priya",
+            lastName: "Patel",
+            email: "priya.patel@example.com",
+            headline: "Product Designer",
+            primaryDiscipline: "Product Design",
+            skills: ["Product Design", "User Research", "Prototyping", "Design Systems"],
+            location: "Austin, TX"
+        },
+        {
+            id: "mock-10",
+            firstName: "Sofia",
+            lastName: "Wagner",
+            email: "sofia.wagner@example.com",
+            headline: "Set Designer",
+            primaryDiscipline: "Set Design",
+            skills: ["Set Design", "Drafting", "Concept Art", "Prop Styling"],
+            location: "Vienna, Austria"
+        },
+        {
+            id: "jane-simpson",
+            firstName: "Jane",
+            lastName: "Simpson",
+            email: "jane.simpson@example.com",
+            headline: "Director",
+            primaryDiscipline: "Directing",
+            skills: ["Directing", "Screenwriting", "Visual Storytelling"],
+            location: "Los Angeles, CA"
+        }
+    ];
+
+    // Seed Talents
+    for (const t of MOCK_TALENTS) {
+        await prisma.user.upsert({
+            where: { email: t.email },
+            update: {},
+            create: {
+                id: (t.id && t.id.startsWith('mock-')) ? undefined : t.id, // Only use mapped ID if needed, else auto-gen
+                email: t.email,
+                passwordHash: password,
+                firstName: t.firstName,
+                lastName: t.lastName,
+                role: 'TALENT',
+                status: 'APPROVED',
+                profile: {
+                    create: {
+                        publicSlug: `${t.firstName.toLowerCase()}-${t.lastName.toLowerCase().charAt(0)}`,
+                        headline: t.headline,
+                        primaryDiscipline: t.primaryDiscipline,
+                        skills: t.skills,
+                        location: t.location
+                    }
                 }
             }
+        });
+        console.log(`Synced talent: ${t.firstName} ${t.lastName}`);
+    }
+
+    // Define Teams (referencing emails to connect to created users)
+    const MOCK_TEAMS = [
+        {
+            slug: "motionworks",
+            name: "MotionWorks",
+            memberEmails: ["sarah.jenkins@example.com", "jane.simpson@example.com", "michelle.ross@example.com"],
+            type: "Film Production",
+            description: "Film and motion production."
+        },
+        {
+            slug: "blackline-fabrication",
+            name: "Blackline Fabrication",
+            memberEmails: ["priya.patel@example.com", "sofia.wagner@example.com"],
+            type: "Prop Design / Fabrication",
+            description: "Prop design, fabrication, and physical builds."
+        },
+        {
+            slug: "environment-studio",
+            name: "Environment Studio",
+            memberEmails: ["sofia.wagner@example.com", "priya.patel@example.com"],
+            type: "Set Design",
+            description: "Set design and spatial environments."
+        },
+        {
+            slug: "waveform-studio",
+            name: "Waveform Studio",
+            memberEmails: ["david.okonjo@example.com"],
+            type: "Audio / Score",
+            description: "Audio, sound design, and music scoring."
+        },
+        {
+            slug: "visual-effects-studio",
+            name: "Visual Effects Studio",
+            memberEmails: ["james.miller@example.com", "elena.rodriguez@example.com"],
+            type: "VFX / Post",
+            description: "High-end visual effects and compositing."
+        },
+        {
+            slug: "continuity",
+            name: "Continuity",
+            memberEmails: ["marcus.thorne@example.com", "emily.chen@example.com"],
+            type: "Post Production",
+            description: "Editorial, color grading, and finishing."
         }
-    })
+    ];
 
-    console.log({ talent })
+    // Seed Teams
+    for (const team of MOCK_TEAMS) {
+        // Find users for this team
+        const members = await prisma.user.findMany({
+            where: { email: { in: team.memberEmails } }
+        });
 
-    console.log({ talent })
+        if (members.length === 0) {
+            console.log(`Skipping team ${team.name} - no members found`);
+            continue;
+        }
+
+        const leaderId = members[0].id;
+
+        // Upsert Team
+        const createdTeam = await prisma.team.upsert({
+            where: { slug: team.slug },
+            update: {
+                leaderUserId: leaderId
+            },
+            create: {
+                name: team.name,
+                slug: team.slug,
+                description: team.description,
+                leaderUserId: leaderId,
+                members: {
+                    create: members.map(m => ({
+                        userId: m.id,
+                        roleInTeam: m.id === leaderId ? 'LEADER' : 'MEMBER',
+                        status: 'ACTIVE'
+                    }))
+                }
+            }
+        });
+        console.log(`Synced team: ${team.name}`);
+    }
+
+
 
     // Categories
     const categories = [

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Alert, StatusBar, Image } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { ProjectList } from '../../components/ProjectList';
+import { NotificationModal } from '../../components/NotificationModal';
 import { API_URL } from '../../constants/Constants';
 import { WME } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +11,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [notifVisible, setNotifVisible] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -47,7 +49,7 @@ export default function Dashboard() {
         </View>
         <View style={styles.headerRight}>
           <View style={styles.statusDot} />
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => setNotifVisible(true)}>
             <Ionicons name="notifications-outline" size={20} color={WME.colors.textMuted} />
           </TouchableOpacity>
         </View>
@@ -68,6 +70,11 @@ export default function Dashboard() {
       >
         <Ionicons name="add" size={28} color={WME.colors.text} />
       </TouchableOpacity>
+
+      <NotificationModal
+        visible={notifVisible}
+        onClose={() => setNotifVisible(false)}
+      />
     </View>
   );
 }

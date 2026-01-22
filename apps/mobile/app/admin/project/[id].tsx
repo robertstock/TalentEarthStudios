@@ -21,11 +21,15 @@ export default function AdminProjectReview() {
         setLoading(true);
         try {
             const response = await fetch(`${API_URL}/admin/projects/${id}`);
-            if (!response.ok) throw new Error('Failed to fetch project');
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.details || errData.message || 'Failed to fetch project');
+            }
             const data = await response.json();
             setProject(data);
-        } catch (error) {
+        } catch (error: any) {
             console.error('PROJECT_FETCH_ERROR:', error);
+            Alert.alert('Error', error.message || 'Failed to load project details');
         } finally {
             setLoading(false);
         }
@@ -175,7 +179,7 @@ export default function AdminProjectReview() {
 
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel} allowFontScaling={false}>Name</Text>
-                            <Text style={styles.detailValue} allowFontScaling={false}>{project.name}</Text>
+                            <Text style={styles.detailValue} allowFontScaling={false}>{project.title || project.name}</Text>
                         </View>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel} allowFontScaling={false}>Client</Text>
@@ -187,17 +191,46 @@ export default function AdminProjectReview() {
                             <Text style={styles.detailLabel} allowFontScaling={false}>Submitted By</Text>
                             <Text style={styles.detailValue} allowFontScaling={false}>{project.createdBy?.name || project.createdBy?.email}</Text>
                         </View>
+                        {(() => {
+                            const dateAns = project.answers?.find((a: any) =>
+                                ['q_Date', 'q5', 'q_date_fallback'].includes(a.questionId) ||
+                                (a.valueText && a.valueText.match(/^\d{2}\/\d{2}\/\d{4}$/))
+                            );
+                            if (dateAns) {
+                                return (
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel} allowFontScaling={false}>Target Delivery</Text>
+                                        <Text style={[styles.detailValue, { color: WME.colors.warning }]} allowFontScaling={false}>{dateAns.valueText}</Text>
+                                    </View>
+                                );
+                            }
+                            return null;
+                        })()}
                     </View>
 
                     {/* Intake Answers */}
                     <View style={styles.card}>
                         <Text style={styles.cardLabel} allowFontScaling={false}>INTAKE RESPONSES</Text>
-                        {project.answers?.map((a: any) => (
-                            <View key={a.id} style={styles.answerItem}>
-                                <Text style={styles.answerPrompt} allowFontScaling={false}>{a.question?.prompt}</Text>
-                                <Text style={styles.answerValue} allowFontScaling={false}>{a.valueText}</Text>
-                            </View>
-                        ))}
+                        {project.answers?.map((a: any) => {
+                            // Fallback for known legacy/orphan questions
+                            let prompt = a.question?.prompt;
+                            if (!prompt) {
+                                if (['q_Date', 'q5', 'q_date_fallback'].includes(a.questionId)) {
+                                    prompt = 'Target Delivery Date';
+                                } else if (a.valueText.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                                    prompt = 'Date';
+                                } else {
+                                    prompt = 'Additional Info'; // Generic fallback
+                                }
+                            }
+
+                            return (
+                                <View key={a.id} style={styles.answerItem}>
+                                    <Text style={styles.answerPrompt} allowFontScaling={false}>{prompt}</Text>
+                                    <Text style={styles.answerValue} allowFontScaling={false}>{a.valueText}</Text>
+                                </View>
+                            );
+                        })}
                     </View>
 
                     {/* Financials Section */}

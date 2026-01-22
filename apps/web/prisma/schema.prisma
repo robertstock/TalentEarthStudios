@@ -42,6 +42,10 @@ enum ProjectStatus {
   SENT
   QUOTE_RECEIVED
   CLOSED
+  SUBMITTED
+  APPROVED_FOR_SOW
+  SOW_DRAFT
+  NEEDS_RPM_UPDATE
 }
 
 enum QuoteStatus {
@@ -71,7 +75,7 @@ model User {
   teamMemberships TeamMember[]
   ledTeams      Team[]      @relation("TeamLeader")
 
-  createdProjects Project[] @relation("ProjectCreator")
+  projectsCreated Project[] @relation("CreatedBy")
   assignedProjects Project[]
   submittedQuotes Quote[]
 
@@ -83,6 +87,7 @@ model User {
   recordingConsents MeetingRecording[]
   reviews           AdminReview[]
   sowsCreated       SOW[]
+  notifications     Notification[]
 }
 
 model TalentProfile {
@@ -212,7 +217,7 @@ model Question {
 model Answer {
   id          String   @id @default(cuid())
   projectId   String
-  project     Project  @relation(fields: [projectId], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   questionId  String
   question    Question @relation(fields: [questionId], references: [id])
   valueText   String?
@@ -224,18 +229,18 @@ model Answer {
 
 model Project {
   id              String             @id @default(cuid())
-  createdByAdminId String
-  createdByAdmin   User               @relation("ProjectCreator", fields: [createdByAdminId], references: [id])
+  createdById     String             @map("createdByAdminId")
+  createdBy       User               @relation("CreatedBy", fields: [createdById], references: [id])
 
-  title           String
-  description     String
+  name            String             @map("title")
+  description     String?
   categoryId      String?
   category        Category?           @relation(fields: [categoryId], references: [id])
-  timeline        String
+  timeline        String?
   budgetRange     String?
   dueDateForQuote DateTime?
 
-  assignedType    ProjectAssignedType
+  assignedType    ProjectAssignedType?
   assignedUserId  String?
   assignedTeamId  String?
 
@@ -248,8 +253,13 @@ model Project {
   talent          Talent?       @relation("ProjectTalent", fields: [talentId], references: [id])
 
   status          ProjectStatus       @default(DRAFT)
+  
+  isPaid          Boolean             @default(false)
+  paidAt          DateTime?
+  finalRevenue    Float?
+  commissionPaid  Float?
 
-  clientId        String?
+  clientId        String
   client          Client?             @relation(fields: [clientId], references: [id])
 
   attachments     ProjectAttachment[]
@@ -267,7 +277,8 @@ model Project {
 model MeetingRecording {
   id                   String   @id @default(cuid())
   projectId            String
-  project              Project  @relation(fields: [projectId], references: [id])
+  project              Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   consentCapturedById  String
   consentCapturedBy    User     @relation(fields: [consentCapturedById], references: [id])
   consentTimestamp     DateTime
@@ -281,7 +292,8 @@ model MeetingRecording {
 model Transcript {
   id          String           @id @default(cuid())
   projectId   String
-  project     Project          @relation(fields: [projectId], references: [id])
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   recordingId String
   recording   MeetingRecording @relation(fields: [recordingId], references: [id])
   rawText     String?          @db.Text
@@ -356,7 +368,8 @@ enum ReviewDecision {
 model AdminReview {
   id             String         @id @default(cuid())
   projectId      String
-  project        Project        @relation(fields: [projectId], references: [id])
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   reviewerId     String
   reviewer       User           @relation(fields: [reviewerId], references: [id])
   decision       ReviewDecision
@@ -373,7 +386,8 @@ enum SOWStatus {
 model SOW {
   id            String    @id @default(cuid())
   projectId     String
-  project       Project   @relation(fields: [projectId], references: [id])
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   versionNumber Int
   status        SOWStatus @default(DRAFT)
   bodyRichText  String?   @db.Text
@@ -430,4 +444,18 @@ model Client {
   projects           Project[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  metadata  String?  
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

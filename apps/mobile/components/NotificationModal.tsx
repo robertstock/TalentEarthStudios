@@ -62,7 +62,7 @@ export function NotificationModal({ visible, onClose, onMarkAllRead }: Notificat
             setHasMore(newNotifications.length >= 20);
             setPage(pageNum);
         } catch (err: any) {
-            console.error('NOTIF_LOAD_ERROR:', err);
+            console.error('NOTIF_LOAD_ERROR DETAILS:', JSON.stringify(err));
             setError(err.message || 'Something went wrong');
         } finally {
             setLoading(false);

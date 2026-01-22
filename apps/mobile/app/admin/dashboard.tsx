@@ -111,7 +111,7 @@ export default function AdminDashboard() {
             setProjects(data);
             previousProjectsRef.current = data;
 
-            const pendingReview = data.filter((p: any) => p.status === 'SUBMITTED').length;
+            const pendingReview = data.filter((p: any) => p.status === 'SUBMITTED' || p.status === 'SENT').length;
             const sowDrafts = data.filter((p: any) => p.status === 'SOW_DRAFT').length;
             const active = data.filter((p: any) => ['APPROVED_FOR_SOW', 'SOW_SENT_TO_CLIENT', 'CLIENT_APPROVED', 'IN_PRODUCTION'].includes(p.status)).length;
 
@@ -141,8 +141,8 @@ export default function AdminDashboard() {
         }, [])
     );
 
-    const pendingProjects = projects.filter(p => p.status === 'SUBMITTED');
-    const recentActivity = projects.filter(p => p.status !== 'SUBMITTED');
+    const pendingProjects = projects.filter(p => p.status === 'SUBMITTED' || p.status === 'SENT');
+    const recentActivity = projects.filter(p => p.status !== 'SUBMITTED' && p.status !== 'SENT');
 
     const animatedBellStyle = useAnimatedStyle(() => {
         return {
@@ -225,23 +225,50 @@ export default function AdminDashboard() {
                         </View>
                     ) : (
                         pendingProjects.map((project) => (
-                            <TouchableOpacity
-                                key={project.id}
-                                style={styles.actionCard}
-                                onPress={() => router.push(`/admin/project/${project.id}`)}
-                            >
-                                <View style={styles.cardLeft}>
-                                    <View style={styles.indicator} />
-                                    <View>
-                                        <Text style={styles.cardTitle} allowFontScaling={false} numberOfLines={1}>{project.name}</Text>
-                                        <Text style={styles.cardSubtitle} allowFontScaling={false}>{(project.client?.companyName === 'Acme Corp' ? 'WME+ Internal' : project.client?.companyName) || 'Unknown Client'}</Text>
+                            <View key={project.id} style={styles.actionCard}>
+                                <TouchableOpacity
+                                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+                                    onPress={() => router.push(`/admin/project/${project.id}`)}
+                                >
+                                    <View style={styles.cardLeft}>
+                                        <View style={styles.indicator} />
+                                        <View>
+                                            <Text style={styles.cardTitle} allowFontScaling={false} numberOfLines={1}>{project.title || project.name}</Text>
+                                            <Text style={styles.cardSubtitle} allowFontScaling={false}>{(project.client?.companyName === 'Acme Corp' ? 'WME+ Internal' : project.client?.companyName) || 'Unknown Client'}</Text>
+                                        </View>
                                     </View>
-                                </View>
+                                </TouchableOpacity>
+
                                 <View style={styles.cardRight}>
                                     <Text style={styles.timeText} allowFontScaling={false}>{new Date(project.updatedAt).toLocaleDateString()}</Text>
-                                    <Ionicons name="chevron-forward" size={16} color={WME.colors.textSubtle} />
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            Alert.alert(
+                                                "Delete Project",
+                                                "Are you sure you want to delete this project?",
+                                                [
+                                                    { text: "Cancel", style: "cancel" },
+                                                    {
+                                                        text: "Delete",
+                                                        style: "destructive",
+                                                        onPress: async () => {
+                                                            try {
+                                                                await fetch(`${API_URL}/admin/projects/${project.id}`, { method: 'DELETE' });
+                                                                fetchData();
+                                                            } catch (e) {
+                                                                Alert.alert("Error", "Failed to delete project");
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            );
+                                        }}
+                                        style={{ padding: 8 }}
+                                    >
+                                        <Ionicons name="trash-outline" size={18} color={WME.colors.textSubtle} />
+                                    </TouchableOpacity>
                                 </View>
-                            </TouchableOpacity>
+                            </View>
                         ))
                     )}
 
@@ -265,7 +292,7 @@ export default function AdminDashboard() {
                                     { backgroundColor: project.status.includes('SOW') ? WME.colors.accent : WME.colors.success }
                                 ]} />
                                 <View style={{ flex: 1, paddingRight: 8 }}>
-                                    <Text style={styles.rowTitle} allowFontScaling={false} numberOfLines={1}>{project.name}</Text>
+                                    <Text style={styles.rowTitle} allowFontScaling={false} numberOfLines={1}>{project.title || project.name}</Text>
                                     <Text style={styles.rowSubtitle} allowFontScaling={false}>{(project.client?.companyName === 'Acme Corp' ? 'WME+ Internal' : project.client?.companyName) || 'Unknown Client'}</Text>
                                 </View>
                             </View>

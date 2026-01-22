@@ -20,10 +20,10 @@ export default async function TalentDirectory() {
 
     // MOCK: Override for Jane Doe to make her look like a real user
     talents.forEach(talent => {
-        if (talent.firstName === 'Jane' && talent.lastName === 'Doe') {
+        if (talent.firstName === 'Jane' && (talent.lastName === 'Doe' || talent.lastName === 'Simpson')) {
             talent.lastName = 'Simpson';
             if (talent.profile) {
-                talent.profile.profileImage = '/jane-simpson.png'; // Keeping her specific image or I could use avatar-5.jpg
+                talent.profile.profileImage = '/talent-faces/avatar-5.jpg';
                 if (!talent.profile.bio || talent.profile.bio.includes("No bio")) {
                     talent.profile.bio = "Award-winning filmmaker and visual storyteller with over 10 years of experience in commercial and narrative cinema. Specializing in creating emotionally resonant content for global brands and independent films. Based in Los Angeles, but available for travel worldwide.";
                 }
@@ -35,8 +35,17 @@ export default async function TalentDirectory() {
     const { MOCK_TALENTS } = await import('@/lib/mock-data');
 
     // Combine real (modified) talents with mock talents
-    // Cast MOCK_TALENTS to the same type as talents or use any if types conflict slightly (Prisma types vs interface)
-    const allTalents = [...talents, ...MOCK_TALENTS];
+    // Deduplicate by email OR name to avoid overlapping database and mock records
+    const existingEmails = new Set(talents.map(t => t.email.toLowerCase()));
+    const existingNames = new Set(talents.map(t => `${t.firstName} ${t.lastName}`.toLowerCase()));
+
+    const uniqueMockTalents = MOCK_TALENTS.filter(t => {
+        const emailMatch = existingEmails.has(t.email.toLowerCase());
+        const nameMatch = existingNames.has(`${t.firstName} ${t.lastName}`.toLowerCase());
+        return !emailMatch && !nameMatch;
+    });
+
+    const allTalents = [...talents, ...uniqueMockTalents];
 
     return (
         <div className="relative z-10 w-full min-h-screen pt-20 md:pt-24 pb-12">

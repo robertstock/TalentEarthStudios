@@ -15,7 +15,7 @@ export default async function AdminDashboard() {
     // Counts
     const pendingReviews = await db.user.count({ where: { status: "PENDING_REVIEW" } });
     const totalTalent = await db.user.count({ where: { role: "TALENT" } });
-    const activeProjects = await db.projectRequest.count({ where: { status: { not: "CLOSED" } } });
+    const activeProjects = await db.project.count({ where: { status: { not: "CLOSED" } } });
     const newLeads = await db.lead.count({ where: { status: "NEW" } });
 
     return (
