@@ -18,41 +18,11 @@ export default async function TalentDirectory() {
         console.warn("Could not fetch talents from DB, falling back to mocks", e);
     }
 
-    // MOCK: Override for Jane Doe to make her look like a real user
-    // AND Deduplicate database talents by name/email
-    const seenNames = new Set();
-    const uniqueDbTalents: any[] = [];
-
-    talents.forEach(talent => {
-        if (talent.firstName === 'Jane' && (talent.lastName === 'Doe' || talent.lastName === 'Simpson')) {
-            talent.lastName = 'Simpson';
-            if (talent.profile) {
-                talent.profile.profileImage = '/talent-faces/avatar-5.jpg';
-                if (!talent.profile.bio || talent.profile.bio.includes("No bio")) {
-                    talent.profile.bio = "Award-winning filmmaker and visual storyteller with over 10 years of experience in commercial and narrative cinema. Specializing in creating emotionally resonant content for global brands and independent films. Based in Los Angeles, but available for travel worldwide.";
-                }
-            }
-        }
-
-        const fullName = `${talent.firstName} ${talent.lastName}`.toLowerCase();
-        if (!seenNames.has(fullName) && !seenNames.has(talent.email.toLowerCase())) {
-            seenNames.add(fullName);
-            seenNames.add(talent.email.toLowerCase());
-            uniqueDbTalents.push(talent);
-        }
-    });
-
-    // MOCK: Inject additional profiles
+    // MOCK: Inject additional profiles and deduplicate
     const { MOCK_TALENTS } = await import('@/lib/mock-data');
+    const { deduplicateTalents } = await import('@/lib/talent-utils');
 
-    // Combine unique DB talents with mock talents
-    // Deduplicate by email OR name to avoid overlapping database and mock records
-    const uniqueMockTalents = MOCK_TALENTS.filter(t => {
-        const nameKey = `${t.firstName} ${t.lastName}`.toLowerCase();
-        return !seenNames.has(t.email.toLowerCase()) && !seenNames.has(nameKey);
-    });
-
-    const allTalents = [...uniqueDbTalents, ...uniqueMockTalents];
+    const allTalents = deduplicateTalents(talents, MOCK_TALENTS);
 
     return (
         <div className="relative z-10 w-full min-h-screen pt-20 md:pt-24 pb-12">
