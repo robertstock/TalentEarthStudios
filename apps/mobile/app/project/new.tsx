@@ -13,12 +13,12 @@ interface Category {
 }
 
 const ICON_MAP: Record<string, string> = {
-    'Event Coverage': 'videocam',
-    'Promotional Video': 'film',
-    'Visual Print Media': 'image',
-    'Film | Video': 'play-circle',
-    'Audio | Score': 'musical-notes',
-    'Experiential Marketing': 'people',
+    'Film Production': 'film',
+    'Prop Design / Fabrication': 'hammer',
+    'Set Design': 'cube',
+    'Audio / Score': 'musical-notes',
+    'VFX / Post': 'color-wand',
+    'Post Production': 'cut',
 };
 
 export default function NewProject() {

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import ThreeBackground from "@/components/ThreeBackground";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -26,9 +27,10 @@ export default function RootLayout({
         <Providers>
           <ThreeBackground />
           <Navbar />
-          <main className="relative z-10 w-full min-h-screen opacity-100 transition-opacity duration-500">
+          <main className="relative z-10 w-full min-h-screen opacity-100 transition-opacity duration-500 pb-20">
             {children}
           </main>
+          <Footer />
         </Providers>
       </body>
     </html>

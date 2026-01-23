@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
         const projects = await db.project.findMany({
@@ -65,6 +67,8 @@ export async function POST(req: Request) {
 
         // Prepare answer processing
         let processedAnswers = Object.entries(answers || {});
+        let clientNameFromAnswers: string | null = null;
+        let projectNameFromAnswers: string | null = null;
 
         // Fetch category for Date Mapping
         if (categoryId) {
@@ -75,32 +79,100 @@ export async function POST(req: Request) {
             const activeSet = category?.questionSets.find(qs => qs.active);
 
             if (activeSet) {
-                // Resolve Fallback Date ID
-                const fallbackDateEntry = processedAnswers.find(([key]) => key.startsWith('q_date_fallback'));
-                if (fallbackDateEntry) {
-                    const realDateQuestion = activeSet.questions.find(q => q.type === 'DATE' || q.prompt === 'Target Delivery Date');
-                    if (realDateQuestion) {
-                        processedAnswers = processedAnswers.map(([k, v]) =>
-                            k.startsWith('q_date_fallback') ? [realDateQuestion.id, v] : [k, v]
-                        );
+                // Dynamic Prompt Mapping
+                // Maps hardcoded mobile keys (e.g. 'q_budget') to real DB Question IDs by matching their Prompts
+                const promptMap: Record<string, string | string[]> = {
+                    'q_budget': 'Budget Range',
+                    'q_timeline': 'Timeline',
+                    'q_description': ['Project Description', 'Creative Brief', 'Concept Description', 'Description & Specs'],
+                    'q_date': ['Target Delivery Date', 'Event Date', 'Delivery Deadline', 'Target Shoot Date'],
+                    'q_date_fallback': ['Target Delivery Date', 'Event Date', 'Delivery Deadline', 'Target Shoot Date'],
+                    'q_client': ['Client Name', 'Company Name', 'Company', 'Brand Name'],
+                    'q_project_name': ['Project Name', 'Campaign Title']
+                };
+
+                processedAnswers = processedAnswers.map(([key, val]) => {
+                    if (promptMap[key]) {
+                        const targetPrompts = Array.isArray(promptMap[key]) ? promptMap[key] : [promptMap[key]];
+                        const realQuestion = activeSet.questions.find(q => targetPrompts.includes(q.prompt));
+
+                        if (realQuestion) {
+                            console.log(`Mapping ${key} -> ${realQuestion.id} (${realQuestion.prompt})`);
+
+                            // Capture special values for Logic
+                            if (targetPrompts.includes('Client Name') || targetPrompts.includes('Company Name') || targetPrompts.includes('Company')) {
+                                clientNameFromAnswers = val as string;
+                            }
+                            if (targetPrompts.includes('Project Name') || targetPrompts.includes('Campaign Title')) {
+                                projectNameFromAnswers = val as string;
+                            }
+
+                            return [realQuestion.id, val];
+                        }
                     }
-                }
+
+                    // Fallback: If key matches a UUID format, check if it's Client Name question
+                    if (activeSet.questions.some(q => q.id === key && (q.prompt === 'Client Name' || q.prompt === 'Company Name'))) {
+                        clientNameFromAnswers = val as string;
+                    }
+                    if (activeSet.questions.some(q => q.id === key && (q.prompt === 'Project Name'))) {
+                        projectNameFromAnswers = val as string;
+                    }
+
+                    return [key, val];
+                });
             }
         }
 
-        // Filter out invalid keys 
-        const validAnswers = processedAnswers.filter(([qId]) => qId && !qId.startsWith('q_'));
+        // Resolve Client Logic
+        let targetClientId = defaultClient.id;
+        if (clientNameFromAnswers) {
+            console.log(`Found Client Name in answers: ${clientNameFromAnswers}`);
+            const existingClient = await db.client.findFirst({
+                where: { companyName: { equals: clientNameFromAnswers, mode: 'insensitive' } }
+            });
+
+            if (existingClient) {
+                targetClientId = existingClient.id;
+            } else {
+                const newClient = await db.client.create({
+                    data: {
+                        companyName: clientNameFromAnswers,
+                        primaryContactName: 'Pending Contact' // Placeholder
+                    }
+                });
+                targetClientId = newClient.id;
+            }
+        }
+
+        // Resolve Project Name Logic
+        // If the top-level name is generic (e.g. "Project 10/24...") and we have a specific answer, use the answer
+        let finalName = name;
+        if (projectNameFromAnswers && (!name || name.startsWith('Project '))) {
+            finalName = projectNameFromAnswers;
+        }
+
+        // Filter to only valid UID question IDs (foreign key constraint requires real DB IDs)
+        // Mock IDs like 'q1', 'q2' or 'q_date_fallback' must be excluded.
+        // DB uses CUIDs (start with 'c') or UUIDs.
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const cuidRegex = /^c[a-z0-9]{20,}$/i;
+
+        const validAnswers = processedAnswers.filter(([qId]) => {
+            if (!qId) return false;
+            return uuidRegex.test(qId) || cuidRegex.test(qId);
+        });
 
         const project = await db.project.create({
             data: {
-                name: name,
+                name: finalName,
                 // REMOVED: assignedType - field doesn't exist in schema
                 createdById: adminUser.id,
                 categoryId: categoryId,
                 status: "SUBMITTED",
-                clientId: defaultClient.id,
+                clientId: targetClientId,
                 assignedType: "INDIVIDUAL", // Required by DB constraint
-                description: name, // Fallback for required field
+                description: finalName, // Fallback for required field
                 timeline: "",      // Fallback for required field
 
                 answers: {

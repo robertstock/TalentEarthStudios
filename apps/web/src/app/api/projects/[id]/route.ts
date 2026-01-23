@@ -10,6 +10,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                 category: true,
                 answers: true,
                 recordings: true,
+                client: true, // Return client details (Company Name)
                 adminReviews: {
                     include: { reviewer: true },
                     orderBy: { createdAt: 'desc' }
@@ -81,9 +82,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
                 // Continue without resolution (fallback ID will be filtered out below, ensuring valid save)
             }
 
-            // Filter out invalid question IDs (must be CUIDs or resolved real IDs)
-            // Invalid IDs start with 'q_' (temporary frontend IDs).
-            const validAnswers = processedAnswers.filter(([qId]) => qId && !qId.startsWith('q_'));
+            // Filter to only valid UID question IDs (foreign key constraint requires real DB IDs)
+            // Mock IDs like 'q1', 'q2' or 'q_date_fallback' must be excluded
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            const cuidRegex = /^c[a-z0-9]{20,}$/i;
+
+            const validAnswers = processedAnswers.filter(([qId]) => {
+                if (!qId) return false;
+                return uuidRegex.test(qId) || cuidRegex.test(qId);
+            });
 
             // If we are getting answers, it's likely a submission/resubmission
             if (!status) updateData.status = 'SUBMITTED';

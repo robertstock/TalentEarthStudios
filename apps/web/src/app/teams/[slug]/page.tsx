@@ -76,13 +76,17 @@ export default async function TeamManifestPage({ params }: PageProps) {
                         <section className="mt-16">
                             <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-6 border-b border-slate-800 pb-2">Capabilities</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {/* Mock capabilities based on type */}
-                                {[1, 2, 3, 4].map((i) => (
+                                {team.capabilities && team.capabilities.map((capability: string, i: number) => (
                                     <div key={i} className="bg-slate-900/50 p-4 border border-slate-800">
                                         <div className="w-1 h-1 bg-green-500 mb-2"></div>
-                                        <span className="text-sm text-slate-300">Capability {i}</span>
+                                        <span className="text-sm text-slate-300">{capability}</span>
                                     </div>
                                 ))}
+                                {(!team.capabilities || team.capabilities.length === 0) && (
+                                    <div className="col-span-full py-6 text-slate-600 font-mono text-sm border border-dashed border-slate-800 flex items-center justify-center">
+                                        NO CAPABILITIES DATA AVAILABLE
+                                    </div>
+                                )}
                             </div>
                         </section>
                     </div>

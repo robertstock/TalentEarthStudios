@@ -48,7 +48,7 @@
 - SOW Template System & Rich Editor
 - SOW Editor & PDF Generation
 - Status Machine Implementation (Submitted -> Approved -> SOW Sent)
-- **Web Network Display**: Featured teams and talent showcased on landing page.
+- **Web Network Display**: ✅ Featured teams and talent showcased on landing page (restored mock portfolios).
 
 ### Phase 4: Client Loop & Rich Media
 **Status**: ⬜ Not Started

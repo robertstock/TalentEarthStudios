@@ -34,10 +34,10 @@ async function getTalentBySlug(slug: string) {
 export default async function TalentProfilePage(props: PageProps) {
     const params = await props.params;
     let talent = await getTalentBySlug(params.slug);
+    const { MOCK_TALENTS } = await import('@/lib/mock-data');
 
     // MOCK: Check if it's a mock talent if not found in DB
     if (!talent) {
-        const { MOCK_TALENTS } = await import('@/lib/mock-data');
         const mockTalent = MOCK_TALENTS.find(t => t.profile.publicSlug === params.slug);
 
         if (mockTalent) {
@@ -69,6 +69,61 @@ export default async function TalentProfilePage(props: PageProps) {
                 }
             } as any;
         }
+    } else {
+        // DB talent found - merge mock data for bios/portfolios/skills if missing
+        let firstName = talent.firstName;
+        let lastName = talent.lastName;
+
+        // Normalize Jane Simpson
+        if (firstName === 'Jane' && (lastName === 'Doe' || lastName === 'Simpson')) {
+            lastName = 'Simpson';
+        }
+
+        const fullName = `${firstName} ${lastName}`.toLowerCase();
+        const mockMatch = MOCK_TALENTS.find(m => {
+            const mockName = `${m.firstName} ${m.lastName}`.toLowerCase();
+            // Also handle jane doe -> jane simpson
+            const altName = firstName?.toLowerCase() === 'jane' &&
+                (lastName?.toLowerCase() === 'doe' || lastName?.toLowerCase() === 'simpson')
+                ? 'jane simpson' : fullName;
+            return mockName === fullName || mockName === altName;
+        });
+
+        if (mockMatch && talent.profile) {
+            // Merge bio if empty
+            if (!talent.profile.bio || talent.profile.bio.includes("No bio")) {
+                talent.profile.bio = mockMatch.profile.bio;
+            }
+            // Merge skills if empty
+            if (!talent.profile.skills || talent.profile.skills.length === 0) {
+                talent.profile.skills = mockMatch.profile.skills;
+            }
+            // Merge headline if empty
+            if (!talent.profile.headline) {
+                talent.profile.headline = mockMatch.profile.headline;
+            }
+            // Merge primaryDiscipline if empty
+            if (!talent.profile.primaryDiscipline) {
+                talent.profile.primaryDiscipline = mockMatch.profile.primaryDiscipline;
+            }
+            // Merge location if empty
+            if (!talent.profile.location) {
+                talent.profile.location = mockMatch.profile.location;
+            }
+            // Assign avatar from map
+            if (!talent.profile.profileImage) {
+                talent.profile.profileImage = mockMatch.profile.profileImage;
+            }
+        }
+
+        // Merge portfolio from mock if DB portfolio is empty
+        if (mockMatch && (!talent.portfolio || talent.portfolio.length === 0)) {
+            talent.portfolio = mockMatch.portfolio || [];
+        }
+
+        // Apply name normalization
+        talent.firstName = firstName;
+        talent.lastName = lastName;
     }
 
     if (!talent || !talent.profile) {

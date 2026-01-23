@@ -12,6 +12,9 @@
 - Verified end-to-end flow from mobile editing to database persistence.
 - Integrated Mobile & Web Database (Merged Schemas).
 - Implemented public API endpoints for Projects and Categories.
+- **Fixed & Verified**: Mobile Intake form now uses real API questions (removed mock ID conflict).
+- **UI Polish**: Updated branding with new Logo and "Powered By" footer.
+- **Talent Network**: Restored full mock portfolio data display on web.
 
 ## Next Steps
 - Implement SOW PDF export (Phase 3).

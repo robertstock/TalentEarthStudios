@@ -12,7 +12,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.mobile",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Allow access to the microphone to record client meetings for project analysis."
+        "NSMicrophoneUsageDescription": "Allow access to the microphone to record client meetings for project analysis.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       }
     },
     "android": {

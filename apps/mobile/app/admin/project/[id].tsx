@@ -217,17 +217,41 @@ export default function AdminProjectReview() {
                             if (!prompt) {
                                 if (['q_Date', 'q5', 'q_date_fallback'].includes(a.questionId)) {
                                     prompt = 'Target Delivery Date';
-                                } else if (a.valueText.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                                } else if (a.valueText && a.valueText.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
                                     prompt = 'Date';
                                 } else {
                                     prompt = 'Additional Info'; // Generic fallback
                                 }
                             }
 
+                            // Determine display value (Text or JSON)
+                            let displayValue = a.valueText;
+
+                            if (!displayValue && a.valueJson) {
+                                try {
+                                    const parsed = JSON.parse(a.valueJson);
+                                    if (Array.isArray(parsed)) {
+                                        // Multi-select or list
+                                        displayValue = parsed.join(', ');
+                                    } else if (typeof parsed === 'object' && parsed !== null) {
+                                        // File Object?
+                                        if (parsed.uri || parsed.name) {
+                                            displayValue = `File: ${parsed.name || 'Attachment'}`;
+                                        } else {
+                                            displayValue = JSON.stringify(parsed);
+                                        }
+                                    } else {
+                                        displayValue = String(parsed);
+                                    }
+                                } catch (e) {
+                                    displayValue = a.valueJson; // Raw fallback
+                                }
+                            }
+
                             return (
                                 <View key={a.id} style={styles.answerItem}>
                                     <Text style={styles.answerPrompt} allowFontScaling={false}>{prompt}</Text>
-                                    <Text style={styles.answerValue} allowFontScaling={false}>{a.valueText}</Text>
+                                    <Text style={styles.answerValue} allowFontScaling={false}>{displayValue || 'No response'}</Text>
                                 </View>
                             );
                         })}

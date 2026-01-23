@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Image, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,22 +90,34 @@ export default function AdminDashboard() {
         }
     };
 
+    const [refreshing, setRefreshing] = useState(false);
+
+    // ...
+
+    const onRefresh = React.useCallback(() => {
+        setRefreshing(true);
+        fetchData(false).then(() => setRefreshing(false));
+    }, []);
+
     const fetchData = async (isPolling = false) => {
-        if (!isPolling) setLoading(true);
+        if (!isPolling && !refreshing) setLoading(true);
         try {
-            const response = await fetch(`${API_URL}/admin/projects`);
-            if (!response.ok) throw new Error('Failed to fetch admin projects');
+            console.log('Fetching dashboard data...');
+            const response = await fetch(`${API_URL}/admin/projects?_t=${Date.now()}`);
+            if (!response.ok) {
+                const text = await response.text();
+                console.error(`Fetch failed with status: ${response.status} ${response.statusText}, body: ${text}`);
+                throw new Error(`Failed to fetch admin projects: ${response.status}`);
+            }
             const data = await response.json();
 
-            // Sort to ensure consistent comparison (newest first is usually best)
-            // Assuming API returns sorted or we sort here if needed, but array order matters for simple comparison
+            console.log(`Fetched ${data.length} projects`);
 
             if (isPolling) {
-                // Keep checking for project updates for diffing, but also sync count
                 checkForUpdates(data);
                 await fetchNotificationsCount();
             } else {
-                fetchNotificationsCount(); // Non-blocking
+                fetchNotificationsCount();
             }
 
             setProjects(data);
@@ -113,17 +125,22 @@ export default function AdminDashboard() {
 
             const pendingReview = data.filter((p: any) => p.status === 'SUBMITTED' || p.status === 'SENT').length;
             const sowDrafts = data.filter((p: any) => p.status === 'SOW_DRAFT').length;
-            const active = data.filter((p: any) => ['APPROVED_FOR_SOW', 'SOW_SENT_TO_CLIENT', 'CLIENT_APPROVED', 'IN_PRODUCTION'].includes(p.status)).length;
+            // Active = any project past the pending review stage (approved and beyond), excluding SOW_DRAFT which has its own counter
+            const active = data.filter((p: any) => ['APPROVED_FOR_SOW', 'QUOTE_RECEIVED', 'CLOSED'].includes(p.status)).length;
+
+            console.log('Stats calc:', { pendingReview, sowDrafts, active });
 
             setStats([
                 { label: 'Pending Review', value: String(pendingReview), icon: 'time', color: [WME.colors.warning, '#d97706'] },
                 { label: 'SOW Drafts', value: String(sowDrafts), icon: 'document-text', color: [WME.colors.accent, '#2563eb'] },
                 { label: 'Active Projects', value: String(active), icon: 'briefcase', color: [WME.colors.success, '#059669'] },
             ]);
-        } catch (error) {
+        } catch (error: any) {
             console.error('DASHBOARD_FETCH_ERROR:', error);
+            // Optionally set an error state here to show a retry button in UI
         } finally {
             if (!isPolling) setLoading(false);
+            setRefreshing(false);
         }
     };
 
@@ -199,7 +216,14 @@ export default function AdminDashboard() {
                     </View>
                 </View>
 
-                <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                    style={styles.content}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={WME.colors.text} />
+                    }
+                >
 
                     {/* Stats Grid */}
                     <View style={styles.statsGrid}>
@@ -234,7 +258,9 @@ export default function AdminDashboard() {
                                         <View style={styles.indicator} />
                                         <View>
                                             <Text style={styles.cardTitle} allowFontScaling={false} numberOfLines={1}>{project.title || project.name}</Text>
-                                            <Text style={styles.cardSubtitle} allowFontScaling={false}>{(project.client?.companyName === 'Acme Corp' ? 'WME+ Internal' : project.client?.companyName) || 'Unknown Client'}</Text>
+                                            <Text style={styles.cardSubtitle} allowFontScaling={false}>
+                                                {(project.client?.companyName === 'Acme Corp' ? 'WME+ Internal' : project.client?.companyName) || 'Unknown Client'} • {project.status}
+                                            </Text>
                                         </View>
                                     </View>
                                 </TouchableOpacity>

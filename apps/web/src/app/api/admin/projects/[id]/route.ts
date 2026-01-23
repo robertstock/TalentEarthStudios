@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
@@ -35,12 +37,33 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     try {
         const { id } = await params;
         const body = await req.json();
+        console.log(`[ADMIN] POST /projects/${id} Body:`, body);
         const { decision, comments } = body;
 
-        // Find default admin user for reviewer
-        const adminUser = await db.user.findFirst({
+        if (!decision) {
+            console.error("[ADMIN] Missing 'decision' in request body");
+            return NextResponse.json({ message: "Missing decision" }, { status: 400 });
+        }
+
+        let adminUser = await db.user.findFirst({
             where: { role: 'ADMIN' }
         });
+
+        if (!adminUser) {
+            console.log("No admin user found. Creating backup admin for review.");
+            try {
+                adminUser = await db.user.create({
+                    data: {
+                        email: 'admin@finley.com',
+                        name: 'Admin User',
+                        role: 'ADMIN'
+                    }
+                });
+            } catch (e) {
+                // Fallback if create fails (e.g. unique constraint race condition)
+                adminUser = await db.user.findFirst();
+            }
+        }
 
         if (decision === 'APPROVED') {
             await db.project.update({
@@ -56,6 +79,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                     }
                 }
             });
+            console.log(`[ADMIN] Approved project ${id}. Status updated to APPROVED_FOR_SOW`);
         } else if (decision === 'CHANGES_REQUESTED') {
             await db.project.update({
                 where: { id },

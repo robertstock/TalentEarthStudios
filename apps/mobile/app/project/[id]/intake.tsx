@@ -8,21 +8,16 @@ import { WME } from '../../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 
 
-const MOCK_QUESTIONS = [
-    { id: 'q1', type: 'SHORT_TEXT', prompt: 'Project Name', required: true, ordering: 1 },
-    { id: 'q2', type: 'SINGLE_SELECT', prompt: 'Budget Range', required: true, optionsJson: JSON.stringify(['$5k - $10k', '$10k - $25k', '$25k+']), ordering: 2 },
-    { id: 'q3', type: 'SINGLE_SELECT', prompt: 'Timeline', required: true, optionsJson: JSON.stringify(['Rush (<2 weeks)', 'Standard (3-4 weeks)', 'Flexible']), ordering: 3 },
-    { id: 'q5', type: 'DATE', prompt: 'Target Delivery Date', required: false, ordering: 4 },
-    { id: 'q4', type: 'LONG_TEXT', prompt: 'Project Description', required: false, ordering: 5 },
-];
+// REMOVED: Mock questions caused answers to have invalid IDs that can't be saved to DB
+// The form MUST wait for real questions to load from the API
 
 export default function IntakeForm() {
     const { id, categoryId } = useLocalSearchParams();
     const router = useRouter();
 
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // Start loading to wait for real questions
     const [project, setProject] = useState<any>({ name: 'New Project Draft' });
-    const [questions, setQuestions] = useState<any[]>(MOCK_QUESTIONS);
+    const [questions, setQuestions] = useState<any[]>([]); // Empty until API provides real questions
     const [answers, setAnswers] = useState<Record<string, any>>({});
     const [submitting, setSubmitting] = useState(false);
     const [audioUri, setAudioUri] = useState<string | null>(null);
@@ -90,27 +85,15 @@ export default function IntakeForm() {
                 const category = data.find((cat: any) => cat.id === targetCategoryId);
                 const activeQS = category?.questionSets?.find((qs: any) => qs.active);
 
-                if (activeQS?.questions) {
+                if (activeQS?.questions && activeQS.questions.length > 0) {
                     const sortedQuestions = activeQS.questions.sort((a: any, b: any) => a.ordering - b.ordering);
-
-                    // Force ensure DATE is present if missing (safety net for mismatched seed data)
-                    const hasDate = sortedQuestions.find((q: any) => q.type === 'DATE');
-                    if (!hasDate) {
-                        sortedQuestions.push({
-                            id: 'q_date_fallback',
-                            type: 'DATE',
-                            prompt: 'Target Delivery Date',
-                            required: false,
-                            ordering: 4.5
-                        });
-                        // Re-sort to ensure correct placement
-                        sortedQuestions.sort((a: any, b: any) => a.ordering - b.ordering);
-                    }
-
                     setQuestions(sortedQuestions);
+                } else {
+                    Alert.alert('Error', 'No questions found for this category. Please try again later.');
                 }
             } catch (error) {
                 console.error('FETCH_ERROR:', error);
+                Alert.alert('Connection Error', 'Unable to load form questions. Please check your connection and try again.');
             } finally {
                 setLoading(false);
             }
