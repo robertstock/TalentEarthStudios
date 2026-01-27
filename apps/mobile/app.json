@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "finley-mobile-v3",
+    "slug": "finley-mobile-v3",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.mobile",
+      "bundleIdentifier": "com.finleypro.mobile",
+      "appleTeamId": "FDHUY2SALH",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Allow access to the microphone to record client meetings for project analysis.",
         "NSAppTransportSecurity": {
@@ -23,6 +24,7 @@
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
+        "package": "com.finleypro.mobile",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "permissions": [

@@ -23,7 +23,9 @@ export default function Dashboard() {
       const response = await fetch(`${API_URL}/projects`);
       if (!response.ok) throw new Error('Failed to fetch projects');
       const data = await response.json();
-      setProjects(data);
+      // Filter out PAID projects
+      const activeProjects = data.filter((p: any) => !p.isPaid);
+      setProjects(activeProjects);
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Could not load projects. Please check your connection.');
@@ -49,6 +51,9 @@ export default function Dashboard() {
         </View>
         <View style={styles.headerRight}>
           <View style={styles.statusDot} />
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/project/history')}>
+            <Ionicons name="time-outline" size={20} color={WME.colors.textMuted} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={() => setNotifVisible(true)}>
             <Ionicons name="notifications-outline" size={20} color={WME.colors.textMuted} />
           </TouchableOpacity>
