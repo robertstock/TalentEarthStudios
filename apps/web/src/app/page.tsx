@@ -22,6 +22,7 @@ export default function Dashboard() {
   const annualSub = mrr * 12;
   const annualProj = projectRevenue * 12;
   const combinedAnnual = annualSub + annualProj;
+  const combinedMargin = annualSub + (projectProfit * 12);
 
   // FORMATTER
   const formatUSD = (num: number) => '$' + num.toLocaleString('en-US');
@@ -66,7 +67,40 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-            {/* CARD 1: SUBSCRIPTION REVENUE */}
+            {/* CARD 1: DEMO (MOVED TO LEFT) */}
+            <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-6 flex flex-col gap-6 shadow-md md:col-span-1 lg:col-span-1">
+              <div className="flex justify-between items-start">
+                <h2 className="text-lg font-medium text-[#E2E8F0]">Demo</h2>
+              </div>
+
+              <p className="text-[#94A3B8] text-sm leading-relaxed">
+                Experience the platform in action. Watch the mobile app walkthrough or visit the live site.
+              </p>
+
+              <div className="flex flex-col gap-4 mt-auto">
+                <button
+                  onClick={handlePlay}
+                  className="w-full py-4 bg-[#38BDF8] hover:bg-[#0EA5E9] text-black font-semibold rounded-md flex justify-center items-center gap-2 transition-colors"
+                >
+                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  Play App Video
+                </button>
+
+                <Link
+                  href="/website"
+                  className="w-full py-4 bg-[#11161F] border border-[#1E2530] hover:bg-[#1a202c] hover:border-[#94A3B8] text-[#E2E8F0] rounded-md flex justify-center items-center gap-2 transition-all"
+                >
+                  <span>Open New Website</span>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+
+            {/* CARD 2: SUBSCRIPTION REVENUE */}
             <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-6 flex flex-col gap-6 shadow-md">
               <div className="flex justify-between items-start">
                 <h2 className="text-lg font-medium text-[#E2E8F0]">
@@ -115,7 +149,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* CARD 2: PROJECT REVENUE */}
+            {/* CARD 3: PROJECT REVENUE */}
             <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-6 flex flex-col gap-6 shadow-md">
               <div className="flex justify-between items-start">
                 <h2 className="text-lg font-medium text-[#E2E8F0]">Project Revenue</h2>
@@ -163,45 +197,17 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* CARD 3: DEMO */}
-            <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-6 flex flex-col gap-6 shadow-md">
-              <div className="flex justify-between items-start">
-                <h2 className="text-lg font-medium text-[#E2E8F0]">Demo</h2>
-              </div>
-
-              <p className="text-[#94A3B8] text-sm leading-relaxed">
-                Experience the platform in action. Watch the mobile app walkthrough or visit the live site.
-              </p>
-
-              <div className="flex flex-col gap-4 mt-auto">
-                <button
-                  onClick={handlePlay}
-                  className="w-full py-4 bg-[#38BDF8] hover:bg-[#0EA5E9] text-black font-semibold rounded-md flex justify-center items-center gap-2 transition-colors"
-                >
-                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                  Play App Video
-                </button>
-
-                <Link
-                  href="/website"
-                  className="w-full py-4 bg-[#11161F] border border-[#1E2530] hover:bg-[#1a202c] hover:border-[#94A3B8] text-[#E2E8F0] rounded-md flex justify-center items-center gap-2 transition-all"
-                >
-                  <span>Open New Website</span>
-                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
-                  </svg>
-                </Link>
-              </div>
-            </div>
-
           </div>
 
           {/* ANNUAL BAR */}
           <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="text-xl md:text-2xl font-medium text-[#94A3B8]">Combined Annual Revenue</div>
             <div className="text-4xl md:text-5xl font-light text-[#E2E8F0] tracking-tight">{formatUSDDecimals(combinedAnnual)}</div>
+          </div>
+
+          <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="text-xl md:text-2xl font-medium text-[#94A3B8]">Combined Annual Margin</div>
+            <div className="text-4xl md:text-5xl font-light text-[#E2E8F0] tracking-tight">{formatUSDDecimals(combinedMargin)}</div>
           </div>
 
           {/* RESET BUTTON */}
@@ -219,24 +225,29 @@ export default function Dashboard() {
 
       {/* VIDEO MODAL */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm transition-opacity duration-300 ${isModalOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md transition-all duration-500 ease-out ${isModalOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={(e) => e.target === e.currentTarget && handleClose()}
       >
-        <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-4 w-[90%] max-w-[400px] relative transition-transform duration-300 transform scale-100">
+        <div
+          className={`relative bg-transparent rounded-xl h-[85vh] w-auto aspect-[9/19.5] shadow-2xl transition-all duration-500 ease-out transform ${isModalOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'}`}
+        >
           <button
             onClick={handleClose}
-            className="absolute -top-10 right-0 text-white text-3xl hover:text-[#38BDF8] bg-transparent border-none cursor-pointer"
+            className="absolute top-4 right-4 md:top-0 md:-right-12 text-white/70 hover:text-white transition-colors duration-300 z-50 p-2 bg-black/50 md:bg-transparent rounded-full md:rounded-none backdrop-blur-sm md:backdrop-blur-none"
           >
-            &times;
+            <i className="ph ph-x text-2xl md:text-3xl"></i>
           </button>
-          <video
-            ref={videoRef}
-            controls
-            className="w-full rounded-lg block"
-          >
-            <source src="/assets/iphone-app-demo.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
+
+          <div className="w-full h-full rounded-xl overflow-hidden bg-black shadow-[0_0_50px_-12px_rgba(56,189,248,0.3)] border border-slate-800/50">
+            <video
+              ref={videoRef}
+              controls
+              className="w-full h-full object-cover"
+            >
+              <source src="/assets/iphone-app-demo.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
         </div>
       </div>
 
