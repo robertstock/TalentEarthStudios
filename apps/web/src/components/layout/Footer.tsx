@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import LogoImage from "@/app/talentearth_logo.png";
+const LogoImage = "/talentearth_logo.png";
 
 export default function Footer() {
     return (
@@ -10,11 +10,10 @@ export default function Footer() {
                 <div className="flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
                     <span className="text-xs font-mono tracking-widest text-slate-500 uppercase">Powered by</span>
                     <div className="relative h-6 w-24">
-                        <Image
+                        <img
                             src={LogoImage}
                             alt="Talent Earth Studios"
-                            fill
-                            className="object-contain"
+                            className="h-full w-full object-contain"
                         />
                     </div>
                 </div>

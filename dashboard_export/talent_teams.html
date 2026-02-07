@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talent & Teams | TalentEarthStudios</title>
+    <style>
+        /* 
+         * WIX EMBED INSTRUCTIONS:
+         * 1. This is a self-contained Showcase.
+         * 2. Upload "assets/tes-logo.png" if you want the logo to appear, or update the src below.
+         * 3. Set iframe height to at least 800px.
+         */
+
+        :root {
+            /* BRAND PALETTE - DARK */
+            --bg: #030508;
+            --panel: #0B0F15;
+            --card: #11161F;
+            --border: #1E2530;
+            --text-main: #E2E8F0;
+            --text-muted: #94A3B8;
+            --accent: #38BDF8;
+            --accent-hover: #0EA5E9;
+            --success: #22c55e;
+            --success-bg: rgba(34, 197, 94, 0.1);
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* HEADER */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            background: rgba(3, 5, 8, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            height: 28px;
+            width: auto;
+        }
+
+        /* TABS */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+
+        .tab-btn.active {
+            color: var(--text-main);
+            border-bottom-color: var(--accent);
+        }
+
+        /* MAIN LAYOUT */
+        main {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            gap: 2rem;
+        }
+
+        aside {
+            width: 260px;
+            flex-shrink: 0;
+        }
+
+        .content {
+            flex: 1;
+        }
+
+        /* SIDEBAR COMPONENTS */
+        .filter-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 8px;
+            position: sticky;
+            top: 100px;
+        }
+
+        .sidebar-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-main);
+            uppercase: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .search-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 0.75rem;
+            width: 100%;
+            color: var(--text-main);
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .search-box input {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            width: 100%;
+            outline: none;
+        }
+
+        .stat-row {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2rem;
+            font-family: monospace;
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+
+        /* GRID CONTENT */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 300;
+            color: var(--text-main);
+        }
+
+        .page-count {
+            font-size: 0.75rem;
+            font-family: monospace;
+            color: var(--text-muted);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* CARDS */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 8px;
+            transition: transform 0.2s, border-color 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            border-color: var(--text-muted);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .avatar {
+            width: 64px;
+            height: 64px;
+            background: #2a3441;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+        }
+
+        .avatar-team {
+            display: flex;
+            margin-left: 10px;
+        }
+
+        .avatar-group {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--card);
+            background: #2a3441;
+            margin-left: -10px;
+            overflow: hidden;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-group img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .badge {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .badge.allocated {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent);
+            border-color: rgba(56, 189, 248, 0.2);
+        }
+
+        .card-name {
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: var(--text-main);
+            margin-bottom: 0.25rem;
+        }
+
+        .card-role {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .card-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: auto;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .tag::before {
+            content: "•";
+            color: var(--border);
+        }
+
+        .card-footer {
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+            margin-top: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        /* VIEW TOGGLING */
+        .view-section {
+            display: none;
+            width: 100%;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            main {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            aside {
+                width: 100%;
+            }
+
+            .filter-panel {
+                position: static;
+            }
+
+            header {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <!-- LOGO PLACEHOLDER -->
+        <img src="assets/tes-logo.png" alt="TES" class="logo" onerror="this.style.display='none'">
+
+        <nav class="tabs">
+            <button class="tab-btn active" onclick="switchTab('talent')">Talent Index</button>
+            <button class="tab-btn" onclick="switchTab('teams')">Operational Units</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- SIDEBAR -->
+        <aside>
+            <div class="filter-panel">
+                <div class="sidebar-title">Index Filter</div>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search name, role, skills..."
+                        oninput="handleSearch()">
+                </div>
+
+                <div class="stat-row">
+                    SYSTEM STATUS: ONLINE<br>
+                    LATENCY: 12ms
+                </div>
+            </div>
+        </aside>
+
+        <!-- TALENT VIEW -->
+        <div id="talent-view" class="content view-section active">
+            <div class="page-header">
+                <h2 class="page-title">Talent Index</h2>
+                <span class="page-count">SHOWING <span id="talent-count">0</span> UNITS</span>
+            </div>
+            <div class="grid" id="talent-grid">
+                <!-- TALENT CARDS INJECTED HERE -->
+            </div>
+        </div>
+
+        <!-- TEAMS VIEW -->
+        <div id="teams-view" class="content view-section">
+            <div class="page-header">
+                <h2 class="page-title">Operational Units</h2>
+                <span class="page-count">SHOWING <span id="team-count">0</span> TEAMS</span>
+            </div>
+            <div class="grid" id="teams-grid">
+                <!-- TEAM CARDS INJECTED HERE -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // MOCK DATA
+        const MOCK_TALENTS = [
+            {
+                id: "mock-1",
+                firstName: "Sarah", lastName: "Jenkins",
+                role: "Creative Director",
+                skills: ["Creative Direction", "Branding", "Strategy"],
+                image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"
+            },
+            {
+                id: "mock-2",
+                firstName: "Emily", lastName: "Chen",
+                role: "Art Director",
+                skills: ["Art Direction", "UI/UX", "Typography"],
+                image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150"
+            },
+            {
+                id: "mock-3",
+                firstName: "Michelle", lastName: "Ross",
+                role: "Senior Producer",
+                skills: ["Production", "Budgeting", "Client Relations"],
+                image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
+            },
+            {
+                id: "mock-4",
+                firstName: "David", lastName: "Okonjo",
+                role: "Sound Designer",
+                skills: ["Sound Design", "Audio Mixing", "Foley"],
+                image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150"
+            },
+            {
+                id: "mock-6",
+                firstName: "Marcus", lastName: "Thorne",
+                role: "Film Editor",
+                skills: ["Video Editing", "Color Grading", "Narrative"],
+                image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150"
+            },
+            {
+                id: "mock-7",
+                firstName: "Elena", lastName: "Rodriguez",
+                role: "Motion Graphics",
+                skills: ["Motion Graphics", "3D Animation", "Cinema 4D"],
+                image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150"
+            },
+            {
+                id: "mock-8",
+                firstName: "James", lastName: "Miller",
+                role: "VFX Supervisor",
+                skills: ["VFX", "Compositing", "Nuke"],
+                image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150"
+            },
+            {
+                id: "mock-9",
+                firstName: "Priya", lastName: "Patel",
+                role: "Product Designer",
+                skills: ["Product Design", "User Research", "Prototyping"],
+                image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150"
+            },
+            {
+                id: "mock-10",
+                firstName: "Sofia", lastName: "Wagner",
+                role: "Set Designer",
+                skills: ["Set Design", "Drafting", "Concept Art"],
+                image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150"
+            },
+            {
+                id: "jane-simpson",
+                firstName: "Jane", lastName: "Simpson",
+                role: "Director",
+                skills: ["Directing", "Screenwriting", "Storytelling"],
+                image: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=150"
+            }
+        ];
+
+        const MOCK_TEAMS = [
+            {
+                id: "tm_prod_001",
+                name: "MotionWorks",
+                type: "Film Production",
+                status: "Allocated",
+                members: ["mock-1", "jane-simpson", "mock-3"],
+                desc: "Full-service film and motion production unit specializing in commercials, documentaries, and branded content."
+            },
+            {
+                id: "tm_fab_002",
+                name: "Blackline Fabrication",
+                type: "Prop Design",
+                status: "Allocated",
+                members: ["mock-9", "mock-10"],
+                desc: "Expert prop design, custom fabrication, and physical builds for film, television, and experiential installations."
+            },
+            {
+                id: "tm_set_003",
+                name: "Environment Studio",
+                type: "Set Design",
+                status: "Available",
+                members: ["mock-10", "mock-9"],
+                desc: "Immersive set design and spatial environments for film, stage, and experiential activations."
+            },
+            {
+                id: "tm_aud_004",
+                name: "Waveform Studio",
+                type: "Audio / Score",
+                status: "Available",
+                members: ["mock-4"],
+                desc: "Full-spectrum audio services including original composition, sound design, and mixing."
+            },
+            {
+                id: "tm_vfx_005",
+                name: "Visual Effects Studio",
+                type: "VFX / Post",
+                status: "Allocated",
+                members: ["mock-8", "mock-7"],
+                desc: "High-end visual effects and compositing for feature films, commercials, and streaming content."
+            }
+        ];
+
+        // HELPER TO GET IMAGE
+        function getTalentImage(id) {
+            const t = MOCK_TALENTS.find(p => p.id === id);
+            return t ? t.image : null;
+        }
+
+        // RENDER FUNCTIONS
+        function renderTalent(talents) {
+            const grid = document.getElementById('talent-grid');
+            document.getElementById('talent-count').textContent = talents.length;
+
+            if (talents.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; padding: 2rem; border: 1px dashed var(--border); text-align: center; color: var(--text-muted);">No units found.</div>';
+                return;
+            }
+
+            grid.innerHTML = talents.map(t => `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="avatar">
+                            <img src="${t.image}" alt="${t.firstName}">
+                        </div>
+                        <span class="badge">Available</span>
+                    </div>
+                    <div>
+                        <h3 class="card-name">${t.firstName} ${t.lastName}</h3>
+                        <div class="card-role">${t.role}</div>
+                    </div>
+                    <div class="tags">
+                        ${t.skills.slice(0, 3).map(s => `<span class="tag">${s}</span>`).join('')}
+                    </div>
+                    <div class="card-footer">
+                        <span>ID: ${t.id.slice(-4).toUpperCase()}</span>
+                        <span>VIEW →</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTeams(teams) {
+            const grid = document.getElementById('teams-grid');
+            document.getElementById('team-count').textContent = teams.length;
+
+            if (teams.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; padding: 2rem; border: 1px dashed var(--border); text-align: center; color: var(--text-muted);">No teams found.</div>';
+                return;
+            }
+
+            grid.innerHTML = teams.map(t => {
+                const memberImages = t.members.map(mid => getTalentImage(mid)).filter(Boolean);
+                const isAllocated = t.status === 'Allocated';
+
+                return `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="avatar-team">
+                            ${memberImages.map(img => `
+                                <div class="avatar-group">
+                                    <img src="${img}">
+                                </div>
+                            `).join('')}
+                        </div>
+                        <span class="badge ${isAllocated ? 'allocated' : ''}">${t.status}</span>
+                    </div>
+                    <div>
+                        <h3 class="card-name">${t.name}</h3>
+                        <div class="card-role">${t.type}</div>
+                    </div>
+                    <p class="card-desc">${t.desc}</p>
+                    <div class="card-footer">
+                        <span>MEMBERS: ${t.members.length}</span>
+                        <span>MANIFEST →</span>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        // LOGIC
+        function switchTab(tab) {
+            // Update Buttons
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update Views
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            if (tab === 'talent') {
+                document.getElementById('talent-view').classList.add('active');
+            } else {
+                document.getElementById('teams-view').classList.add('active');
+            }
+
+            // Re-filter to ensure correct search application
+            handleSearch();
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const activeTab = document.querySelector('.tab-btn.active').textContent.includes('Talent') ? 'talent' : 'teams';
+
+            if (activeTab === 'talent') {
+                const filtered = MOCK_TALENTS.filter(t =>
+                    t.firstName.toLowerCase().includes(query) ||
+                    t.lastName.toLowerCase().includes(query) ||
+                    t.role.toLowerCase().includes(query) ||
+                    t.skills.some(s => s.toLowerCase().includes(query))
+                );
+                renderTalent(filtered);
+            } else {
+                const filtered = MOCK_TEAMS.filter(t =>
+                    t.name.toLowerCase().includes(query) ||
+                    t.type.toLowerCase().includes(query) ||
+                    t.desc.toLowerCase().includes(query)
+                );
+                renderTeams(filtered);
+            }
+        }
+
+        // INIT
+        renderTalent(MOCK_TALENTS);
+        renderTeams(MOCK_TEAMS);
+
+    </script>
+</body>
+
+</html>

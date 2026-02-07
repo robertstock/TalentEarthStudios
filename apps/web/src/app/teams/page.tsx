@@ -5,7 +5,7 @@ import { MOCK_TEAMS } from "@/lib/mock-data";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Teams | WME+",
+    title: "Teams | TalentEarthStudios",
     description: "Operational units.",
 };
 

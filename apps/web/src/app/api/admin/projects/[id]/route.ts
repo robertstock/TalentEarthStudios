@@ -55,7 +55,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 adminUser = await db.user.create({
                     data: {
                         email: 'admin@finley.com',
-                        name: 'Admin User',
+                        firstName: 'Admin',
+                        lastName: 'User',
                         role: 'ADMIN'
                     }
                 });

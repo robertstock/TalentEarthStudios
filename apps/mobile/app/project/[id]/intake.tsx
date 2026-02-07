@@ -280,7 +280,7 @@ export default function IntakeForm() {
 
                 Alert.alert(
                     'Project Submitted',
-                    'Audio and details sent to WME+ for review.',
+                    'Audio and details sent to TalentEarthStudios for review.',
                     [{ text: 'OK', onPress: () => router.push('/(tabs)/projects') }]
                 );
             }

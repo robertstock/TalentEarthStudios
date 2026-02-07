@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TalentEarthStudios Dashboard</title>
+    <style>
+        /* 
+         * WIX EMBED INSTRUCTIONS:
+         * 1. Upload the contents of this folder to your server or use Wix HTML element code mode.
+         * 2. Ensure /assets folder is at the same level if using relative paths, or update paths below.
+         * 3. For iframe embedding, set height to at least 800px.
+         */
+
+        :root {
+            /* BRAND PALETTE */
+            --bg: #030508;
+            --card: #11161F;
+            --border: #1E2530;
+            --text-main: #E2E8F0;
+            --text-muted: #94A3B8;
+            --accent: #38BDF8;
+            /* Sky Blue */
+            --accent-hover: #0EA5E9;
+            --container-bg: #0B0F15;
+            /* Slightly lighter than main BG */
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* HEADER */
+        header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            /* Removed header border for cleaner look */
+            background: rgba(3, 5, 8, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .logo {
+            height: 32px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        /* ACTIONS */
+        .btn {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            border-color: var(--text-muted);
+            background: #1a202c;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-text {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .btn-text:hover {
+            color: var(--text-main);
+            text-decoration: underline;
+        }
+
+        /* MAIN LAYOUT */
+        main {
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .business-model-container {
+            background: var(--container-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 300;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* CARDS */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .card-title .muted {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-left: 0.5rem;
+        }
+
+        /* SLIDERS */
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .slider-value {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        /* TRACK */
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        input[type=range]::-moz-range-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        /* THUMB */
+        input[type=range]::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            /* center it */
+            box-shadow: 0 0 0 2px var(--bg);
+        }
+
+        input[type=range]::-moz-range-thumb {
+            height: 18px;
+            width: 18px;
+            border: 0;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 0 2px var(--bg);
+        }
+
+        /* RESULTS AREA */
+        .result-area {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .result-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .result-value {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: var(--text-main);
+            letter-spacing: -1px;
+        }
+
+        .result-sub {
+            font-size: 0.875rem;
+            color: var(--accent);
+            margin-top: 0.25rem;
+        }
+
+        .assumptions {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            opacity: 0.6;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        /* DEMO ACTIONS SPECIFIC */
+        .demo-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .demo-btn_lg {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* ANNUAL REVENUE BAR */
+        .annual-revenue-bar {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .annual-label {
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .annual-value {
+            font-size: 3rem;
+            font-weight: 300;
+            /* Regular weight */
+            color: var(--text-main);
+            letter-spacing: -1px;
+        }
+
+        .reset-container {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: var(--card);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 8px;
+            display: block;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .business-model-container {
+                padding: 1rem;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .annual-revenue-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+                padding: 1.5rem;
+            }
+
+            .annual-value {
+                font-size: 2.5rem;
+            }
+
+            .result-value {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <!-- REPLACE src WITH YOUR LOGO URL -->
+        <img src="assets/tes-logo.png" alt="TalentEarthStudios" class="logo" onerror="this.style.display='none'">
+    </header>
+
+    <main>
+        <section class="business-model-container">
+            <h1 class="section-title">Business Model</h1>
+
+            <div class="cards-grid">
+                <!-- CARD 1: SUBSCRIPTION REVENUE -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Subscription Revenue <span class="muted">(Optional)</span></h2>
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Price per month</span>
+                            <span class="slider-value">$<span id="price-val">0</span></span>
+                        </div>
+                        <input type="range" id="price-slider" min="0" max="100" step="1" value="0">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Active Users</span>
+                            <span class="slider-value"><span id="users-val">0</span></span>
+                        </div>
+                        <input type="range" id="users-slider" min="0" max="10000" step="50" value="0">
+                    </div>
+
+                    <div class="result-area">
+                        <div class="result-label">Monthly Recurring Revenue</div>
+                        <div class="result-value" id="mrr-result">$0</div>
+                        <div class="assumptions">Assumes: Price x Users</div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: PROJECT REVENUE -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Project Revenue</h2>
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Avg Project Cost</span>
+                            <span class="slider-value">$<span id="cost-val">0</span></span>
+                        </div>
+                        <input type="range" id="cost-slider" min="0" max="50000" step="100" value="0">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Projects / Month</span>
+                            <span class="slider-value"><span id="projects-val">0</span></span>
+                        </div>
+                        <input type="range" id="projects-slider" min="0" max="1000" step="5" value="0">
+                    </div>
+
+                    <div class="result-area">
+                        <div class="result-label">Total Revenue</div>
+                        <div class="result-value" id="project-rev-result">$0</div>
+                        <div class="result-sub" id="profit-result">Profit: $0 (50%)</div>
+                        <div class="assumptions">Revenue = Cost x Projects</div>
+                    </div>
+                </div>
+
+                <!-- CARD 3: DEMO -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Demo</h2>
+                    </div>
+
+                    <p style="color:var(--text-muted); font-size:0.9rem; line-height:1.5;">
+                        Experience the platform in action. Watch the mobile app walkthrough or visit the live site.
+                    </p>
+
+                    <div class="demo-actions">
+                        <button id="play-video-btn" class="btn btn-primary demo-btn_lg">
+                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                            Play App Video
+                        </button>
+
+                        <a href="#" id="open-site-btn" target="_blank" class="btn demo-btn_lg">
+                            <span>Open New Website</span>
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path
+                                    d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div> <!-- End Grid -->
+
+            <!-- COMBINED ANNUAL REVENUE -->
+            <div class="annual-revenue-bar">
+                <div class="annual-label">Combined Annual Revenue</div>
+                <div class="annual-value" id="annual-result">$0.00</div>
+            </div>
+
+            <div class="reset-container">
+                <button id="reset-btn" class="btn btn-text">Reset</button>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- VIDEO MODAL -->
+    <div class="modal-overlay" id="video-modal">
+        <div class="modal-content">
+            <button class="close-modal" id="close-modal">&times;</button>
+            <video id="demo-video" controls>
+                <!-- REPLACE src WITH YOUR VIDEO URL -->
+                <source src="assets/iphone-app-demo.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
+
+    <script>
+        // CONFIG
+        const WEBSITE_URL = "https://web-vert-nine-37.vercel.app"; // Live Vercel Demo URL
+        document.getElementById('open-site-btn').href = WEBSITE_URL;
+
+        // SELECTION
+        const els = {
+            priceSlider: document.getElementById('price-slider'),
+            usersSlider: document.getElementById('users-slider'),
+            costSlider: document.getElementById('cost-slider'),
+            projectsSlider: document.getElementById('projects-slider'),
+
+            priceVal: document.getElementById('price-val'),
+            usersVal: document.getElementById('users-val'),
+            costVal: document.getElementById('cost-val'),
+            projectsVal: document.getElementById('projects-val'),
+
+            mrrResult: document.getElementById('mrr-result'),
+            projRevResult: document.getElementById('project-rev-result'),
+            profitResult: document.getElementById('profit-result'),
+            annualResult: document.getElementById('annual-result'),
+
+            resetBtn: document.getElementById('reset-btn'),
+            playBtn: document.getElementById('play-video-btn'),
+            closeModalBtn: document.getElementById('close-modal'),
+            modal: document.getElementById('video-modal'),
+            video: document.getElementById('demo-video')
+        };
+
+        // STATE
+        let annualSub = 0;
+        let annualProj = 0;
+
+        // FORMATTER
+        const formatUSD = (num) => {
+            return '$' + num.toLocaleString('en-US');
+        };
+        const formatUSDDecimals = (num) => {
+            return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+        const formatNum = (num) => {
+            return num.toLocaleString('en-US');
+        };
+
+        // UPDATE TOTAL
+        function updateAnnual() {
+            const total = annualSub + annualProj;
+            els.annualResult.textContent = formatUSDDecimals(total);
+        }
+
+        // UPDATE FUNCTIONS
+        function updateMRR() {
+            const price = parseInt(els.priceSlider.value);
+            const users = parseInt(els.usersSlider.value);
+
+            els.priceVal.textContent = price;
+            els.usersVal.textContent = formatNum(users);
+
+            const mrr = price * users;
+            els.mrrResult.textContent = formatUSD(mrr);
+
+            // Calc Annual
+            annualSub = mrr * 12;
+            updateAnnual();
+        }
+
+        function updateProjects() {
+            const cost = parseInt(els.costSlider.value);
+            const count = parseInt(els.projectsSlider.value);
+
+            els.costVal.textContent = formatNum(cost);
+            els.projectsVal.textContent = formatNum(count);
+
+            const revenue = cost * count;
+            const profit = revenue * 0.5;
+
+            els.projRevResult.textContent = formatUSD(revenue);
+            els.profitResult.textContent = `Profit: ${formatUSD(profit)} (50%)`;
+
+            // Calc Annual
+            annualProj = revenue * 12;
+            updateAnnual();
+        }
+
+        function resetAll() {
+            els.priceSlider.value = 0;
+            els.usersSlider.value = 0;
+            els.costSlider.value = 0;
+            els.projectsSlider.value = 0;
+            updateMRR();
+            updateProjects();
+        }
+
+        // LISTENERS
+        els.priceSlider.addEventListener('input', updateMRR);
+        els.usersSlider.addEventListener('input', updateMRR);
+        els.costSlider.addEventListener('input', updateProjects);
+        els.projectsSlider.addEventListener('input', updateProjects);
+        els.resetBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            resetAll();
+        });
+
+        // MODAL LOGIC
+        els.playBtn.addEventListener('click', () => {
+            els.modal.classList.add('active');
+            els.video.play();
+        });
+
+        const closeModal = () => {
+            els.modal.classList.remove('active');
+            els.video.pause();
+            els.video.currentTime = 0;
+        };
+
+        els.closeModalBtn.addEventListener('click', closeModal);
+        els.modal.addEventListener('click', (e) => {
+            if (e.target === els.modal) closeModal();
+        });
+
+        // INIT
+        updateMRR();
+        updateProjects();
+
+    </script>
+</body>
+
+</html>

@@ -9,7 +9,7 @@ import ThreeBackground from "@/components/ThreeBackground";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "WME+ | Execution Layer",
+  title: "TalentEarthStudios | Execution Layer",
   description: "A representation layer for those who create.",
 };
 

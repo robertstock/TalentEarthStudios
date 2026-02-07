@@ -19,6 +19,7 @@ const ICON_MAP: Record<string, string> = {
     'Audio / Score': 'musical-notes',
     'VFX / Post': 'color-wand',
     'Post Production': 'cut',
+    'Visual Print Media': 'print',
 };
 
 export default function NewProject() {

@@ -30,7 +30,7 @@ export default function LandingPage() {
                 >
                     <View style={styles.logoContainer}>
                         <Image
-                            source={require('../assets/images/wme_logo_white_new.png')}
+                            source={require('../assets/images/talent_earth_logo.png')}
                             style={styles.logo}
                             resizeMode="contain"
                         />
@@ -64,7 +64,7 @@ export default function LandingPage() {
                     </Animated.View>
 
                     <Animated.View entering={FadeIn.delay(1200)} style={styles.copyContainer}>
-                        <Text style={styles.copy} allowFontScaling={false}>© 2024 WME+ Creative Studios</Text>
+                        <Text style={styles.copy} allowFontScaling={false}>© 2024 TalentEarthStudios</Text>
                     </Animated.View>
                 </View>
             </View>

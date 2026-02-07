@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import TalentBrowser from "@/components/TalentBrowser";
 
 export const metadata: Metadata = {
-    title: "Talent Index | WME+",
+    title: "Talent Index | TalentEarthStudios",
     description: "Verified execution units.",
 };
 

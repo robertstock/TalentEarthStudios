@@ -184,7 +184,7 @@ export default function AdminProjectReview() {
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel} allowFontScaling={false}>Client</Text>
                             <Text style={styles.detailValue} allowFontScaling={false}>
-                                {project.client?.companyName === 'Acme Corp' ? 'WME+ Internal' : project.client?.companyName}
+                                {project.client?.companyName === 'Acme Corp' ? 'TalentEarthStudios Internal' : project.client?.companyName}
                             </Text>
                         </View>
                         <View style={styles.detailRow}>

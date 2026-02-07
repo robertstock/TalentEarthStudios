@@ -243,6 +243,7 @@ async function main() {
     // Categories
     const categories = [
         { name: 'Film Production', desc: 'Full-service video production for commercials, branded content, and narrative films.' },
+        { name: 'Visual Print Media', desc: 'Large format physical displays, signage, environmental graphics, and wide format style.' },
         { name: 'Prop Design / Fabrication', desc: 'Custom prop design and fabrication for film, theater, and events.' },
         { name: 'Set Design', desc: 'Conceptualization and construction of physical sets and environments.' },
         { name: 'Audio / Score', desc: 'Sound design, foley art, and original music scoring.' },
@@ -354,7 +355,73 @@ async function main() {
     } else {
         console.log('Client Acme Corp already exists');
     }
+
+    // Seed Projects if none exist
+    const projectCount = await prisma.project.count();
+    if (projectCount === 0) {
+        // Get Admin User
+        const adminUser = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
+        // Get a Category
+        const category = await prisma.category.findFirst();
+        // Get a Client
+        const clientAcme = await prisma.client.findFirst({ where: { companyName: 'Acme Corp' } });
+
+        if (adminUser && category && clientAcme) {
+            const projectsData = [
+                {
+                    title: 'Summer Campaign 2025',
+                    status: 'SUBMITTED',
+                    clientId: clientAcme.id,
+                    categoryId: category.id,
+                    createdById: adminUser.id, // Creator
+                    budgetRange: '$10k - $25k',
+                    brief: 'A high energy summer campaign video.',
+                    startDate: new Date(),
+                    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30), // 30 days
+                },
+                {
+                    title: 'Corporate Rebrand',
+                    status: 'APPROVED_FOR_SOW',
+                    clientId: clientAcme.id,
+                    categoryId: category.id,
+                    createdById: adminUser.id,
+                    budgetRange: '$25k+',
+                    brief: 'Complete overhaul of corporate identity.',
+                    startDate: new Date(),
+                    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 60),
+                },
+                {
+                    title: 'Social Media Shorts',
+                    status: 'SOW_DRAFT',
+                    clientId: clientAcme.id,
+                    categoryId: category.id,
+                    createdById: adminUser.id,
+                    budgetRange: '$5k - $10k',
+                    brief: 'Series of 15s shorts for Instagram.',
+                    startDate: new Date(),
+                    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14),
+                }
+            ];
+
+            for (const p of projectsData) {
+                await prisma.project.create({
+                    data: {
+                        name: p.title,
+                        status: p.status as any,
+                        clientId: p.clientId,
+                        categoryId: p.categoryId,
+                        createdById: p.createdById,
+                        budgetRange: p.budgetRange,
+                        description: p.brief,
+                        // timeline: 'Standard (3-4 weeks)',
+                    }
+                });
+            }
+        }
+    }
 }
+
+
 
 main()
     .then(async () => {

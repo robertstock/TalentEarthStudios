@@ -43,7 +43,7 @@ export default function Dashboard() {
       <View style={styles.header}>
         <View>
           <Image
-            source={require('../../assets/images/wme_logo.png')}
+            source={require('../../assets/images/talent_earth_logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: 100,
-    height: 24,
+    height: 32,
     marginBottom: 8,
   },
 

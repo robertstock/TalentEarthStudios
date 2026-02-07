@@ -210,7 +210,7 @@ export default function CommissionsScreen() {
                                 <Text style={styles.commissionValue} allowFontScaling={false}>+{formatCurrency(p.commission)}</Text>
                             </View>
                             <Text style={styles.clientName} allowFontScaling={false}>
-                                {p.client?.companyName === 'Acme Corp' ? 'WME+ Internal' : p.client?.companyName}
+                                {p.client?.companyName === 'Acme Corp' ? 'TalentEarthStudios Internal' : p.client?.companyName}
                             </Text>
                             <View style={styles.cardFooter}>
                                 <Text style={styles.statusText} allowFontScaling={false}>{p.status.replace(/_/g, ' ')}</Text>

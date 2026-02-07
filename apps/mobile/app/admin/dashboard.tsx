@@ -99,7 +99,7 @@ export default function AdminDashboard() {
         fetchData(false).then(() => setRefreshing(false));
     }, []);
 
-    const fetchData = async (isPolling = false) => {
+    const fetchData = React.useCallback(async (isPolling = false) => {
         if (!isPolling && !refreshing) setLoading(true);
         try {
             console.log('Fetching dashboard data...');
@@ -123,10 +123,12 @@ export default function AdminDashboard() {
             setProjects(data);
             previousProjectsRef.current = data;
 
-            const pendingReview = data.filter((p: any) => p.status === 'SUBMITTED' || p.status === 'SENT').length;
-            const sowDrafts = data.filter((p: any) => p.status === 'SOW_DRAFT').length;
-            // Active = any project past the pending review stage (approved and beyond), excluding SOW_DRAFT which has its own counter
-            const active = data.filter((p: any) => ['APPROVED_FOR_SOW', 'QUOTE_RECEIVED', 'CLOSED'].includes(p.status)).length;
+            const pendingReview = data.filter((p: any) => (p.status === 'SUBMITTED' || p.status === 'SENT') && !p.isPaid).length;
+            const sowDrafts = data.filter((p: any) => p.status === 'SOW_DRAFT' && !p.isPaid).length;
+            // Active = any project past the pending review stage, EXCLUDING SOW Drafts AND Paid/Archived projects
+            const active = data.filter((p: any) =>
+                ['APPROVED_FOR_SOW', 'QUOTE_RECEIVED', 'CLOSED'].includes(p.status) && !p.isPaid
+            ).length;
 
             console.log('Stats calc:', { pendingReview, sowDrafts, active });
 
@@ -142,24 +144,60 @@ export default function AdminDashboard() {
             if (!isPolling) setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [refreshing]);
 
-    // Initial Load
+    // Initial Load & Focus Refresh
     useFocusEffect(
         React.useCallback(() => {
             fetchData();
 
-            // Polling Interval
+            // Polling Interval (optional, but good for background updates)
             const interval = setInterval(() => {
                 fetchData(true);
-            }, 5000); // 5 seconds
+            }, 5000);
 
             return () => clearInterval(interval);
-        }, [])
+        }, [fetchData]) // Keeping empty array means the callback identity is stable, but useFocusEffect RUNS it on focus.
+        // Wait, standard useFocusEffect behavior:
+        // "The effect will run when the screen comes into focus and cleanup when it goes out of focus."
+        // If the callback passed to useFocusEffect changes, it will re-run.
+        // If the callback is stable (created with useCallback([])), useFocusEffect STILL runs it on focus.
+        // So why isn't it updating?
+        // Maybe the 'fetchData' function inside is using stale closure variables?
+        // 'fetchData' is defined in the component scope. If 'fetchData' changes, the useCallback doesn't see it if deps are [].
+        // 'fetchData' depends on 'refreshing' and 'loading' state, but those are refs or state setters.
+        // However, 'fetchData' is NOT wrapped in useCallback in the code I saw (lines 102-145).
+        // Wait, line 102 `const fetchData = async ...`. It's re-created on every render.
+        // But `useFocusEffect` has `[]` dependency. So it captures the FIRST `fetchData` function from the initial render.
+        // If `fetchData` closes over any state (it uses `refreshing` state), that state might be stale inside the closure.
+        // BUT `fetchData` mostly does `fetch` and `setProjects(data)`.
+        // The issue is likely that `useFocusEffect` mounts the effect once because of `[]` passed to `useCallback`.
+        // Actually, `useFocusEffect(useCallback(..., []))` is the correct pattern to run on focus.
+        // Let's verify if `fetchData` is indeed being called. The user says counters don't update.
+        // Maybe the statuses checked in `const active = ...` are incomplete?
+        // The previous issue was data missing entirely. Now it's "counters don't change".
+        // This implies `fetchData` might return new data, but the stats calculation doesn't reflect it?
+        // OR `fetchData` is cached by the server/browser?
+        // Line 106: `fetch(..., { ... }  ?_t=${Date.now()}`. So cache breaking is there.
+        // Let's look at the stats calculation again.
+        // Line 126: `const pendingReview = data.filter((p: any) => p.status === 'SUBMITTED' || p.status === 'SENT').length;`
+        // Line 127: `const sowDrafts = data.filter((p: any) => p.status === 'SOW_DRAFT').length;`
+        // Line 129: `const active = data.filter((p: any) => ['APPROVED_FOR_SOW', 'QUOTE_RECEIVED', 'CLOSED'].includes(p.status)).length;`
+        // If a project moves from 'SUBMITTED' to 'APPROVED', it's not in the 'active' list (Wait, 'APPROVED' is not in the list).
+        // The status enum in schema is:
+        // DRAFT, SENT, QUOTE_RECEIVED, CLOSED, SUBMITTED, APPROVED_FOR_SOW, SOW_DRAFT, NEEDS_RPM_UPDATE
+        // Note: `APPROVED` is NOT in the ProjectStatus enum in schema! (UserStatus has APPROVED).
+        // Schema ProjectStatus: DRAFT, SENT, QUOTE_RECEIVED, CLOSED, SUBMITTED, APPROVED_FOR_SOW, SOW_DRAFT, NEEDS_RPM_UPDATE.
+        // If the user "Approves" a project, what status does it get?
+        // If it gets "APPROVED", that might be an invalid status or handled freely as string.
+        // If the backend sets it to "APPROVED", but the frontend filters look for "APPROVED_FOR_SOW", that's a mismatch.
+        // Let's check `apps/mobile/app/admin/project/[id].tsx` to see what status it sets on approval.
     );
 
-    const pendingProjects = projects.filter(p => p.status === 'SUBMITTED' || p.status === 'SENT');
-    const recentActivity = projects.filter(p => p.status !== 'SUBMITTED' && p.status !== 'SENT');
+
+    const pendingProjects = projects.filter(p => (p.status === 'SUBMITTED' || p.status === 'SENT') && !p.isPaid);
+    // Recent Activity excludes pending and PAID projects (Archived)
+    const recentActivity = projects.filter(p => p.status !== 'SUBMITTED' && p.status !== 'SENT' && !p.isPaid);
 
     const animatedBellStyle = useAnimatedStyle(() => {
         return {
@@ -187,6 +225,14 @@ export default function AdminDashboard() {
                         <Text style={styles.adminName} allowFontScaling={false}>Admin User</Text>
                     </View>
                     <View style={styles.headerRight}>
+
+                        {/* Archive Button */}
+                        <TouchableOpacity
+                            style={styles.iconButton}
+                            onPress={() => router.push('/project/history')}
+                        >
+                            <Ionicons name="archive-outline" size={22} color={WME.colors.textMuted} />
+                        </TouchableOpacity>
 
                         {/* Notification Bell with Ripple */}
                         <TouchableOpacity
@@ -259,7 +305,7 @@ export default function AdminDashboard() {
                                         <View>
                                             <Text style={styles.cardTitle} allowFontScaling={false} numberOfLines={1}>{project.title || project.name}</Text>
                                             <Text style={styles.cardSubtitle} allowFontScaling={false}>
-                                                {(project.client?.companyName === 'Acme Corp' ? 'WME+ Internal' : project.client?.companyName) || 'Unknown Client'} • {project.status}
+                                                {(project.client?.companyName === 'Acme Corp' ? 'TalentEarthStudios Internal' : project.client?.companyName) || 'Unknown Client'} • {project.status}
                                             </Text>
                                         </View>
                                     </View>
@@ -319,7 +365,7 @@ export default function AdminDashboard() {
                                 ]} />
                                 <View style={{ flex: 1, paddingRight: 8 }}>
                                     <Text style={styles.rowTitle} allowFontScaling={false} numberOfLines={1}>{project.title || project.name}</Text>
-                                    <Text style={styles.rowSubtitle} allowFontScaling={false}>{(project.client?.companyName === 'Acme Corp' ? 'WME+ Internal' : project.client?.companyName) || 'Unknown Client'}</Text>
+                                    <Text style={styles.rowSubtitle} allowFontScaling={false}>{(project.client?.companyName === 'Acme Corp' ? 'TalentEarthStudios Internal' : project.client?.companyName) || 'Unknown Client'}</Text>
                                 </View>
                             </View>
                             <View style={styles.rowRight}>

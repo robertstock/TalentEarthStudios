@@ -88,7 +88,7 @@ export default function LoginScreen() {
                         style={styles.logoContainer}
                     >
                         <Image
-                            source={require('../assets/images/wme_logo_white_new.png')}
+                            source={require('../assets/images/talent_earth_logo.png')}
                             style={styles.logoImage}
                             resizeMode="contain"
                         />
@@ -193,7 +193,7 @@ export default function LoginScreen() {
                         style={styles.footer}
                     >
                         <Text style={styles.footerText} allowFontScaling={false}>
-                            © 2024 WME+ Creative Studios
+                            © 2024 TalentEarthStudios
                         </Text>
                     </Animated.View>
                 </View>
@@ -248,8 +248,8 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(10, 15, 26, 0.7)', // Increased opacity for better readability
     },
     logoImage: {
-        width: 140,
-        height: 50,
+        width: 168,
+        height: 60,
         marginBottom: 4,
     },
     loginTitle: {

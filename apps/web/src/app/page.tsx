@@ -1,95 +1,245 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
-export default function Home() {
+export default function Dashboard() {
+  // SLIDER STATE
+  const [price, setPrice] = useState(0);
+  const [users, setUsers] = useState(0);
+  const [cost, setCost] = useState(0);
+  const [projects, setProjects] = useState(0);
+
+  // MODAL STATE
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // DERIVED STATE
+  const mrr = price * users;
+  const projectRevenue = cost * projects;
+  const projectProfit = projectRevenue * 0.5;
+  const annualSub = mrr * 12;
+  const annualProj = projectRevenue * 12;
+  const combinedAnnual = annualSub + annualProj;
+
+  // FORMATTER
+  const formatUSD = (num: number) => '$' + num.toLocaleString('en-US');
+  const formatUSDDecimals = (num: number) => '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const formatNum = (num: number) => num.toLocaleString('en-US');
+
+  // RESET
+  const handleReset = () => {
+    setPrice(0);
+    setUsers(0);
+    setCost(0);
+    setProjects(0);
+  };
+
+  // VIDEO ACTIONS
+  const handlePlay = () => {
+    setIsModalOpen(true);
+    if (videoRef.current) {
+      // use promises to handle play(), as it is async and can fail
+      videoRef.current.play().catch(e => console.error("Play failed", e));
+    }
+  };
+
+  const handleClose = () => {
+    setIsModalOpen(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
+
   return (
-    <>
-      {/* Hero Section */}
-      <section className="min-h-screen flex items-center px-6 md:px-16 lg:px-24 pt-20 md:pt-0 pointer-events-none">
-        <div className="max-w-3xl w-full pointer-events-auto">
-          <h1 className="text-4xl xs:text-5xl md:text-6xl lg:text-7xl font-light text-white leading-tight mb-6 md:mb-8 select-none">
-            A representation layer<br />
-            <span className="text-slate-500">for those who create.</span>
-          </h1>
+    <div className="min-h-screen bg-[#030508] text-[#E2E8F0] font-sans flex flex-col">
+      {/* HEADER */}
+      {/* HEADER REMOVED: Using Global Layout Navbar */}
+      <div className="pt-32"></div> {/* Spacer for fixed global navbar */}
 
-          <p className="text-base md:text-xl text-slate-400 font-light leading-relaxed max-w-xl md:max-w-2xl border-l border-slate-800 pl-4 md:pl-6 select-text mb-8">
-            Designers, engineers, fabricators, and operators represented through a managed execution system built for real production.
-          </p>
+      {/* MAIN CONTENT */}
+      <main className="w-full flex justify-center p-4 md:p-8">
+        <div className="w-full max-w-[1200px] bg-[#0B0F15] border border-[#1E2530] rounded-2xl p-4 md:p-8 flex flex-col gap-8 shadow-xl">
+          <h1 className="text-2xl font-light text-[#E2E8F0]">Business Model</h1>
 
-          <div className="mt-8 md:mt-12 flex flex-wrap gap-4 md:gap-6 text-[10px] md:text-xs uppercase tracking-widest text-slate-500 select-none">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-900/10 border border-green-900/20 rounded-full md:bg-transparent md:border-none md:p-0 md:rounded-none">
-              <div className="w-1.5 h-1.5 bg-green-500 md:bg-green-900 rounded-full animate-pulse"></div>
-              System Active
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            {/* CARD 1: SUBSCRIPTION REVENUE */}
+            <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-6 flex flex-col gap-6 shadow-md">
+              <div className="flex justify-between items-start">
+                <h2 className="text-lg font-medium text-[#E2E8F0]">
+                  Subscription Revenue <span className="text-sm text-[#94A3B8] font-normal ml-2">(Optional)</span>
+                </h2>
+              </div>
+
+              {/* Price Slider */}
+              <div className="flex flex-col gap-3">
+                <div className="flex justify-between text-sm text-[#94A3B8]">
+                  <span>Price per month</span>
+                  <span className="text-[#E2E8F0] font-semibold">${price}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={price}
+                  onChange={(e) => setPrice(Number(e.target.value))}
+                  className="w-full h-1.5 bg-[#1E2530] rounded-lg appearance-none cursor-pointer accent-[#38BDF8]"
+                />
+              </div>
+
+              {/* Users Slider */}
+              <div className="flex flex-col gap-3">
+                <div className="flex justify-between text-sm text-[#94A3B8]">
+                  <span>Active Users</span>
+                  <span className="text-[#E2E8F0] font-semibold">{formatNum(users)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="10000"
+                  step="50"
+                  value={users}
+                  onChange={(e) => setUsers(Number(e.target.value))}
+                  className="w-full h-1.5 bg-[#1E2530] rounded-lg appearance-none cursor-pointer accent-[#38BDF8]"
+                />
+              </div>
+
+              <div className="mt-auto pt-4 border-t border-[#1E2530] text-center">
+                <div className="text-xs uppercase tracking-wider text-[#94A3B8] mb-2">Monthly Recurring Revenue</div>
+                <div className="text-4xl font-light text-[#E2E8F0] tracking-tight">{formatUSD(mrr)}</div>
+                <div className="text-xs text-[#94A3B8] opacity-60 mt-2 italic">Assumes: Price x Users</div>
+              </div>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/30 border border-slate-700/30 rounded-full md:bg-transparent md:border-none md:p-0 md:rounded-none">
-              <div className="w-1.5 h-1.5 bg-slate-400 md:bg-slate-600 rounded-full"></div>
-              Global Nodes: 247
+
+            {/* CARD 2: PROJECT REVENUE */}
+            <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-6 flex flex-col gap-6 shadow-md">
+              <div className="flex justify-between items-start">
+                <h2 className="text-lg font-medium text-[#E2E8F0]">Project Revenue</h2>
+              </div>
+
+              {/* Cost Slider */}
+              <div className="flex flex-col gap-3">
+                <div className="flex justify-between text-sm text-[#94A3B8]">
+                  <span>Avg Project Cost</span>
+                  <span className="text-[#E2E8F0] font-semibold">${formatNum(cost)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="50000"
+                  step="100"
+                  value={cost}
+                  onChange={(e) => setCost(Number(e.target.value))}
+                  className="w-full h-1.5 bg-[#1E2530] rounded-lg appearance-none cursor-pointer accent-[#38BDF8]"
+                />
+              </div>
+
+              {/* Projects Slider */}
+              <div className="flex flex-col gap-3">
+                <div className="flex justify-between text-sm text-[#94A3B8]">
+                  <span>Projects / Month</span>
+                  <span className="text-[#E2E8F0] font-semibold">{formatNum(projects)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1000"
+                  step="5"
+                  value={projects}
+                  onChange={(e) => setProjects(Number(e.target.value))}
+                  className="w-full h-1.5 bg-[#1E2530] rounded-lg appearance-none cursor-pointer accent-[#38BDF8]"
+                />
+              </div>
+
+              <div className="mt-auto pt-4 border-t border-[#1E2530] text-center">
+                <div className="text-xs uppercase tracking-wider text-[#94A3B8] mb-2">Total Revenue</div>
+                <div className="text-4xl font-light text-[#E2E8F0] tracking-tight">{formatUSD(projectRevenue)}</div>
+                <div className="text-sm text-[#38BDF8] mt-1">Profit: {formatUSD(projectProfit)} (50%)</div>
+                <div className="text-xs text-[#94A3B8] opacity-60 mt-2 italic">Revenue = Cost x Projects</div>
+              </div>
             </div>
+
+            {/* CARD 3: DEMO */}
+            <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-6 flex flex-col gap-6 shadow-md">
+              <div className="flex justify-between items-start">
+                <h2 className="text-lg font-medium text-[#E2E8F0]">Demo</h2>
+              </div>
+
+              <p className="text-[#94A3B8] text-sm leading-relaxed">
+                Experience the platform in action. Watch the mobile app walkthrough or visit the live site.
+              </p>
+
+              <div className="flex flex-col gap-4 mt-auto">
+                <button
+                  onClick={handlePlay}
+                  className="w-full py-4 bg-[#38BDF8] hover:bg-[#0EA5E9] text-black font-semibold rounded-md flex justify-center items-center gap-2 transition-colors"
+                >
+                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  Play App Video
+                </button>
+
+                <Link
+                  href="/website"
+                  className="w-full py-4 bg-[#11161F] border border-[#1E2530] hover:bg-[#1a202c] hover:border-[#94A3B8] text-[#E2E8F0] rounded-md flex justify-center items-center gap-2 transition-all"
+                >
+                  <span>Open New Website</span>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+
           </div>
+
+          {/* ANNUAL BAR */}
+          <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="text-xl md:text-2xl font-medium text-[#94A3B8]">Combined Annual Revenue</div>
+            <div className="text-4xl md:text-5xl font-light text-[#E2E8F0] tracking-tight">{formatUSDDecimals(combinedAnnual)}</div>
+          </div>
+
+          {/* RESET BUTTON */}
+          <div className="flex justify-start pt-4">
+            <button
+              onClick={handleReset}
+              className="text-sm text-[#94A3B8] hover:text-[#E2E8F0] hover:underline bg-transparent border-none cursor-pointer"
+            >
+              Reset
+            </button>
+          </div>
+
         </div>
-      </section>
+      </main>
 
-      {/* Information Panels */}
-      <section className="min-h-screen bg-gradient-to-b from-transparent via-wme-base/90 to-wme-base pb-32">
-        <div className="max-w-7xl mx-auto px-6 sm:px-12 pt-12 md:pt-32 space-y-12 md:space-y-16">
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="glass-panel p-6 md:p-8 min-h-[240px] md:min-h-[320px] flex flex-col justify-between group hover:border-slate-700 transition-colors duration-500 cursor-default">
-              <div className="text-xs font-mono text-slate-600 mb-4">01 // REPRESENTATION</div>
-              <div>
-                <h3 className="text-white text-lg font-normal mb-3">Managed Talent</h3>
-                <p className="text-sm text-slate-400 leading-relaxed font-light select-text">
-                  We represent the technical and creative architects behind global production. Not a roster of faces, but a network of verified capabilities.
-                </p>
-              </div>
-              <div className="w-full h-px bg-slate-800 mt-6 md:mt-8 group-hover:bg-slate-600 transition-colors"></div>
-            </div>
-
-            <div className="glass-panel p-6 md:p-8 min-h-[240px] md:min-h-[320px] flex flex-col justify-between group hover:border-slate-700 transition-colors duration-500 cursor-default">
-              <div className="text-xs font-mono text-slate-600 mb-4">02 // ASSEMBLY</div>
-              <div>
-                <h3 className="text-white text-lg font-normal mb-3">Team Construction</h3>
-                <p className="text-sm text-slate-400 leading-relaxed font-light select-text">
-                  Deploy complete operational units. From experiential fabrication to virtual production, teams are scoped and deployed as single entities.
-                </p>
-              </div>
-              <div className="w-full h-px bg-slate-800 mt-6 md:mt-8 group-hover:bg-slate-600 transition-colors"></div>
-            </div>
-
-            <div className="glass-panel p-6 md:p-8 min-h-[240px] md:min-h-[320px] flex flex-col justify-between group hover:border-slate-700 transition-colors duration-500 cursor-default">
-              <div className="text-xs font-mono text-slate-600 mb-4">03 // DELIVERY</div>
-              <div>
-                <h3 className="text-white text-lg font-normal mb-3">Oversight & Scope</h3>
-                <p className="text-sm text-slate-400 leading-relaxed font-light select-text">
-                  WME+ acts as the operating layer. Contracts, insurance, and technical riders are standardized, removing friction from complex builds.
-                </p>
-              </div>
-              <div className="w-full h-px bg-slate-800 mt-6 md:mt-8 group-hover:bg-slate-600 transition-colors"></div>
-            </div>
-          </div>
-
-          <div className="glass-panel p-6 md:p-8 border border-wme-border">
-            <div className="text-xs font-mono text-slate-600 mb-4">EXECUTION DOMAINS</div>
-            <div className="flex flex-wrap gap-2 text-[10px] md:text-xs font-mono text-slate-400 select-none">
-              <span className="px-3 py-1 border border-slate-800 bg-wme-panel">Build</span>
-              <span className="px-3 py-1 border border-slate-800 bg-wme-panel">Fabrication</span>
-              <span className="px-3 py-1 border border-slate-800 bg-wme-panel">Technical Direction</span>
-              <span className="px-3 py-1 border border-slate-800 bg-wme-panel">Systems</span>
-              <span className="px-3 py-1 border border-slate-800 bg-wme-panel">Media</span>
-              <span className="px-3 py-1 border border-slate-800 bg-wme-panel">Interactive</span>
-              <span className="px-3 py-1 border border-slate-800 bg-wme-panel">Installation</span>
-              <span className="px-3 py-1 border border-slate-800 bg-wme-panel">Operations</span>
-              <span className="px-3 py-1 border border-slate-800 bg-wme-panel">Compliance</span>
-              <span className="px-3 py-1 border border-slate-800 bg-wme-panel">Specialized</span>
-            </div>
-          </div>
-
-          <div className="text-center pb-12">
-            <Link href="/talent" className="inline-block text-xs uppercase tracking-[0.2em] text-white border border-slate-700 px-8 py-4 hover:bg-white hover:text-black transition-all duration-500 focus:outline-none w-full md:w-auto">
-              Access The System
-            </Link>
-          </div>
+      {/* VIDEO MODAL */}
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm transition-opacity duration-300 ${isModalOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        onClick={(e) => e.target === e.currentTarget && handleClose()}
+      >
+        <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-4 w-[90%] max-w-[400px] relative transition-transform duration-300 transform scale-100">
+          <button
+            onClick={handleClose}
+            className="absolute -top-10 right-0 text-white text-3xl hover:text-[#38BDF8] bg-transparent border-none cursor-pointer"
+          >
+            &times;
+          </button>
+          <video
+            ref={videoRef}
+            controls
+            className="w-full rounded-lg block"
+          >
+            <source src="/assets/iphone-app-demo.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
         </div>
-      </section>
-    </>
+      </div>
+
+    </div>
   );
 }

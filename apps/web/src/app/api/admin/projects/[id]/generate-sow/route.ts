@@ -61,6 +61,12 @@ Budget Range: ${budget}
             }
         });
 
+        // Update Project status to indicate an SOW has been drafted
+        await db.project.update({
+            where: { id },
+            data: { status: 'SOW_DRAFT' }
+        });
+
         return NextResponse.json({
             ...sow,
             projectCreator: project.createdBy

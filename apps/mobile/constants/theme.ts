@@ -1,6 +1,6 @@
 /**
- * WME+ Design System Theme
- * Extracted from WME+ website - Dark, minimal, professional aesthetic
+ * TalentEarthStudios Design System Theme
+ * Extracted from TalentEarthStudios website - Dark, minimal, professional aesthetic
  */
 
 import { Platform } from 'react-native';
