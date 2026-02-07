@@ -6,10 +6,10 @@ import Image from "next/image";
 
 export default function Dashboard() {
   // SLIDER STATE
-  const [price, setPrice] = useState(0);
-  const [users, setUsers] = useState(0);
-  const [cost, setCost] = useState(0);
-  const [projects, setProjects] = useState(0);
+  const [price, setPrice] = useState(50);
+  const [users, setUsers] = useState(1000);
+  const [cost, setCost] = useState(5000);
+  const [projects, setProjects] = useState(20);
 
   // MODAL STATE
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -31,10 +31,10 @@ export default function Dashboard() {
 
   // RESET
   const handleReset = () => {
-    setPrice(0);
-    setUsers(0);
-    setCost(0);
-    setProjects(0);
+    setPrice(50);
+    setUsers(1000);
+    setCost(5000);
+    setProjects(20);
   };
 
   // VIDEO ACTIONS
@@ -62,7 +62,7 @@ export default function Dashboard() {
 
       {/* MAIN CONTENT */}
       <main className="w-full flex justify-center p-4 md:p-8">
-        <div className="w-full max-w-[1200px] bg-[#0B0F15] border border-[#1E2530] rounded-2xl p-4 md:p-8 flex flex-col gap-8 shadow-xl">
+        <div className="w-full max-w-[1200px] bg-[#0B0F15] border border-[#1E2530] rounded-2xl p-4 md:p-8 flex flex-col gap-6 shadow-xl">
           <h1 className="text-2xl font-light text-[#E2E8F0]">Business Model</h1>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -199,24 +199,25 @@ export default function Dashboard() {
 
           </div>
 
-          {/* ANNUAL BAR */}
-          <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="text-xl md:text-2xl font-medium text-[#94A3B8]">Combined Annual Revenue</div>
-            <div className="text-4xl md:text-5xl font-light text-[#E2E8F0] tracking-tight">{formatUSDDecimals(combinedAnnual)}</div>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-[#11161F] border border-[#1E2530] rounded-xl px-6 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 shadow-md hover:border-[#38BDF8]/30 transition-colors group">
+              <div className="text-lg font-medium text-[#94A3B8] group-hover:text-[#E2E8F0] transition-colors">Combined Annual Revenue</div>
+              <div className="text-3xl font-light text-[#E2E8F0] tracking-tight">{formatUSDDecimals(combinedAnnual)}</div>
+            </div>
 
-          <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="text-xl md:text-2xl font-medium text-[#94A3B8]">Combined Annual Margin</div>
-            <div className="text-4xl md:text-5xl font-light text-[#E2E8F0] tracking-tight">{formatUSDDecimals(combinedMargin)}</div>
+            <div className="bg-[#11161F] border border-[#1E2530] rounded-xl px-6 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 shadow-md hover:border-[#38BDF8]/30 transition-colors group">
+              <div className="text-lg font-medium text-[#94A3B8] group-hover:text-[#E2E8F0] transition-colors">Combined Annual Margin</div>
+              <div className="text-3xl font-light text-[#38BDF8] tracking-tight">{formatUSDDecimals(combinedMargin)}</div>
+            </div>
           </div>
 
           {/* RESET BUTTON */}
-          <div className="flex justify-start pt-4">
+          <div className="flex justify-start pt-2">
             <button
               onClick={handleReset}
               className="text-sm text-[#94A3B8] hover:text-[#E2E8F0] hover:underline bg-transparent border-none cursor-pointer"
             >
-              Reset
+              Reset to Defaults
             </button>
           </div>
 
