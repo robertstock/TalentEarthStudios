@@ -2,7 +2,7 @@
 // import { authOptions } from "@/lib/auth";
 // import { redirect } from "next/navigation";
 // import { isAdmin } from "@/lib/rbac";
-import { db } from "@/lib/db";
+// import { db } from "@/lib/db";
 import Link from "next/link";
 
 export default async function AdminDashboard() {
