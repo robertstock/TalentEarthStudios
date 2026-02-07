@@ -84,7 +84,7 @@ export default function Dashboard() {
 
               <div className="flex flex-col gap-4 mt-auto">
                 <button
-                  onClick={() => handlePlay("/assets/intro.mp4")}
+                  onClick={() => handlePlay("/assets/intro.mov")}
                   className="w-full py-4 bg-[#E2E8F0] hover:bg-[#F8FAFC] text-black font-semibold rounded-md flex justify-center items-center gap-2 transition-colors shadow-sm"
                 >
                   <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
