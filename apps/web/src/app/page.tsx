@@ -13,6 +13,7 @@ export default function Dashboard() {
 
   // MODAL STATE
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [videoSrc, setVideoSrc] = useState("/assets/iphone-app-demo.mp4"); // Default
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // DERIVED STATE
@@ -38,12 +39,16 @@ export default function Dashboard() {
   };
 
   // VIDEO ACTIONS
-  const handlePlay = () => {
+  const handlePlay = (src: string) => {
+    setVideoSrc(src);
     setIsModalOpen(true);
-    if (videoRef.current) {
-      // use promises to handle play(), as it is async and can fail
-      videoRef.current.play().catch(e => console.error("Play failed", e));
-    }
+    // Wait for modal to render before attempting to play
+    setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.load(); // Reload video with new src
+        videoRef.current.play().catch(e => console.error("Play failed", e));
+      }
+    }, 100);
   };
 
   const handleClose = () => {
@@ -79,7 +84,17 @@ export default function Dashboard() {
 
               <div className="flex flex-col gap-4 mt-auto">
                 <button
-                  onClick={handlePlay}
+                  onClick={() => handlePlay("/assets/intro.mp4")}
+                  className="w-full py-4 bg-[#E2E8F0] hover:bg-[#F8FAFC] text-black font-semibold rounded-md flex justify-center items-center gap-2 transition-colors shadow-sm"
+                >
+                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M10 8v8l5-4-5-4zm9-5H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
+                  </svg>
+                  Intro Video
+                </button>
+
+                <button
+                  onClick={() => handlePlay("/assets/iphone-app-demo.mp4")}
                   className="w-full py-4 bg-[#38BDF8] hover:bg-[#0EA5E9] text-black font-semibold rounded-md flex justify-center items-center gap-2 transition-colors"
                 >
                   <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
@@ -244,8 +259,9 @@ export default function Dashboard() {
               ref={videoRef}
               controls
               className="w-full h-full object-cover"
+              key={videoSrc} // Force re-render on source change
             >
-              <source src="/assets/iphone-app-demo.mp4" type="video/mp4" />
+              <source src={videoSrc} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
           </div>
