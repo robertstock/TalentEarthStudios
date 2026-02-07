@@ -6,7 +6,8 @@ import { db } from "@/lib/db";
 import Link from "next/link";
 
 export default async function AdminDashboard() {
-    const session = await getServerSession(authOptions);
+    // DEMO MODE: Bypassing auth check for demo purposes
+    // const session = await getServerSession(authOptions);
 
     // DEMO MODE: Bypassing auth check for demo purposes
     // if (!isAdmin(session)) {
