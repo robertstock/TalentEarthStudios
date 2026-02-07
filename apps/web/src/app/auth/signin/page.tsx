@@ -1,57 +1,9 @@
 "use client";
 
-import { signIn } from "next-auth/react";
-import { useState, Suspense, useEffect } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
 
 function SignInForm() {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const callbackUrl = searchParams.get("callbackUrl") || "/";
-
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        const errorType = searchParams.get("error");
-        if (errorType === "OAuthSignin") {
-            setError("Error connecting to Google. Configuration may be missing.");
-        } else if (errorType === "OAuthCallback") {
-            setError("Error communicating with Google.");
-        } else if (errorType === "CredentialsSignin") {
-            setError("Invalid email or password.");
-        } else if (errorType) {
-            setError("An authentication error occurred.");
-        }
-    }, [searchParams]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError("");
-
-        try {
-            const res = await signIn("credentials", {
-                redirect: false,
-                email,
-                password,
-            });
-
-            if (res?.error) {
-                setError("Invalid email or password");
-                setLoading(false);
-            } else {
-                router.push(callbackUrl);
-            }
-        } catch (err) {
-            setError("An error occurred during sign in");
-            setLoading(false);
-        }
-    };
-
     return (
         <div className="flex min-h-screen flex-col items-center justify-center p-4">
             <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-8 shadow-2xl">
