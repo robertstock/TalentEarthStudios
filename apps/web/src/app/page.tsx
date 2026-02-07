@@ -14,6 +14,7 @@ export default function Dashboard() {
   // MODAL STATE
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [videoSrc, setVideoSrc] = useState("/assets/iphone-app-demo.mp4"); // Default
+  const [isVideoVertical, setIsVideoVertical] = useState(true); // Default to vertical
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // DERIVED STATE
@@ -39,8 +40,9 @@ export default function Dashboard() {
   };
 
   // VIDEO ACTIONS
-  const handlePlay = (src: string) => {
+  const handlePlay = (src: string, isVertical: boolean = true) => {
     setVideoSrc(src);
+    setIsVideoVertical(isVertical);
     setIsModalOpen(true);
     // Wait for modal to render before attempting to play
     setTimeout(() => {
@@ -84,7 +86,7 @@ export default function Dashboard() {
 
               <div className="flex flex-col gap-4 mt-auto">
                 <button
-                  onClick={() => handlePlay("/assets/intro.mov")}
+                  onClick={() => handlePlay("/assets/intro.mov", false)}
                   className="w-full py-4 bg-[#E2E8F0] hover:bg-[#F8FAFC] text-black font-semibold rounded-md flex justify-center items-center gap-2 transition-colors shadow-sm"
                 >
                   <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
@@ -94,7 +96,7 @@ export default function Dashboard() {
                 </button>
 
                 <button
-                  onClick={() => handlePlay("/assets/iphone-app-demo.mp4")}
+                  onClick={() => handlePlay("/assets/iphone-app-demo.mp4", true)}
                   className="w-full py-4 bg-[#38BDF8] hover:bg-[#0EA5E9] text-black font-semibold rounded-md flex justify-center items-center gap-2 transition-colors"
                 >
                   <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
@@ -245,7 +247,7 @@ export default function Dashboard() {
         onClick={(e) => e.target === e.currentTarget && handleClose()}
       >
         <div
-          className={`relative bg-transparent rounded-xl h-[85vh] w-auto aspect-[9/19.5] shadow-2xl transition-all duration-500 ease-out transform ${isModalOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'}`}
+          className={`relative bg-transparent rounded-xl shadow-2xl transition-all duration-500 ease-out transform ${isModalOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'} ${isVideoVertical ? 'h-[85vh] w-auto aspect-[9/19.5]' : 'w-[90vw] max-w-6xl aspect-video h-auto'}`}
         >
           <button
             onClick={handleClose}
