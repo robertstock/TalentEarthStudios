@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -14,6 +14,19 @@ function SignInForm() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const errorType = searchParams.get("error");
+        if (errorType === "OAuthSignin") {
+            setError("Error connecting to Google. Configuration may be missing.");
+        } else if (errorType === "OAuthCallback") {
+            setError("Error communicating with Google.");
+        } else if (errorType === "CredentialsSignin") {
+            setError("Invalid email or password.");
+        } else if (errorType) {
+            setError("An authentication error occurred.");
+        }
+    }, [searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
