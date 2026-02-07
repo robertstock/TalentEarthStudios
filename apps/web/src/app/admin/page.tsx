@@ -8,15 +8,22 @@ import Link from "next/link";
 export default async function AdminDashboard() {
     const session = await getServerSession(authOptions);
 
-    if (!isAdmin(session)) {
-        redirect("/");
-    }
+    // DEMO MODE: Bypassing auth check for demo purposes
+    // if (!isAdmin(session)) {
+    //     redirect("/");
+    // }
 
     // Counts
-    const pendingReviews = await db.user.count({ where: { status: "PENDING_REVIEW" } });
-    const totalTalent = await db.user.count({ where: { role: "TALENT" } });
-    const activeProjects = await db.project.count({ where: { status: { not: "CLOSED" } } });
-    const newLeads = await db.lead.count({ where: { status: "NEW" } });
+    // DEMO MODE: Mock data
+    // const pendingReviews = await db.user.count({ where: { status: "PENDING_REVIEW" } });
+    // const totalTalent = await db.user.count({ where: { role: "TALENT" } });
+    // const activeProjects = await db.project.count({ where: { status: { not: "CLOSED" } } });
+    // const newLeads = await db.lead.count({ where: { status: "NEW" } });
+
+    const pendingReviews = 12;
+    const totalTalent = 145;
+    const activeProjects = 8;
+    const newLeads = 24;
 
     return (
         <div className="container mx-auto py-12 px-6">
