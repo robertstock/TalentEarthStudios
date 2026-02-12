@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [users, setUsers] = useState(1000);
   const [cost, setCost] = useState(5000);
   const [projects, setProjects] = useState(20);
+  const [margin, setMargin] = useState(50);
 
   // MODAL STATE
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,7 +21,7 @@ export default function Dashboard() {
   // DERIVED STATE
   const mrr = price * users;
   const projectRevenue = cost * projects;
-  const projectProfit = projectRevenue * 0.5;
+  const projectProfit = projectRevenue * (margin / 100);
   const annualSub = mrr * 12;
   const annualProj = projectRevenue * 12;
   const combinedAnnual = annualSub + annualProj;
@@ -37,6 +38,7 @@ export default function Dashboard() {
     setUsers(1000);
     setCost(5000);
     setProjects(20);
+    setMargin(50);
   };
 
   // VIDEO ACTIONS
@@ -206,10 +208,29 @@ export default function Dashboard() {
                 />
               </div>
 
+              {/* Margin Slider */}
+              <div className="flex flex-col gap-3">
+                <div className="flex justify-between text-sm text-[#94A3B8]">
+                  <span>Margin %</span>
+                  <span className="text-[#E2E8F0] font-semibold">{margin}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="400"
+                  step="1"
+                  value={margin}
+                  onChange={(e) => setMargin(Number(e.target.value))}
+                  className="w-full h-1.5 bg-[#1E2530] rounded-lg appearance-none cursor-pointer accent-[#38BDF8]"
+                />
+              </div>
+
               <div className="mt-auto pt-4 border-t border-[#1E2530] text-center">
                 <div className="text-xs uppercase tracking-wider text-[#94A3B8] mb-2">Total Revenue</div>
                 <div className="text-4xl font-light text-[#E2E8F0] tracking-tight">{formatUSD(projectRevenue)}</div>
-                <div className="text-sm text-[#38BDF8] mt-1">Profit: {formatUSD(projectProfit)} (50%)</div>
+                <div className="text-sm text-[#38BDF8] mt-1">
+                  Profit: {formatUSD(projectProfit)} <span className="text-xs text-[#94A3B8] opacity-80">({margin}%)</span>
+                </div>
                 <div className="text-xs text-[#94A3B8] opacity-60 mt-2 italic">Revenue = Cost x Projects</div>
               </div>
             </div>
