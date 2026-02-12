@@ -83,7 +83,7 @@ export default function Dashboard() {
               </div>
 
               <p className="text-[#94A3B8] text-sm leading-relaxed">
-                Experience the platform in action. Watch the mobile app walkthrough or visit the live site.
+                Live view of the platform in action. This demo shows how projects are captured, priced, and managed, with an optional subscription layer and real-time revenue visibility across both recurring users and project-based work.
               </p>
 
               <div className="flex flex-col gap-4 mt-auto">
