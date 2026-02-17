@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-const LogoImage = "/talentearth_logo.png";
+const LogoImage = "/TalentEarthStudioLogo_White.png";
 
 export default function Footer() {
     return (
