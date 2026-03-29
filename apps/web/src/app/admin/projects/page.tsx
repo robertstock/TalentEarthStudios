@@ -204,7 +204,7 @@ export default function ActiveProjects() {
                   <div className="w-full h-1.5 bg-black/50 rounded-full overflow-hidden">
                     <div 
                       className={`h-full rounded-full ${getProgressBarColor(project.health)}`}
-                      style={{ width: \`\${project.progress}%\` }}
+                      style={{ width: `${project.progress}%` }}
                     ></div>
                   </div>
                 </div>
@@ -282,7 +282,7 @@ export default function ActiveProjects() {
                       <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden mt-4">
                         <div 
                           className={`h-full rounded-full transition-all duration-1000 ease-out ${getProgressBarColor(selectedProject.health)}`}
-                          style={{ width: \`\${selectedProject.progress}%\` }}
+                          style={{ width: `${selectedProject.progress}%` }}
                         ></div>
                       </div>
                    </div>
