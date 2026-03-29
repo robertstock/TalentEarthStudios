@@ -14,10 +14,13 @@ export default function AdminDashboard() {
                     <h3 className="text-gray-400 font-bold uppercase text-xs tracking-wider">Total Talent</h3>
                     <p className="text-4xl font-bold mt-2 text-white">145</p>
                 </div>
-                <div className="bg-white/5 border border-white/10 p-6 rounded-lg hover:bg-white/10 transition">
-                    <h3 className="text-gray-400 font-bold uppercase text-xs tracking-wider">Active Projects</h3>
-                    <p className="text-4xl font-bold mt-2 text-white">8</p>
-                </div>
+                <Link href="/admin/projects" className="block bg-white/5 border border-white/10 p-6 rounded-lg hover:bg-blue-900/40 hover:border-blue-500/50 transition duration-300 group">
+                    <div className="flex justify-between items-start">
+                        <h3 className="text-gray-400 group-hover:text-blue-200 transition-colors font-bold uppercase text-xs tracking-wider">Active Projects</h3>
+                        <i className="ph ph-arrow-up-right text-gray-500 group-hover:text-blue-400 transition-colors"></i>
+                    </div>
+                    <p className="text-4xl font-bold mt-2 text-white group-hover:text-blue-100 transition-colors">5</p>
+                </Link>
                 <div className="bg-white/5 border border-white/10 p-6 rounded-lg hover:bg-white/10 transition">
                     <h3 className="text-gray-400 font-bold uppercase text-xs tracking-wider">New Leads</h3>
                     <p className="text-4xl font-bold mt-2 text-white">24</p>
