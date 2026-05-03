@@ -33,11 +33,12 @@ export default function Navbar() {
 
                 {/* Desktop Menu */}
                 <div className="hidden md:flex gap-8 text-xs font-medium tracking-widest uppercase text-slate-400">
-                    <Link href="/" className={navLinkClass}>Business Demo Page</Link>
-                    <Link href="/website" className={navLinkClass}>Overview</Link>
+                    <Link href="/" className={navLinkClass}>Overview</Link>
                     <Link href="/talent" className={navLinkClass}>Talent</Link>
                     <Link href="/teams" className={navLinkClass}>Teams</Link>
                     <Link href="/request" className={navLinkClass}>Request</Link>
+                    <Link href="/business-demo" className={navLinkClass}>Business Demo</Link>
+                    <Link href="/workflow" className={navLinkClass}>Workflow Prototype</Link>
 
                     {session ? (
                         <>
@@ -63,11 +64,12 @@ export default function Navbar() {
             {/* Mobile Menu Overlay */}
             <div className={`fixed inset-0 z-40 bg-wme-base/95 backdrop-blur-xl flex flex-col justify-center items-center transition-all duration-300 transform ${mobileMenuOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                 <div className="flex flex-col gap-8 text-center">
-                    <Link href="/" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Business Demo Page</Link>
-                    <Link href="/website" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Overview</Link>
+                    <Link href="/" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Overview</Link>
                     <Link href="/talent" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Talent</Link>
                     <Link href="/teams" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Teams</Link>
                     <Link href="/request" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Request</Link>
+                    <Link href="/business-demo" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Business Demo</Link>
+                    <Link href="/workflow" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Workflow Prototype</Link>
 
                     {session ? (
                         <>
