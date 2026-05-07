@@ -38,7 +38,6 @@ export default function Navbar() {
                     <Link href="/teams" className={navLinkClass}>Teams</Link>
                     <Link href="/request" className={navLinkClass}>Request</Link>
                     <Link href="/business-demo" className={navLinkClass}>Business Demo</Link>
-                    <Link href="/workflow" className={navLinkClass}>Workflow Prototype</Link>
 
                     {session ? (
                         <>
@@ -72,7 +71,6 @@ export default function Navbar() {
                     <Link href="/teams" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Teams</Link>
                     <Link href="/request" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Request</Link>
                     <Link href="/business-demo" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Business Demo</Link>
-                    <Link href="/workflow" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Workflow Prototype</Link>
 
                     {session ? (
                         <>
