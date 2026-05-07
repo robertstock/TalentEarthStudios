@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -46,6 +47,9 @@ enum ProjectStatus {
   APPROVED_FOR_SOW
   SOW_DRAFT
   NEEDS_RPM_UPDATE
+  AWAITING_CLIENT
+  IN_PROGRESS
+  STALLED
 }
 
 enum QuoteStatus {
@@ -254,6 +258,17 @@ model Project {
 
   status          ProjectStatus       @default(DRAFT)
   
+  // AI and Routing enhancements
+  aiConfidenceScore Float?
+  urgencyScore      Float?
+  complexityScore   Float?
+  
+  isAutoRouted      Boolean             @default(true)
+  requiresRpmReview Boolean             @default(false)
+  exceptionReason   String?
+
+  routingLogs       RoutingLog[]
+
   isPaid          Boolean             @default(false)
   paidAt          DateTime?
   finalRevenue    Float?
@@ -269,6 +284,8 @@ model Project {
   transcripts     Transcript[]
   adminReviews    AdminReview[]
   sows            SOW[]
+  vendorBills     VendorBill[]
+  invoice         Invoice?
 
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
@@ -458,4 +475,40 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model RoutingLog {
+  id              String   @id @default(cuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id])
+  talentScanned   Int      @default(0)
+  selectedTalentId String?
+  routingDecision String   @db.Text
+  createdAt       DateTime @default(now())
+}
+
+model VendorBill {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  vendorName  String
+  amount      Float
+  status      String   @default("UNPAID") // UNPAID, PAID
+  date        DateTime
+  documentUrl String?
+  
+  createdAt   DateTime @default(now())
+}
+
+model Invoice {
+  id              String   @id @default(cuid())
+  projectId       String   @unique
+  project         Project  @relation(fields: [projectId], references: [id])
+  qbInvoiceId     String?  
+  amount          Float
+  status          String   @default("DRAFT") // DRAFT, SENT, PAID
+  sentAt          DateTime?
+  paidAt          DateTime?
+  
+  createdAt       DateTime @default(now())
 }
