@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import Image from "next/image";
+import { MOCK_TALENTS } from "@/lib/mock-data";
 
 export default async function Dashboard() {
     const session = await getServerSession(authOptions);
@@ -12,16 +13,44 @@ export default async function Dashboard() {
         redirect("/api/auth/signin");
     }
 
-    // Fetch latest data
-    const user = await db.user.findUnique({
-        where: { id: session.user.id },
-        include: {
-            profile: true,
-            _count: {
-                select: { assignedProjects: true }
+    let user = null;
+    try {
+        // Fetch latest data
+        user = await db.user.findUnique({
+            where: { id: session.user.id },
+            include: {
+                profile: true,
+                _count: {
+                    select: { assignedProjects: true }
+                }
             }
+        });
+    } catch (error) {
+        console.error("Database connection failed, falling back to mock data:", error);
+        
+        // Fallback to mock data if DB is offline
+        const mockTalent = MOCK_TALENTS.find(t => t.id === session.user.id || t.email === session.user.email);
+        if (mockTalent) {
+            user = {
+                id: mockTalent.id,
+                email: mockTalent.email,
+                firstName: mockTalent.firstName,
+                lastName: mockTalent.lastName,
+                status: "APPROVED",
+                profile: {
+                    publicSlug: mockTalent.profile.publicSlug || mockTalent.id,
+                    headline: mockTalent.profile.headline,
+                    bio: mockTalent.profile.bio,
+                    profileImage: mockTalent.profile.profileImage,
+                    skills: mockTalent.profile.skills || [],
+                    primaryDiscipline: mockTalent.profile.primaryDiscipline
+                },
+                _count: {
+                    assignedProjects: 0
+                }
+            } as any;
         }
-    });
+    }
 
     // Helper for Status Badge
     const getStatusColor = (status: string) => {
