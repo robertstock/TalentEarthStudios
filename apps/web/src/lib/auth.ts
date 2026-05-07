@@ -5,6 +5,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { db } from "@/lib/db";
 import { compare, hash } from "bcryptjs";
 import { areDemoCredentialsEnabled } from "@/lib/env";
+import { MOCK_TALENTS } from "@/lib/mock-data";
 
 const demoCredentialsEnabled = areDemoCredentialsEnabled();
 
@@ -47,61 +48,64 @@ export const authOptions: NextAuthOptions = {
                     }
 
                     // Check if it's a mock talent demo
-                    const { MOCK_TALENTS } = await import("@/lib/mock-data");
                     const mockTalent = MOCK_TALENTS.find(t => t.email === credentials.email);
                     
                     if (mockTalent && credentials.password === "password123") {
-                        // Ensure this mock talent exists in the real DB so the dashboard works
-                        let user = await db.user.findUnique({ where: { email: credentials.email }, include: { profile: true } });
-                        
-                        if (!user) {
-                            const passwordHash = await hash("password123", 10);
-                            user = await db.user.create({
-                                data: {
-                                    id: mockTalent.id,
-                                    email: mockTalent.email,
-                                    firstName: mockTalent.firstName,
-                                    lastName: mockTalent.lastName,
-                                    role: mockTalent.role as any,
-                                    status: "APPROVED",
-                                    passwordHash,
-                                    profile: {
-                                        create: {
-                                            publicSlug: mockTalent.profile.publicSlug || mockTalent.id,
-                                            headline: mockTalent.profile.headline,
-                                            bio: mockTalent.profile.bio,
-                                            profileImage: mockTalent.profile.profileImage,
-                                            skills: mockTalent.profile.skills || [],
-                                            primaryDiscipline: mockTalent.profile.primaryDiscipline
+                        let user = null;
+                        try {
+                            // Ensure this mock talent exists in the real DB so the dashboard works
+                            user = await db.user.findUnique({ where: { email: credentials.email }, include: { profile: true } });
+                            
+                            if (!user) {
+                                const passwordHash = await hash("password123", 10);
+                                user = await db.user.create({
+                                    data: {
+                                        id: mockTalent.id,
+                                        email: mockTalent.email,
+                                        firstName: mockTalent.firstName,
+                                        lastName: mockTalent.lastName,
+                                        role: mockTalent.role as any,
+                                        status: "APPROVED",
+                                        passwordHash,
+                                        profile: {
+                                            create: {
+                                                publicSlug: mockTalent.profile.publicSlug || mockTalent.id,
+                                                headline: mockTalent.profile.headline,
+                                                bio: mockTalent.profile.bio,
+                                                profileImage: mockTalent.profile.profileImage,
+                                                skills: mockTalent.profile.skills || [],
+                                                primaryDiscipline: mockTalent.profile.primaryDiscipline
+                                            }
                                         }
-                                    }
-                                },
-                                include: { profile: true }
-                            });
-
-                            // Seed portfolio items
-                            if (mockTalent.portfolio && mockTalent.portfolio.length > 0) {
-                                await db.portfolioItem.createMany({
-                                    data: mockTalent.portfolio.map((item, index) => ({
-                                        id: item.id,
-                                        userId: user.id,
-                                        title: item.title,
-                                        description: item.description,
-                                        type: item.type as any,
-                                        assetUrl: item.assetUrl,
-                                        isPublic: true,
-                                        sortOrder: index
-                                    }))
+                                    },
+                                    include: { profile: true }
                                 });
+
+                                // Seed portfolio items safely
+                                if (mockTalent.portfolio && mockTalent.portfolio.length > 0) {
+                                    await db.portfolioItem.createMany({
+                                        data: mockTalent.portfolio.map((item, index) => ({
+                                            userId: user!.id,
+                                            title: item.title,
+                                            description: item.description,
+                                            type: item.type as any,
+                                            assetUrl: item.assetUrl,
+                                            isPublic: true,
+                                            sortOrder: index
+                                        }))
+                                    });
+                                }
                             }
+                        } catch (dbError) {
+                            console.error("Failed to seed mock talent into DB:", dbError);
                         }
 
                         return {
-                            id: user.id,
-                            email: user.email,
-                            name: user.firstName,
-                            role: user.role,
-                            image: user.profile?.profileImage,
+                            id: user?.id || mockTalent.id,
+                            email: user?.email || mockTalent.email,
+                            name: user?.firstName || mockTalent.firstName,
+                            role: user?.role || mockTalent.role,
+                            image: user?.profile?.profileImage || mockTalent.profile.profileImage,
                         };
                     }
                 }
