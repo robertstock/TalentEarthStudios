@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { signOut } from "next-auth/react";
+import { MOCK_TALENTS } from "@/lib/mock-data";
 
 interface UserDropdownProps {
     user: {
@@ -62,22 +63,36 @@ export default function UserDropdown({ user }: UserDropdownProps) {
                     </div>
 
                     <Link
-                        href="/app"
+                        href={user.email === "finley@talentearth.com" ? "/admin" : "/app"}
                         onClick={() => setIsOpen(false)}
                         className="block px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors"
                     >
                         Dashboard
                     </Link>
 
-                    {user.id && (
+                    {user.email !== "finley@talentearth.com" && (
                         <Link
-                            href={`/talent/${user.id}`}
+                            href="/app/portfolio"
                             onClick={() => setIsOpen(false)}
                             className="block px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors"
                         >
-                            Public Profile
+                            Edit Portfolio
                         </Link>
                     )}
+
+                    {user.id && user.email !== "finley@talentearth.com" && (() => {
+                        const mockTalent = MOCK_TALENTS.find(t => t.id === user.id || t.email === user.email);
+                        const slug = mockTalent?.profile?.publicSlug || user.id;
+                        return (
+                            <Link
+                                href={`/talent/${slug}`}
+                                onClick={() => setIsOpen(false)}
+                                className="block px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors"
+                            >
+                                Public Profile
+                            </Link>
+                        );
+                    })()}
 
                     <div className="border-t border-white/10 my-1"></div>
 
