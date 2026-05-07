@@ -48,7 +48,10 @@ export default function Navbar() {
                             <UserDropdown user={session.user} />
                         </>
                     ) : (
-                        <Link href="/auth/signin" className={navLinkClass}>Sign In</Link>
+                        <div className="flex flex-col items-center gap-1 -mt-1">
+                            <Link href="/auth/signin" className={navLinkClass}>Sign In</Link>
+                            <Link href="/auth/register" className="text-[9px] uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors">Sign Up</Link>
+                        </div>
                     )}
                 </div>
 
@@ -77,7 +80,10 @@ export default function Navbar() {
                             <button onClick={() => { setMobileMenuOpen(false); handleSignOut(); }} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Sign Out</button>
                         </>
                     ) : (
-                        <Link href="/auth/signin" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Sign In</Link>
+                        <>
+                            <Link href="/auth/signin" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Sign In</Link>
+                            <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)} className="text-xl font-light text-blue-400 tracking-widest uppercase hover:text-blue-300 transition-colors">Sign Up</Link>
+                        </>
                     )}
                 </div>
                 <div className="absolute bottom-12 text-[10px] text-slate-600 font-mono">
