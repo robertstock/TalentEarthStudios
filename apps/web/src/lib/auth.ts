@@ -82,9 +82,12 @@ export const authOptions: NextAuthOptions = {
                                         },
                                         include: { profile: true }
                                     });
+                                }
 
-                                    // Seed portfolio items safely
-                                    if (mockTalent.portfolio && mockTalent.portfolio.length > 0) {
+                                // Seed portfolio items safely if they don't exist yet
+                                if (mockTalent.portfolio && mockTalent.portfolio.length > 0) {
+                                    const existingPortfolioCount = await db.portfolioItem.count({ where: { userId: user!.id } });
+                                    if (existingPortfolioCount === 0) {
                                         await db.portfolioItem.createMany({
                                             data: mockTalent.portfolio.map((item, index) => ({
                                                 userId: user!.id,
