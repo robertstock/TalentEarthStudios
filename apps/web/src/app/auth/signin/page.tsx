@@ -13,11 +13,14 @@ function SignInForm() {
         setLoading(true);
 
         const emailToUse = selectedEmail || "finley@talentearth.com"; // default to admin
+        
+        // Route Finley to Admin, and Talents directly to their Portfolio editor
+        const destination = emailToUse === "finley@talentearth.com" ? "/admin" : "/app/portfolio";
 
         await signIn("credentials", {
             email: emailToUse,
             password: "password123",
-            callbackUrl: "/app"
+            callbackUrl: destination
         });
     };
 
