@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { db } from "@/lib/db";
-import { compare } from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 import { areDemoCredentialsEnabled } from "@/lib/env";
 
 const demoCredentialsEnabled = areDemoCredentialsEnabled();
@@ -34,24 +34,76 @@ export const authOptions: NextAuthOptions = {
                     return null;
                 }
 
-                if (demoCredentialsEnabled && credentials.email === "finley@talentearth.com" && credentials.password === "password123") {
-                    return {
-                        id: "demo-admin",
-                        email: "finley@talentearth.com",
-                        name: "Finley (Demo)",
-                        role: "ADMIN",
-                        image: null,
-                    };
-                }
+                if (demoCredentialsEnabled) {
+                    // Check if it's the admin demo
+                    if (credentials.email === "finley@talentearth.com" && credentials.password === "password123") {
+                        return {
+                            id: "demo-admin",
+                            email: "finley@talentearth.com",
+                            name: "Finley (Demo)",
+                            role: "ADMIN",
+                            image: null,
+                        };
+                    }
 
-                if (demoCredentialsEnabled && credentials.email === "talent@example.com" && credentials.password === "password123") {
-                    return {
-                        id: "demo-talent",
-                        email: "talent@example.com",
-                        name: "Jane Doe (Demo)",
-                        role: "TALENT",
-                        image: null,
-                    };
+                    // Check if it's a mock talent demo
+                    const { MOCK_TALENTS } = await import("@/lib/mock-data");
+                    const mockTalent = MOCK_TALENTS.find(t => t.email === credentials.email);
+                    
+                    if (mockTalent && credentials.password === "password123") {
+                        // Ensure this mock talent exists in the real DB so the dashboard works
+                        let user = await db.user.findUnique({ where: { email: credentials.email }, include: { profile: true } });
+                        
+                        if (!user) {
+                            const passwordHash = await hash("password123", 10);
+                            user = await db.user.create({
+                                data: {
+                                    id: mockTalent.id,
+                                    email: mockTalent.email,
+                                    firstName: mockTalent.firstName,
+                                    lastName: mockTalent.lastName,
+                                    role: mockTalent.role as any,
+                                    status: "APPROVED",
+                                    passwordHash,
+                                    profile: {
+                                        create: {
+                                            publicSlug: mockTalent.profile.publicSlug || mockTalent.id,
+                                            headline: mockTalent.profile.headline,
+                                            bio: mockTalent.profile.bio,
+                                            profileImage: mockTalent.profile.profileImage,
+                                            skills: mockTalent.profile.skills || [],
+                                            primaryDiscipline: mockTalent.profile.primaryDiscipline
+                                        }
+                                    }
+                                },
+                                include: { profile: true }
+                            });
+
+                            // Seed portfolio items
+                            if (mockTalent.portfolio && mockTalent.portfolio.length > 0) {
+                                await db.portfolioItem.createMany({
+                                    data: mockTalent.portfolio.map((item, index) => ({
+                                        id: item.id,
+                                        userId: user.id,
+                                        title: item.title,
+                                        description: item.description,
+                                        type: item.type as any,
+                                        assetUrl: item.assetUrl,
+                                        isPublic: true,
+                                        sortOrder: index
+                                    }))
+                                });
+                            }
+                        }
+
+                        return {
+                            id: user.id,
+                            email: user.email,
+                            name: user.firstName,
+                            role: user.role,
+                            image: user.profile?.profileImage,
+                        };
+                    }
                 }
                 const user = await db.user.findUnique({
                     where: { email: credentials.email },

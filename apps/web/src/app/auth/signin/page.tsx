@@ -1,30 +1,72 @@
 "use client";
 
-import { Suspense } from "react";
-import Link from "next/link";
+import { Suspense, useState } from "react";
+import { signIn } from "next-auth/react";
+import { MOCK_TALENTS } from "@/lib/mock-data";
 
 function SignInForm() {
+    const [selectedEmail, setSelectedEmail] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleSignIn = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+
+        const emailToUse = selectedEmail || "finley@talentearth.com"; // default to admin
+
+        await signIn("credentials", {
+            email: emailToUse,
+            password: "password123",
+            callbackUrl: "/app"
+        });
+    };
+
     return (
         <div className="flex min-h-screen flex-col items-center justify-center p-4">
             <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-8 shadow-2xl">
                 <div className="mb-8 text-center">
                     <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Demo Access</h1>
-                    <p className="text-sm text-gray-400">Enter the admin dashboard in demo mode</p>
+                    <p className="text-sm text-gray-400">Select a mock user to enter the dashboard</p>
                 </div>
 
-                <Link
-                    href="/admin"
-                    className="w-full mb-4 rounded-lg bg-emerald-600/20 border border-emerald-500/50 px-4 py-3 font-semibold text-emerald-400 transition-all hover:bg-emerald-600/30 flex items-center justify-center gap-2"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    Enter Demo Mode (Admin)
-                </Link>
+                <form onSubmit={handleSignIn} className="space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium uppercase tracking-wider text-blue-400 block mb-2">Select Demo User</label>
+                        <select
+                            value={selectedEmail}
+                            onChange={(e) => setSelectedEmail(e.target.value)}
+                            className="w-full rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-all appearance-none cursor-pointer"
+                        >
+                            <option value="finley@talentearth.com">⭐ Finley (Admin Dashboard)</option>
+                            <optgroup label="Mock Talents (Portfolio Dashboard)">
+                                {MOCK_TALENTS.map(talent => (
+                                    <option key={talent.id} value={talent.email}>
+                                        {talent.firstName} {talent.lastName} - {talent.profile.primaryDiscipline}
+                                    </option>
+                                ))}
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-all hover:bg-blue-500 flex items-center justify-center gap-2 shadow-[0_0_20px_-5px_rgba(37,99,235,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? (
+                            <span className="flex items-center gap-2">
+                                <i className="ph ph-spinner-gap animate-spin"></i> Authenticating...
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-2">
+                                <i className="ph ph-sign-in text-lg"></i> Sign In to Demo
+                            </span>
+                        )}
+                    </button>
+                </form>
 
                 <div className="mt-6 text-center text-xs text-gray-600">
-                    Authentication is disabled for this demo.
+                    Authentication is bypassed for this demo environment. Passwords are not required.
                 </div>
             </div>
         </div>
@@ -33,7 +75,7 @@ function SignInForm() {
 
 export default function SignInPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>}>
             <SignInForm />
         </Suspense>
     );
