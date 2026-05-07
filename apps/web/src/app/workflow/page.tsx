@@ -10,7 +10,7 @@ import {
   Check,
   ClipboardList,
   FileSignature,
-  Handshake,
+  Users,
   ListChecks,
   SearchCheck,
   Smartphone,
@@ -189,7 +189,7 @@ export default function WorkflowDemoPage() {
             <span>Create and approve the SOW</span>
           </div>
           <div>
-            <Handshake size={18} />
+            <Users size={18} />
             <span>Match, price, approve, and award</span>
           </div>
         </section>
