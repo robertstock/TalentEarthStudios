@@ -2,6 +2,7 @@
   "name": "temp_init",
   "private": true,
   "scripts": {
+    "postinstall": "cd apps/web && npx prisma generate",
     "build": "turbo run build --filter=web",
     "build:all": "turbo run build",
     "dev": "turbo run dev",
