@@ -9,6 +9,11 @@ import { MOCK_TALENTS } from "@/lib/mock-data";
 
 const demoCredentialsEnabled = true; // Always enable for the demo platform
 
+// FORCE NextAuth to trust the custom domain so getServerSession doesn't fail
+if (process.env.NODE_ENV === "production") {
+    process.env.NEXTAUTH_URL = "https://demo.talentearth.com";
+}
+
 export const authOptions: NextAuthOptions = {
     secret: process.env.NEXTAUTH_SECRET || "fallback_secret_for_demo_purposes_only",
     adapter: PrismaAdapter(db),
