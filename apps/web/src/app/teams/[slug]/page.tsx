@@ -2,6 +2,7 @@
 import { MOCK_TEAMS } from "@/lib/mock-data";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { formatPublicName } from "@/lib/talent-utils";
 
 interface PageProps {
     params: {
@@ -100,10 +101,10 @@ export default async function TeamManifestPage({ params }: PageProps) {
                                 {team.members.map((member: any) => (
                                     <div key={member.id} className="flex items-center gap-4 group cursor-pointer hover:bg-slate-800/50 p-2 rounded -mx-2 transition-colors">
                                         <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-700">
-                                            <img src={member.profile.profileImage} alt={member.lastName} className="w-full h-full object-cover" />
+                                            <img src={member.profile.profileImage} alt={formatPublicName(member.firstName, member.lastName)} className="w-full h-full object-cover" />
                                         </div>
                                         <div>
-                                            <div className="text-white font-medium group-hover:text-green-400 transition-colors">{member.firstName} {member.lastName}</div>
+                                            <div className="text-white font-medium group-hover:text-green-400 transition-colors">{formatPublicName(member.firstName, member.lastName)}</div>
                                             <div className="text-xs text-slate-500 uppercase tracking-wide">{member.profile.primaryDiscipline || member.profile.headline}</div>
                                         </div>
                                     </div>

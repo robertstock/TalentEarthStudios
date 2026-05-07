@@ -108,7 +108,7 @@ export default function Dashboard() {
                 </button>
 
                 <Link
-                  href="/website"
+                  href="/"
                   className="w-full py-4 bg-[#11161F] border border-[#1E2530] hover:bg-[#1a202c] hover:border-[#94A3B8] text-[#E2E8F0] rounded-md flex justify-center items-center gap-2 transition-all"
                 >
                   <span>Open New Website</span>

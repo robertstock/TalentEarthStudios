@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { requireTalentOrAdmin } from "@/lib/auth-guards";
 
 export async function PUT(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireTalentOrAdmin();
+    if (auth.error) {
+        return auth.error;
     }
 
     const searchParams = req.nextUrl.searchParams;

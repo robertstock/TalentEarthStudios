@@ -1,20 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireSession } from "@/lib/auth-guards";
 
 export async function POST(req: Request) {
+    const { session, error } = await requireSession();
+    if (error) {
+        return error;
+    }
+
     try {
-        // In a real app, we would get the userId from the session
-        // For now, we'll clear all notifications or find the primary user
-        const user = await db.user.findFirst({
-            where: { role: 'ADMIN' }
-        });
-
-        if (!user) {
-            return NextResponse.json({ message: "User not found" }, { status: 404 });
-        }
-
         await db.notification.deleteMany({
-            where: { userId: user.id }
+            where: { userId: session.user.id }
         });
 
         return NextResponse.json({ message: "All notifications cleared" });

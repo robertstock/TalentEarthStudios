@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { formatPublicName } from "@/lib/talent-utils";
 
 interface Talent {
     id: string;
@@ -90,7 +91,7 @@ export default function TalentBrowser({ initialTalents }: TalentBrowserProps) {
                                         {talent.profile?.profileImage ? (
                                             <Image
                                                 src={talent.profile.profileImage}
-                                                alt={`${talent.firstName} ${talent.lastName}`}
+                                                alt={formatPublicName(talent.firstName, talent.lastName)}
                                                 fill
                                                 className="object-cover"
                                             />
@@ -103,7 +104,7 @@ export default function TalentBrowser({ initialTalents }: TalentBrowserProps) {
                                     <span className="text-[10px] uppercase tracking-wider text-green-500 bg-green-900/10 px-2 py-1 border border-green-900/20">Available</span>
                                 </div>
                                 <h3 className="text-white font-medium text-lg mb-1 group-hover:text-blue-400 transition-colors">
-                                    {talent.firstName} {talent.lastName}
+                                    {formatPublicName(talent.firstName, talent.lastName)}
                                 </h3>
                                 <p className="text-slate-500 text-xs uppercase tracking-wider mb-4">
                                     {talent.profile?.headline || 'Specialist'}

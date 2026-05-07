@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+    const { error } = await requireAdmin();
+    if (error) {
+        return error;
+    }
+
     try {
         const projects = await db.project.findMany({
             include: {

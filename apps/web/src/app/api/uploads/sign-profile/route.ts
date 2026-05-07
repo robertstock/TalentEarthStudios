@@ -5,23 +5,26 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client, BUCKET_PUBLIC } from "@/lib/storage";
 import { v4 as uuidv4 } from "uuid";
+import { requireTalentOrAdmin } from "@/lib/auth-guards";
+import { z } from "zod";
+
+const uploadSchema = z.object({
+    contentType: z.string().min(1),
+    fileName: z.string().min(1),
+});
 
 export async function POST(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireTalentOrAdmin();
+    if (auth.error) {
+        return auth.error;
     }
+    const { session } = auth;
 
     // Check if S3 is configured
     const isS3Configured = BUCKET_PUBLIC && process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY;
 
     try {
-        const { contentType, fileName } = await req.json();
-
-        if (!contentType || !fileName) {
-            return NextResponse.json({ error: "Missing contentType or fileName" }, { status: 400 });
-        }
+        const { contentType, fileName } = uploadSchema.parse(await req.json());
 
         // Generate unique filename
         const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, "");
@@ -58,6 +61,9 @@ export async function POST(req: NextRequest) {
             finalUrl: `https://${BUCKET_PUBLIC}.s3.${process.env.S3_REGION}.amazonaws.com/${key}`
         });
     } catch (error) {
+        if (error instanceof z.ZodError) {
+            return NextResponse.json({ error: "Invalid upload request" }, { status: 400 });
+        }
         console.error("Sign Profile Error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }

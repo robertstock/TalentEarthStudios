@@ -22,6 +22,11 @@ export function getTalentAvatar(firstName: string, lastName: string, currentImag
     return currentImage || null;
 }
 
+export function formatPublicName(firstName: string, lastName: string): string {
+    if (!lastName) return firstName;
+    return `${firstName} ${lastName[0]}.`;
+}
+
 // Find matching mock talent by name (case-insensitive)
 function findMatchingMockTalent(firstName: string, lastName: string): MockTalent | undefined {
     const normalizedName = `${firstName} ${lastName}`.toLowerCase();

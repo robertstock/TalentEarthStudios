@@ -4,6 +4,9 @@ import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { db } from "@/lib/db";
 import { compare } from "bcryptjs";
+import { areDemoCredentialsEnabled } from "@/lib/env";
+
+const demoCredentialsEnabled = areDemoCredentialsEnabled();
 
 export const authOptions: NextAuthOptions = {
     adapter: PrismaAdapter(db),
@@ -31,8 +34,7 @@ export const authOptions: NextAuthOptions = {
                     return null;
                 }
 
-                // DEMO MODE: Allow default admin login without DB
-                if (credentials.email === "finley@talentearth.com" && credentials.password === "password123") {
+                if (demoCredentialsEnabled && credentials.email === "finley@talentearth.com" && credentials.password === "password123") {
                     return {
                         id: "demo-admin",
                         email: "finley@talentearth.com",
@@ -42,8 +44,7 @@ export const authOptions: NextAuthOptions = {
                     };
                 }
 
-                // DEMO MODE: Allow default talent login without DB
-                if (credentials.email === "talent@example.com" && credentials.password === "password123") {
+                if (demoCredentialsEnabled && credentials.email === "talent@example.com" && credentials.password === "password123") {
                     return {
                         id: "demo-talent",
                         email: "talent@example.com",

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { formatPublicName } from "@/lib/talent-utils";
 
 interface PageProps {
     params: Promise<{
@@ -162,7 +163,7 @@ export default async function TalentProfilePage(props: PageProps) {
                             {talent.profile.profileImage ? (
                                 <Image
                                     src={talent.profile.profileImage}
-                                    alt={talent.firstName}
+                                    alt={formatPublicName(talent.firstName, talent.lastName)}
                                     fill
                                     className="object-cover"
                                 />
@@ -178,7 +179,7 @@ export default async function TalentProfilePage(props: PageProps) {
                             <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                                 <div>
                                     <h1 className="text-4xl md:text-5xl font-light text-white mb-2">
-                                        {talent.firstName} <span className="opacity-50">{talent.lastName}</span>
+                                        {formatPublicName(talent.firstName, talent.lastName)}
                                     </h1>
                                     <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400 mb-6">
                                         {talent.profile.primaryDiscipline && (

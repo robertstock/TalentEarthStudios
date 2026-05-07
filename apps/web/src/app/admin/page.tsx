@@ -1,6 +1,17 @@
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 
-export default function AdminDashboard() {
+import { authOptions } from "@/lib/auth";
+import { canAccessAdmin } from "@/lib/auth-guards";
+
+export default async function AdminDashboard() {
+    const session = await getServerSession(authOptions);
+
+    if (!canAccessAdmin(session)) {
+        redirect("/app");
+    }
+
     return (
         <div className="container mx-auto pt-32 pb-12 px-6 text-white">
             <h1 className="text-3xl font-bold mb-8">Admin Dashboard (Demo)</h1>

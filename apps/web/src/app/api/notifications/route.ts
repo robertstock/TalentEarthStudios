@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireSession } from "@/lib/auth-guards";
 
 export async function GET(req: Request) {
+    const { session, error } = await requireSession();
+    if (error) {
+        return error;
+    }
+
     try {
         const notifications = await db.notification.findMany({
+            where: { userId: session.user.id },
             orderBy: { createdAt: 'desc' },
             include: { user: { select: { firstName: true, lastName: true, email: true } } }
         });
