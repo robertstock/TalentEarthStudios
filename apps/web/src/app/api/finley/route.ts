@@ -43,7 +43,7 @@ Instructions:
 `;
 
   const result = streamText({
-    model: openai(FINLEY_MODEL),
+    model: openai(FINLEY_MODEL, { structuredOutputs: false }),
     system: systemPrompt,
     messages,
     tools: {
