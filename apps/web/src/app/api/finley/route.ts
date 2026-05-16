@@ -52,7 +52,7 @@ Instructions:
         parameters: z.object({
           name: z.string().describe("The client's full name"),
           email: z.string().email().describe("The client's email address"),
-          company: z.string().optional().describe("The client's company or organization"),
+          company: z.string().describe("The client's company or organization. Use an empty string if not provided."),
           projectType: z.string().describe("The discipline or type of project"),
           timeline: z.string().describe("The estimated timeline"),
           budgetRange: z.string().describe("The estimated budget range"),
