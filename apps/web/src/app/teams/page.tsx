@@ -3,6 +3,9 @@ import Link from "next/link";
 // // import { db as prisma } from "@/lib/db";
 import { MOCK_TEAMS } from "@/lib/mock-data";
 import { Metadata } from "next";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
     title: "Teams | TalentEarthStudios",
@@ -16,6 +19,11 @@ interface PageProps {
 }
 
 export default async function TeamsPage({ searchParams }: PageProps) {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'ADMIN') {
+        redirect('/auth/signin');
+    }
+
     const { type } = await searchParams;
 
     let teams = MOCK_TEAMS;

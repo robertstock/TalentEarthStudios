@@ -111,7 +111,7 @@ export default async function Dashboard() {
 
                             <div className="relative p-6 z-10">
                                 <div className="flex items-start justify-between mb-6">
-                                    <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 overflow-hidden relative shadow-lg">
+                                    <Link href="/app/portfolio" className="w-20 h-20 rounded-full bg-white/5 border border-white/10 overflow-hidden relative shadow-lg hover:ring-2 hover:ring-blue-500 transition-all cursor-pointer block">
                                         {user?.profile?.profileImage ? (
                                             <Image src={user.profile.profileImage} alt="Profile" fill className="object-cover" />
                                         ) : (
@@ -119,7 +119,7 @@ export default async function Dashboard() {
                                                 <i className="ph ph-user text-3xl text-slate-600"></i>
                                             </div>
                                         )}
-                                    </div>
+                                    </Link>
                                     <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${getStatusColor(user?.status || 'DRAFT')}`}>
                                         {user?.status}
                                     </div>
