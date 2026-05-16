@@ -47,7 +47,7 @@ export default function Navbar() {
                     {session ? (
                         <>
                             {session.user.role === 'ADMIN' && (
-                                <Link href="/admin" className={navLinkClass}>Admin</Link>
+                                <Link href="/admin/incoming" className={navLinkClass}>Admin</Link>
                             )}
                             <UserDropdown user={session.user} />
                         </>

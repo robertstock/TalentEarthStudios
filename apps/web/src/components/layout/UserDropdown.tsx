@@ -63,7 +63,7 @@ export default function UserDropdown({ user }: UserDropdownProps) {
                     </div>
 
                     <Link
-                        href={user.email === "finley@talentearth.com" ? "/admin" : "/app"}
+                        href={user.email === "finley@talentearth.com" ? "/admin/incoming" : "/app"}
                         onClick={() => setIsOpen(false)}
                         className="block px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors"
                     >
