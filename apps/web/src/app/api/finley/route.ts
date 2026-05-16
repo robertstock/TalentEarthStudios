@@ -85,8 +85,19 @@ Instructions:
             const requiresRpmReview = !recommendedAutoRoute || confidenceScore < 85;
 
             // Ensure we have an admin ID for the creator
-            const systemAdmin = await db.user.findFirst({ where: { role: "ADMIN" } });
-            const createdById = systemAdmin ? systemAdmin.id : "system";
+            let systemAdmin = await db.user.findFirst({ where: { role: "ADMIN" } });
+            if (!systemAdmin) {
+                systemAdmin = await db.user.create({
+                    data: {
+                        email: "finley@talentearth.com",
+                        firstName: "Finley",
+                        lastName: "System",
+                        role: "ADMIN",
+                        status: "APPROVED"
+                    }
+                });
+            }
+            const createdById = systemAdmin.id;
 
             // Determine Routing match if AutoRoute is true
             let matchedTalentId = null;
