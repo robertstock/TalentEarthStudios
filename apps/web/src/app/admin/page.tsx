@@ -6,6 +6,9 @@ import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/auth-guards";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AdminDashboard() {
     const session = await getServerSession(authOptions);
 
