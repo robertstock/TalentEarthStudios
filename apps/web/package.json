@@ -13,8 +13,8 @@
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai": "latest",
-    "@ai-sdk/react": "^3.0.179",
+    "@ai-sdk/openai": "^1.1.13",
+    "@ai-sdk/react": "^1.1.17",
     "@auth/prisma-adapter": "^1.0.14",
     "@aws-sdk/client-s3": "^3.490.0",
     "@aws-sdk/s3-request-presigner": "^3.490.0",
@@ -22,7 +22,7 @@
     "@phosphor-icons/react": "^2.1.10",
     "@prisma/client": "^5.10.2",
     "@types/three": "^0.182.0",
-    "ai": "latest",
+    "ai": "^4.1.41",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.0",
     "date-fns": "^4.1.0",
@@ -38,7 +38,7 @@
     "tailwind-merge": "^2.2.1",
     "three": "^0.182.0",
     "use-sync-external-store": "^1.6.0",
-    "zod": "^3.22.4"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
