@@ -179,5 +179,5 @@ ${missingInfo !== "None" ? `**Pending Clarification:** ${missingInfo}` : "All st
     },
   });
 
-  return result.toDataStreamResponse();
+  return result.toUIMessageStreamResponse();
 }
