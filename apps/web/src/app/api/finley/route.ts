@@ -8,8 +8,8 @@ import { specialtyData, SpecialtySlug } from "@/lib/specialty-data";
 // Set max duration for edge functions (if deployed to Vercel edge)
 export const maxDuration = 60;
 
-// Model selection — override via FINLEY_MODEL env var (e.g. "gpt-4o", "gpt-5-mini")
-const FINLEY_MODEL = process.env.FINLEY_MODEL ?? "gpt-5";
+// Model selection — override via FINLEY_MODEL env var (e.g. "gpt-4o")
+const FINLEY_MODEL = process.env.FINLEY_MODEL ?? "gpt-4o";
 
 export async function POST(req: Request) {
   const { messages, team } = await req.json();
