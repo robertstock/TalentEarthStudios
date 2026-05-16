@@ -1,7 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { useEffect, useRef, Suspense } from "react";
+import { useEffect, useRef, Suspense, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
@@ -13,15 +13,26 @@ function ChatContent() {
     const teamSlug = searchParams.get('team') as SpecialtySlug | null;
     const teamData = teamSlug ? specialtyData[teamSlug] : null;
 
-    const { messages, input, handleInputChange, handleSubmit, isLoading, append } = useChat({
+    const [input, setInput] = useState("");
+    const { messages, sendMessage, status } = useChat({
         api: "/api/finley",
         body: { team: teamSlug },
     });
+    
+    const isLoading = status === 'submitted' || status === 'streaming';
+    
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value);
+    const handleSubmit = (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!input.trim() || isLoading) return;
+        sendMessage({ role: 'user', content: input });
+        setInput("");
+    };
 
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const hasGreeted = useRef(false);
 
-    // On mount, trigger Finley to send its own opening message via GPT-5
+    // On mount, trigger Finley to send its own opening message
     useEffect(() => {
         if (hasGreeted.current) return;
         hasGreeted.current = true;
@@ -30,7 +41,7 @@ function ChatContent() {
             ? `[SYSTEM: The client has navigated to start a project with the ${teamData.title} team. Begin the intake conversation. Greet them warmly, mention the ${teamData.title} team, and ask for their first name and email address to get started. Do not ask for any other project details yet. Wait for their response.]`
             : `[SYSTEM: A new client has arrived. Begin the intake conversation. Greet them warmly as Finley, the AI Project Manager for TalentEarthStudios. Ask for their first name and email address to get started. Do not ask for any other project details yet. Wait for their response.]`;
 
-        append({ role: "user", content: trigger });
+        sendMessage({ role: "user", content: trigger });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
