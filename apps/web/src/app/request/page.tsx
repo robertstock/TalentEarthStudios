@@ -27,8 +27,8 @@ function ChatContent() {
         hasGreeted.current = true;
 
         const trigger = teamData
-            ? `[SYSTEM: The client has navigated to start a project with the ${teamData.title} team. Begin the intake conversation. Greet them warmly, mention the ${teamData.title} team, and ask for their first name to get started. Keep it brief — one or two sentences max.]`
-            : `[SYSTEM: A new client has arrived. Begin the intake conversation. Greet them warmly as Finley, the AI Project Manager for TalentEarthStudios, and ask for their first name to get started. Keep it brief — one or two sentences max.]`;
+            ? `[SYSTEM: The client has navigated to start a project with the ${teamData.title} team. Begin the intake conversation. Greet them warmly, mention the ${teamData.title} team, and ask for their first name and email address to get started. Do not ask for any other project details yet. Wait for their response.]`
+            : `[SYSTEM: A new client has arrived. Begin the intake conversation. Greet them warmly as Finley, the AI Project Manager for TalentEarthStudios. Ask for their first name and email address to get started. Do not ask for any other project details yet. Wait for their response.]`;
 
         append({ role: "user", content: trigger });
     // eslint-disable-next-line react-hooks/exhaustive-deps
