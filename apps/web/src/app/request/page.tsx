@@ -14,9 +14,9 @@ function ChatContent() {
     const teamData = teamSlug ? specialtyData[teamSlug] : null;
 
     const [input, setInput] = useState("");
-    const { messages, sendMessage, status } = useChat({
+    const { messages, append, status } = useChat({
         api: "/api/finley",
-        body: { team: teamSlug },
+        body: { team: teamSlug }
     });
     
     const isLoading = status === 'submitted' || status === 'streaming';
@@ -25,7 +25,7 @@ function ChatContent() {
     const handleSubmit = (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!input.trim() || isLoading) return;
-        sendMessage({ role: 'user', content: input });
+        append({ role: 'user', content: input });
         setInput("");
     };
 
@@ -41,7 +41,7 @@ function ChatContent() {
             ? `[SYSTEM: The client has navigated to start a project with the ${teamData.title} team. Begin the intake conversation. Greet them warmly, mention the ${teamData.title} team, and ask for their first name and email address to get started. Do not ask for any other project details yet. Wait for their response.]`
             : `[SYSTEM: A new client has arrived. Begin the intake conversation. Greet them warmly as Finley, the AI Project Manager for TalentEarthStudios. Ask for their first name and email address to get started. Do not ask for any other project details yet. Wait for their response.]`;
 
-        sendMessage({ role: "user", content: trigger });
+        append({ role: "user", content: trigger });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
