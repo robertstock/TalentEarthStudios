@@ -65,6 +65,27 @@ export default function IncomingClient({ projects }: IncomingClientProps) {
         }
     };
 
+    const handleApproveProject = async () => {
+        if (!selectedProject) return;
+        setIsSaving(true);
+        try {
+            const res = await fetch(`/api/admin/projects/${selectedProject.id}/move-to-active`, {
+                method: 'POST'
+            });
+            if (res.ok) {
+                router.refresh();
+            } else {
+                console.error("Failed to approve project");
+                alert("Failed to approve project. Please try again.");
+            }
+        } catch (e) {
+            console.error("Error approving project:", e);
+            alert("Error approving project. Please try again.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     if (projects.length === 0) {
         return (
             <div className="container mx-auto pt-32 pb-12 px-6 text-white min-h-screen">
@@ -241,7 +262,12 @@ export default function IncomingClient({ projects }: IncomingClientProps) {
                                         >
                                             Edit SOW
                                         </button>
-                                        <button className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-widest rounded transition-colors shadow-[0_0_20px_rgba(37,99,235,0.4)]">
+                                        <button 
+                                            onClick={handleApproveProject}
+                                            disabled={isSaving}
+                                            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-widest rounded transition-colors shadow-[0_0_20px_rgba(37,99,235,0.4)] disabled:opacity-50 flex items-center gap-2"
+                                        >
+                                            {isSaving ? <i className="ph ph-spinner animate-spin"></i> : null}
                                             Approve & Move to Active
                                         </button>
                                     </>

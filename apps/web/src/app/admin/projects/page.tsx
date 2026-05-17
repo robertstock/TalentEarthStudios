@@ -46,9 +46,7 @@ export default async function AdminProjectsPage() {
             team: {
                 include: { members: { include: { user: true } } }
             },
-            talent: {
-                include: { user: true }
-            },
+            talent: true,
             sows: {
                 orderBy: { createdAt: 'desc' },
                 take: 1
@@ -68,11 +66,11 @@ export default async function AdminProjectsPage() {
                 role: m.roleInTeam || "Member",
                 avatar: `${m.user?.firstName?.[0] || ''}${m.user?.lastName?.[0] || ''}`.toUpperCase()
             }));
-        } else if (p.talent && p.talent.user) {
+        } else if (p.talent) {
             teamMembers = [{
-                name: `${p.talent.user.firstName || ''} ${p.talent.user.lastName || ''}`.trim(),
+                name: p.talent.name,
                 role: "Lead Talent",
-                avatar: `${p.talent.user.firstName?.[0] || ''}${p.talent.user.lastName?.[0] || ''}`.toUpperCase()
+                avatar: `${p.talent.name?.[0] || ''}`.toUpperCase()
             }];
         }
 
