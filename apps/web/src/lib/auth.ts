@@ -44,7 +44,7 @@ export const authOptions: NextAuthOptions = {
 
                     if (demoCredentialsEnabled) {
                         // Check if it's the admin demo
-                        if (credentials.email === "finley@talentearth.com" && credentials.password === "password123") {
+                        if (credentials.email === "finley@talentearth.com" && credentials.password === "finley") {
                             return {
                                 id: "demo-admin",
                                 email: "finley@talentearth.com",
@@ -57,14 +57,14 @@ export const authOptions: NextAuthOptions = {
                         // Check if it's a mock talent demo
                         const mockTalent = MOCK_TALENTS.find(t => t.email === credentials.email);
                         
-                        if (mockTalent && credentials.password === "password123") {
+                        if (mockTalent && credentials.password === "finley") {
                             let user = null;
                             try {
                                 // Ensure this mock talent exists in the real DB so the dashboard works
                                 user = await db.user.findUnique({ where: { email: credentials.email }, include: { profile: true } });
                                 
                                 if (!user) {
-                                    const passwordHash = await hash("password123", 10);
+                                    const passwordHash = await hash("finley", 10);
                                     user = await db.user.create({
                                         data: {
                                             id: mockTalent.id,

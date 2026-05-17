@@ -6,22 +6,33 @@ import { MOCK_TALENTS } from "@/lib/mock-data";
 
 function SignInForm() {
     const [selectedEmail, setSelectedEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [errorMsg, setErrorMsg] = useState("");
     const [loading, setLoading] = useState(false);
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setErrorMsg("");
 
         const emailToUse = selectedEmail || "finley@talentearth.com"; // default to admin
         
         // Route Finley to Admin, and Talents directly to their Portfolio editor
         const destination = emailToUse === "finley@talentearth.com" ? "/admin" : "/app/portfolio";
 
-        await signIn("credentials", {
+        const result = await signIn("credentials", {
             email: emailToUse,
-            password: "password123",
-            callbackUrl: destination
+            password: password,
+            callbackUrl: destination,
+            redirect: false
         });
+
+        if (result?.error) {
+            setLoading(false);
+            setErrorMsg("Invalid password. Please try again.");
+        } else {
+            if (result?.url) window.location.href = result.url;
+        }
     };
 
     return (
@@ -40,7 +51,7 @@ function SignInForm() {
                             onChange={(e) => setSelectedEmail(e.target.value)}
                             className="w-full rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-all appearance-none cursor-pointer"
                         >
-                            <option value="finley@talentearth.com">⭐ Finley (Admin Dashboard)</option>
+                            <option value="finley@talentearth.com">⭐ ADMIN LOGON</option>
                             <optgroup label="Mock Talents (Portfolio Dashboard)">
                                 {MOCK_TALENTS.map(talent => (
                                     <option key={talent.id} value={talent.email}>
@@ -50,6 +61,24 @@ function SignInForm() {
                             </optgroup>
                         </select>
                     </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium uppercase tracking-wider text-blue-400 block mb-2">Password</label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-all placeholder:text-white/30"
+                            placeholder="Enter password..."
+                            required
+                        />
+                    </div>
+
+                    {errorMsg && (
+                        <div className="text-red-400 text-sm font-medium p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-center">
+                            {errorMsg}
+                        </div>
+                    )}
 
                     <button
                         type="submit"
@@ -69,7 +98,7 @@ function SignInForm() {
                 </form>
 
                 <div className="mt-6 text-center text-xs text-gray-600">
-                    Authentication is bypassed for this demo environment. Passwords are not required.
+                    Authentication requires the universal demo password.
                 </div>
             </div>
         </div>
