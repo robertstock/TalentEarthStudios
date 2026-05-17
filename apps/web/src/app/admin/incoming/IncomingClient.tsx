@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { useRouter } from "next/navigation";
 
 export interface IncomingProject {
     id: string;
@@ -27,8 +28,42 @@ interface IncomingClientProps {
 }
 
 export default function IncomingClient({ projects }: IncomingClientProps) {
+    const router = useRouter();
     const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || "");
     const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
+
+    const [isEditingSow, setIsEditingSow] = useState(false);
+    const [editedSowText, setEditedSowText] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        setIsEditingSow(false);
+        setEditedSowText("");
+    }, [selectedProjectId]);
+
+    const handleSaveSow = async () => {
+        if (!selectedProject) return;
+        setIsSaving(true);
+        try {
+            const res = await fetch(`/api/admin/projects/${selectedProject.id}/sow`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bodyRichText: editedSowText })
+            });
+            if (res.ok) {
+                setIsEditingSow(false);
+                router.refresh();
+            } else {
+                console.error("Failed to save SOW");
+                alert("Failed to save SOW. Please try again.");
+            }
+        } catch (e) {
+            console.error("Error saving SOW:", e);
+            alert("Error saving SOW. Please try again.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     if (projects.length === 0) {
         return (
@@ -154,24 +189,63 @@ export default function IncomingClient({ projects }: IncomingClientProps) {
                                     <i className="ph ph-file-text"></i> Draft Statement of Work (SOW)
                                 </h3>
                                 <div className="bg-black/30 border border-white/5 rounded-xl p-6 overflow-y-auto flex-1">
-                                    {selectedProject.sow.map((paragraph, index) => (
-                                        <p key={index} className="text-gray-300 leading-relaxed text-sm mb-4 last:mb-0">
-                                            {paragraph}
-                                        </p>
-                                    ))}
-                                    {selectedProject.sow.length === 0 && (
-                                        <p className="text-gray-500 italic">No SOW draft available.</p>
+                                    {isEditingSow ? (
+                                        <textarea
+                                            value={editedSowText}
+                                            onChange={(e) => setEditedSowText(e.target.value)}
+                                            className="w-full h-full min-h-[200px] bg-transparent text-gray-300 leading-relaxed text-sm resize-none focus:outline-none"
+                                            placeholder="Enter SOW details here..."
+                                        />
+                                    ) : (
+                                        <>
+                                            {selectedProject.sow.map((paragraph, index) => (
+                                                <p key={index} className="text-gray-300 leading-relaxed text-sm mb-4 last:mb-0">
+                                                    {paragraph}
+                                                </p>
+                                            ))}
+                                            {selectedProject.sow.length === 0 && (
+                                                <p className="text-gray-500 italic">No SOW draft available.</p>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             </div>
 
                             <div className="mt-8 pt-6 border-t border-white/10 flex gap-4 justify-end">
-                                <button className="px-6 py-3 border border-white/10 hover:bg-white/5 text-white text-sm font-bold uppercase tracking-widest rounded transition-colors">
-                                    Edit SOW
-                                </button>
-                                <button className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-widest rounded transition-colors shadow-[0_0_20px_rgba(37,99,235,0.4)]">
-                                    Approve & Move to Active
-                                </button>
+                                {isEditingSow ? (
+                                    <>
+                                        <button 
+                                            onClick={() => setIsEditingSow(false)}
+                                            disabled={isSaving}
+                                            className="px-6 py-3 border border-white/10 hover:bg-white/5 text-white text-sm font-bold uppercase tracking-widest rounded transition-colors disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button 
+                                            onClick={handleSaveSow}
+                                            disabled={isSaving}
+                                            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-widest rounded transition-colors shadow-[0_0_20px_rgba(37,99,235,0.4)] disabled:opacity-50 flex items-center gap-2"
+                                        >
+                                            {isSaving ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-floppy-disk"></i>}
+                                            Save SOW
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button 
+                                            onClick={() => {
+                                                setEditedSowText(selectedProject.sow.join("\n\n"));
+                                                setIsEditingSow(true);
+                                            }}
+                                            className="px-6 py-3 border border-white/10 hover:bg-white/5 text-white text-sm font-bold uppercase tracking-widest rounded transition-colors"
+                                        >
+                                            Edit SOW
+                                        </button>
+                                        <button className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-widest rounded transition-colors shadow-[0_0_20px_rgba(37,99,235,0.4)]">
+                                            Approve & Move to Active
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     )}
