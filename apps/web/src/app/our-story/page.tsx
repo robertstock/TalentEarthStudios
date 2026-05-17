@@ -1,0 +1,117 @@
+import Image from "next/image";
+import Link from "next/link";
+
+export const metadata = {
+    title: "Our Story | TalentEarthStudios",
+    description: "The founding story of TalentEarthStudios."
+};
+
+export default function OurStoryPage() {
+    return (
+        <div className="min-h-screen bg-[#0B0F15] text-white pt-32 pb-24 overflow-hidden relative">
+            {/* Background Effects */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
+                <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-900/20 blur-[120px]" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-800/10 blur-[120px]" />
+            </div>
+
+            <div className="container mx-auto px-6 lg:px-12">
+                
+                {/* Header */}
+                <div className="mb-16 md:mb-24 text-center max-w-3xl mx-auto">
+                    <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-blue-200 to-white leading-tight">
+                        Our Story
+                    </h1>
+                    <p className="text-xl md:text-2xl text-blue-100/80 font-light leading-relaxed">
+                        TalentEarthStudios was founded on a simple belief: the world&apos;s best ideas deserve access to the world&apos;s best talent.
+                    </p>
+                </div>
+
+                {/* Content Split */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
+                    
+                    {/* Left: Image */}
+                    <div className="lg:col-span-5 relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden border border-white/10 bg-white/5">
+                            {/* Placeholder for the user's photo */}
+                            <img 
+                                src="/robert_stock.jpg" 
+                                alt="Robert Stock - Founder" 
+                                className="object-cover w-full h-full transform group-hover:scale-105 transition-transform duration-700 ease-in-out"
+                            />
+                            <div className="absolute bottom-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
+                                <p className="text-white font-bold text-xl">Robert Stock</p>
+                                <p className="text-blue-300 text-sm font-medium tracking-widest uppercase mt-1">Founder</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right: Text Content */}
+                    <div className="lg:col-span-7 space-y-8 text-lg text-gray-300 leading-relaxed font-light">
+                        <p>
+                            After more than 30 years in project management, operations, and visual communications, founder Robert Stock saw the same challenge repeated across every industry. Companies had ambitious ideas but often struggled to find the right people to execute them and manage the process from start to finish.
+                        </p>
+                        
+                        <p>
+                            At the same time, many highly skilled creative professionals and specialty teams were looking for meaningful opportunities where they could focus on what they do best.
+                        </p>
+                        
+                        <div className="p-8 my-10 border-l-4 border-blue-500 bg-blue-900/10 rounded-r-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-5">
+                                <i className="ph ph-quotes text-8xl"></i>
+                            </div>
+                            <p className="text-2xl text-blue-100 font-medium relative z-10">
+                                TalentEarthStudios was created to bridge that gap.
+                            </p>
+                        </div>
+                        
+                        <p>
+                            We act as a representation and project management layer for a curated network of top talent and specialty teams across disciplines including fabrication, film and video, experiential marketing, software development, 3D modeling, animation, visual communications, and emerging technologies.
+                        </p>
+                        
+                        <p>
+                            Clients bring us an idea, a challenge, or a vision.
+                        </p>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 my-10">
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center hover:bg-white/10 transition-colors">
+                                <i className="ph ph-users text-3xl text-blue-400 mb-3 block"></i>
+                                <h3 className="text-white font-bold mb-2">Align Talent</h3>
+                                <p className="text-sm text-gray-400">We match the right specialty teams to your unique vision.</p>
+                            </div>
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center hover:bg-white/10 transition-colors">
+                                <i className="ph ph-kanban text-3xl text-blue-400 mb-3 block"></i>
+                                <h3 className="text-white font-bold mb-2">Manage Process</h3>
+                                <p className="text-sm text-gray-400">We build the schedule and oversee production end-to-end.</p>
+                            </div>
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center hover:bg-white/10 transition-colors">
+                                <i className="ph ph-rocket-launch text-3xl text-blue-400 mb-3 block"></i>
+                                <h3 className="text-white font-bold mb-2">Deliver Results</h3>
+                                <p className="text-sm text-gray-400">One accountable partner from concept to completion.</p>
+                            </div>
+                        </div>
+
+                        <p>
+                            Our clients benefit from one accountable partner, while our talent gains access to opportunities they may not have reached on their own.
+                        </p>
+                        
+                        <p>
+                            This model allows great companies to move faster and with confidence, while empowering exceptional talent to focus on creating outstanding work.
+                        </p>
+                        
+                        <p className="text-white font-medium text-xl pt-6 border-t border-white/10">
+                            Whether the project is a custom fabrication, branded experience, digital platform, marketing campaign, or content production, TalentEarthStudios exists to connect talent and opportunity, and turn ideas into delivered projects.
+                        </p>
+
+                        <div className="pt-8">
+                            <Link href="/request" className="inline-flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold tracking-widest uppercase text-sm rounded transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)]">
+                                Start Your Project <i className="ph ph-arrow-right"></i>
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
