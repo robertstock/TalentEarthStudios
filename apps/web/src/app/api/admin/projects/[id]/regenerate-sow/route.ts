@@ -52,7 +52,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 versionNumber: latestSow.versionNumber + 1,
                 status: 'DRAFT',
                 bodyRichText: newContent,
-                createdById: session.user.id
+                createdById: latestSow.createdById
             }
         });
 

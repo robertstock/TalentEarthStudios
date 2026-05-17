@@ -78,7 +78,8 @@ export default async function AdminProjectsPage() {
         }
 
         const latestSow = p.sows.length > 0 ? p.sows[0].bodyRichText : null;
-        const parsedSowParagraphs = latestSow ? latestSow.split("\\n\\n").filter(Boolean) : [];
+        const sowVersion = p.sows.length > 0 ? p.sows[0].versionNumber : 1;
+        const parsedSowParagraphs = latestSow ? latestSow.split("\n\n").filter(Boolean) : [];
 
         return {
             id: p.id,
@@ -93,6 +94,7 @@ export default async function AdminProjectsPage() {
             aiConfidenceScore: p.aiConfidenceScore || 0,
             teamMembers,
             sow: parsedSowParagraphs,
+            sowVersion,
             budgetRange: p.budgetRange || "Pending",
             vendorBills: p.vendorBills || [],
             invoice: p.invoice || null,

@@ -18,6 +18,7 @@ export interface DashboardProject {
   aiConfidenceScore: number;
   teamMembers: { name: string; role: string; avatar: string }[];
   sow: string[];
+  sowVersion: number;
   budgetRange: string;
   vendorBills: { amount: number, vendorName: string, status: string }[];
   invoice: { amount: number, status: string } | null;
@@ -286,8 +287,13 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                   {/* Main Info */}
                   <div className="md:col-span-2 flex flex-col gap-6">
                     <div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
-                        <i className="ph ph-file-text"></i> Scope Definition
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center justify-between">
+                        <span className="flex items-center gap-2"><i className="ph ph-file-text"></i> Scope Definition</span>
+                        {selectedProject.sow.length > 0 && (
+                            <span className="bg-blue-500/20 border border-blue-500/30 text-blue-400 px-2 py-1 rounded text-[10px] tracking-widest shadow-inner">
+                                VERSION 1.{selectedProject.sowVersion - 1}
+                            </span>
+                        )}
                       </h3>
                       <div className="bg-black/30 border border-white/5 rounded-xl p-5 space-y-4">
                         {selectedProject.sow.map((paragraph, index) => (
