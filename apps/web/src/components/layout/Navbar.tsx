@@ -32,7 +32,7 @@ export default function Navbar() {
                 </Link>
 
                 {/* Desktop Menu */}
-                <div className="hidden md:flex gap-8 text-xs font-medium tracking-widest uppercase text-slate-400">
+                <div className="hidden md:flex items-center gap-8 text-xs font-medium tracking-widest uppercase text-slate-400">
                     <Link href="/" className={navLinkClass}>Overview</Link>
                     <Link href="/specialty" className={navLinkClass}>Specialty Teams</Link>
                     {session?.user?.role === 'ADMIN' && (
