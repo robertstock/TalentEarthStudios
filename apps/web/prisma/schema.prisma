@@ -286,6 +286,7 @@ model Project {
   sows            SOW[]
   vendorBills     VendorBill[]
   invoice         Invoice?
+  meetingNotes    MeetingNote[]
 
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
@@ -511,4 +512,13 @@ model Invoice {
   paidAt          DateTime?
   
   createdAt       DateTime @default(now())
+}
+
+model MeetingNote {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
 }

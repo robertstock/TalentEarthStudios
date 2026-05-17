@@ -53,6 +53,9 @@ export default async function AdminProjectsPage() {
             },
             vendorBills: true,
             invoice: true,
+            meetingNotes: {
+                orderBy: { createdAt: 'asc' }
+            }
         },
         orderBy: { updatedAt: "desc" }
     });
@@ -93,6 +96,7 @@ export default async function AdminProjectsPage() {
             budgetRange: p.budgetRange || "Pending",
             vendorBills: p.vendorBills || [],
             invoice: p.invoice || null,
+            meetingNotes: p.meetingNotes || [],
         };
     });
 

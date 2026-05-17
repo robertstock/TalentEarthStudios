@@ -21,6 +21,7 @@ export interface DashboardProject {
   budgetRange: string;
   vendorBills: { amount: number, vendorName: string, status: string }[];
   invoice: { amount: number, status: string } | null;
+  meetingNotes: { id: string, title: string, content: string, createdAt: Date }[];
 }
 
 interface DashboardClientProps {
@@ -45,7 +46,12 @@ const getProgressBarColor = (health: ProjectHealth) => {
 
 export default function DashboardClient({ projects }: DashboardClientProps) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || "");
-  const [activeTab, setActiveTab] = useState<"SCOPE" | "FINANCIALS">("SCOPE");
+  const [activeTab, setActiveTab] = useState<"SCOPE" | "FINANCIALS" | "MEETING_NOTES">("SCOPE");
+  const [newNoteTitle, setNewNoteTitle] = useState("");
+  const [newNoteContent, setNewNoteContent] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
   const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
 
   const statOnTrack = projects.filter(p => p.health === "Green").length;
@@ -62,6 +68,46 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
           </div>
       );
   }
+
+  const handleSaveNote = async () => {
+      if (!newNoteTitle || !newNoteContent || !selectedProject) return;
+      setIsSavingNote(true);
+      try {
+          const res = await fetch(`/api/admin/projects/${selectedProject.id}/notes`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title: newNoteTitle, content: newNoteContent })
+          });
+          if (res.ok) {
+              setNewNoteTitle("");
+              setNewNoteContent("");
+              window.location.reload(); // Quick refresh to show new data
+          } else {
+              alert("Failed to save note.");
+          }
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsSavingNote(false);
+      }
+  };
+
+  const handleRegenerateSow = async () => {
+      if (!selectedProject) return;
+      setIsRegenerating(true);
+      try {
+          const res = await fetch(`/api/admin/projects/${selectedProject.id}/regenerate-sow`, { method: 'POST' });
+          if (res.ok) {
+              window.location.reload();
+          } else {
+              alert("Failed to regenerate SOW.");
+          }
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsRegenerating(false);
+      }
+  };
 
   return (
     <div className="container mx-auto pt-32 pb-12 px-6 text-white min-h-screen flex flex-col">
@@ -195,13 +241,22 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                    onClick={() => setActiveTab("SCOPE")}
                    className={`pb-3 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === "SCOPE" ? 'text-white border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-300'}`}
                 >
-                   Scope & Routing
+                   Scope & SOW
                 </button>
                 <button 
                    onClick={() => setActiveTab("FINANCIALS")}
                    className={`pb-3 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === "FINANCIALS" ? 'text-white border-b-2 border-emerald-500' : 'text-gray-500 hover:text-gray-300'}`}
                 >
                    Financial Ledger
+                </button>
+                <button 
+                   onClick={() => setActiveTab("MEETING_NOTES")}
+                   className={`pb-3 text-sm font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${activeTab === "MEETING_NOTES" ? 'text-white border-b-2 border-purple-500' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                   Meeting Notes
+                   {selectedProject.meetingNotes?.length > 0 && (
+                       <span className="bg-white/10 text-[10px] px-1.5 py-0.5 rounded-full">{selectedProject.meetingNotes.length}</span>
+                   )}
                 </button>
             </div>
 
@@ -381,6 +436,80 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                 Sync Financials
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === "MEETING_NOTES" && (
+                <div className="flex-1 flex flex-col gap-6 relative z-10 overflow-y-auto animate-fade-in pr-2">
+                    
+                    {/* Add Note Form */}
+                    <div className="bg-black/40 border border-white/5 rounded-xl p-5 mb-4">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-purple-400 mb-4 flex items-center gap-2">
+                            <i className="ph ph-plus-circle"></i> Add Meeting Note or Update
+                        </h3>
+                        <div className="space-y-4">
+                            <input 
+                                type="text"
+                                placeholder="e.g. Meeting 1, Client Email, etc."
+                                value={newNoteTitle}
+                                onChange={(e) => setNewNoteTitle(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500 transition-colors"
+                            />
+                            <textarea 
+                                placeholder="Paste client emails, text messages, or meeting transcripts here..."
+                                value={newNoteContent}
+                                onChange={(e) => setNewNoteContent(e.target.value)}
+                                rows={4}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors resize-none"
+                            ></textarea>
+                            <button 
+                                onClick={handleSaveNote}
+                                disabled={isSavingNote || !newNoteTitle || !newNoteContent}
+                                className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold uppercase tracking-widest rounded shadow disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isSavingNote ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-floppy-disk"></i>}
+                                Save to Project Log
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* SOW Regeneration Prompt */}
+                    {selectedProject.meetingNotes?.length > 0 && (
+                        <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-5 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div>
+                                <h4 className="text-white font-bold mb-1"><i className="ph ph-magic-wand text-blue-400 mr-2"></i> Update Statement of Work</h4>
+                                <p className="text-xs text-blue-200/70">Use the AI engine to generate a NEW version of the SOW incorporating all meeting notes below.</p>
+                            </div>
+                            <button 
+                                onClick={handleRegenerateSow}
+                                disabled={isRegenerating}
+                                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-widest rounded shadow-[0_0_15px_rgba(37,99,235,0.4)] disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
+                            >
+                                {isRegenerating ? <i className="ph ph-spinner animate-spin"></i> : null}
+                                Regenerate SOW
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Notes History */}
+                    <div className="space-y-4">
+                        {selectedProject.meetingNotes?.length > 0 ? (
+                            selectedProject.meetingNotes.map((note) => (
+                                <div key={note.id} className="bg-white/5 border border-white/10 rounded-xl p-5">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <h4 className="text-white font-bold">{note.title}</h4>
+                                        <span className="text-xs text-gray-500">{new Date(note.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-10 text-gray-500 bg-black/20 rounded-xl border border-dashed border-white/10">
+                                <i className="ph ph-note-blank text-3xl mb-2 block opacity-50"></i>
+                                No meeting notes saved yet.
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
