@@ -24,20 +24,18 @@ export default async function AdminIncomingPage() {
                 orderBy: { createdAt: 'desc' },
                 take: 1
             },
-            talent: {
-                include: { user: true }
-            }
+            talent: true
         },
         orderBy: { createdAt: "desc" }
     });
 
     const formattedProjects: IncomingProject[] = rawProjects.map(p => {
         const latestSow = p.sows.length > 0 ? p.sows[0].bodyRichText : null;
-        const parsedSowParagraphs = latestSow ? latestSow.split("\\n\\n").filter(Boolean) : [];
+        const parsedSowParagraphs = latestSow ? latestSow.split("\n\n").filter(Boolean) : [];
 
         let assignedTalentName = null;
-        if (p.talent?.user) {
-            assignedTalentName = `${p.talent.user.firstName || ''} ${p.talent.user.lastName || ''}`.trim();
+        if (p.talent) {
+            assignedTalentName = p.talent.name;
         }
 
         return {
