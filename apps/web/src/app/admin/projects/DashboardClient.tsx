@@ -146,6 +146,31 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       }
   };
 
+  const handleDownloadSow = () => {
+      if (!selectedProject || selectedProject.sow.length === 0) return;
+      
+      const versionString = `1.${selectedProject.sowVersion - 1}`;
+      
+      let textContent = `STATEMENT OF WORK\n`;
+      textContent += `=================\n\n`;
+      textContent += `Project: ${selectedProject.name}\n`;
+      textContent += `Client: ${selectedProject.client}\n`;
+      textContent += `Version: v${versionString}\n`;
+      textContent += `Date: ${new Date().toLocaleDateString()}\n\n`;
+      textContent += `-------------------------------------------------\n\n`;
+      
+      textContent += selectedProject.sow.join('\n\n');
+      
+      const blob = new Blob([textContent], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `SOW_${selectedProject.client.replace(/\s+/g, '_')}_v${versionString}.txt`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+
   return (
     <div className="container mx-auto pt-32 pb-12 px-6 text-white min-h-screen flex flex-col">
       {/* Header section */}
@@ -407,7 +432,14 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                         </div>
                     )}
                     {!selectedProject.requiresRpmReview && selectedProject.sow.length > 0 && (
-                        <div className="mt-auto">
+                        <div className="mt-auto flex flex-col gap-3">
+                            <button 
+                                onClick={handleDownloadSow}
+                                className="w-full py-3 bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-lg transition duration-300 text-sm font-medium flex items-center justify-center gap-2"
+                            >
+                                <i className="ph ph-download-simple"></i> Download SOW (.txt)
+                            </button>
+                            
                             <button 
                                 onClick={handleShareSow}
                                 disabled={isSharing}
