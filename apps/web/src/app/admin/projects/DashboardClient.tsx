@@ -19,6 +19,8 @@ export interface DashboardProject {
   teamMembers: { name: string; role: string; avatar: string }[];
   sow: string[];
   sowVersion: number;
+  shareToken: string | null;
+  clientStatus: string;
   budgetRange: string;
   vendorBills: { amount: number, vendorName: string, status: string }[];
   invoice: { amount: number, status: string } | null;
@@ -52,6 +54,8 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   const [newNoteContent, setNewNoteContent] = useState("");
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
 
@@ -107,6 +111,38 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
           console.error(e);
       } finally {
           setIsRegenerating(false);
+      }
+  };
+
+  const handleShareSow = async () => {
+      if (!selectedProject) return;
+      setIsSharing(true);
+      try {
+          // If already has token, just copy it
+          if (selectedProject.shareToken) {
+              const url = `${window.location.origin}/sow/${selectedProject.shareToken}`;
+              await navigator.clipboard.writeText(url);
+              setCopiedLink(true);
+              setTimeout(() => setCopiedLink(false), 3000);
+              setIsSharing(false);
+              return;
+          }
+
+          const res = await fetch(`/api/admin/projects/${selectedProject.id}/sow/share`, { method: 'POST' });
+          if (res.ok) {
+              const data = await res.json();
+              const url = `${window.location.origin}/sow/${data.shareToken}`;
+              await navigator.clipboard.writeText(url);
+              setCopiedLink(true);
+              setTimeout(() => setCopiedLink(false), 3000);
+              window.location.reload(); // Refresh to show new token state
+          } else {
+              alert("Failed to generate link.");
+          }
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsSharing(false);
       }
   };
 
@@ -290,8 +326,20 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                       <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center justify-between">
                         <span className="flex items-center gap-2"><i className="ph ph-file-text"></i> Scope Definition</span>
                         {selectedProject.sow.length > 0 && (
-                            <span className="bg-blue-500/20 border border-blue-500/30 text-blue-400 px-2 py-1 rounded text-[10px] tracking-widest shadow-inner">
-                                VERSION 1.{selectedProject.sowVersion - 1}
+                            <span className="flex items-center gap-3">
+                                {selectedProject.clientStatus === 'APPROVED' && (
+                                    <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-[10px] tracking-widest font-bold border border-emerald-500/30 flex items-center gap-1">
+                                        <i className="ph ph-check-circle"></i> CLIENT APPROVED
+                                    </span>
+                                )}
+                                {selectedProject.clientStatus === 'REVISION_REQUESTED' && (
+                                    <span className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-[10px] tracking-widest font-bold border border-yellow-500/30 flex items-center gap-1">
+                                        <i className="ph ph-warning-circle"></i> REVISION REQUESTED
+                                    </span>
+                                )}
+                                <span className="bg-blue-500/20 border border-blue-500/30 text-blue-400 px-2 py-1 rounded text-[10px] tracking-widest shadow-inner">
+                                    VERSION 1.{selectedProject.sowVersion - 1}
+                                </span>
                             </span>
                         )}
                       </h3>
@@ -326,7 +374,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                     </div>
                   </div>
 
-                  {/* Sidebar Info */}
+                    {/* Sidebar Info */}
                   <div className="flex flex-col gap-6">
                      <div>
                       <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
@@ -358,10 +406,15 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                             </button>
                         </div>
                     )}
-                    {!selectedProject.requiresRpmReview && (
+                    {!selectedProject.requiresRpmReview && selectedProject.sow.length > 0 && (
                         <div className="mt-auto">
-                            <button className="w-full py-3 bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-lg transition duration-300 text-sm font-medium flex items-center justify-center gap-2">
-                                <i className="ph ph-envelope-simple"></i> Message Team
+                            <button 
+                                onClick={handleShareSow}
+                                disabled={isSharing}
+                                className={`w-full py-4 rounded-lg shadow transition duration-300 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2 ${copiedLink ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_20px_rgba(147,51,234,0.4)]'}`}
+                            >
+                                {isSharing ? <i className="ph ph-spinner animate-spin"></i> : (copiedLink ? <i className="ph ph-check"></i> : <i className="ph ph-link"></i>)}
+                                {copiedLink ? "Link Copied!" : "Share Client SOW"}
                             </button>
                         </div>
                     )}

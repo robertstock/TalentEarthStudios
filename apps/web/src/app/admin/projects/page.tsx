@@ -48,8 +48,9 @@ export default async function AdminProjectsPage() {
             },
             talent: true,
             sows: {
-                orderBy: { createdAt: 'desc' },
-                take: 1
+                orderBy: { versionNumber: 'desc' },
+                take: 1,
+                include: { clientResponses: true }
             },
             vendorBills: true,
             invoice: true,
@@ -77,9 +78,16 @@ export default async function AdminProjectsPage() {
             }];
         }
 
-        const latestSow = p.sows.length > 0 ? p.sows[0].bodyRichText : null;
-        const sowVersion = p.sows.length > 0 ? p.sows[0].versionNumber : 1;
-        const parsedSowParagraphs = latestSow ? latestSow.split("\n\n").filter(Boolean) : [];
+        const latestSow = p.sows.length > 0 ? p.sows[0] : null;
+        const sowVersion = latestSow ? latestSow.versionNumber : 1;
+        const parsedSowParagraphs = latestSow?.bodyRichText ? latestSow.bodyRichText.split("\n\n").filter(Boolean) : [];
+        const shareToken = latestSow?.shareToken || null;
+        
+        // Determine if client has signed off
+        let clientStatus = "Pending";
+        if (latestSow && latestSow.clientResponses.length > 0) {
+            clientStatus = latestSow.clientResponses[latestSow.clientResponses.length - 1].responseType;
+        }
 
         return {
             id: p.id,
@@ -95,6 +103,8 @@ export default async function AdminProjectsPage() {
             teamMembers,
             sow: parsedSowParagraphs,
             sowVersion,
+            shareToken,
+            clientStatus,
             budgetRange: p.budgetRange || "Pending",
             vendorBills: p.vendorBills || [],
             invoice: p.invoice || null,
