@@ -53,6 +53,26 @@ export default function ClientSowView({
     };
 
     return (
+        <div className="max-w-4xl md:max-w-3xl sm:max-w-2xl mx-auto px-4 md:px-6 py-8 md:py-12 lg:py-16 text-white">
+            {/* Logo */}
+            <div className="flex justify-center mb-8">
+                <Image
+                    src="/TalentEarthStudioLogo_White.png"
+                    alt="TalentEarthStudios"
+                    width={120}
+                    height={40}
+                    className="object-contain"
+                />
+            </div>
+            
+            {/* Header / Logo */}
+            <div className="flex flex-col items-center justify-center mb-12 relative">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-blue-600/10 blur-[80px] rounded-full pointer-events-none"></div>
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-white z-10 text-center">Statement of Work</h1>
+                <p className="text-gray-400 mt-2 text-center z-10">
+                    Prepared for <span className="text-white font-medium">{companyName}</span>
+                </p>
+            </div>
         <div className="max-w-4xl mx-auto px-6 py-12 md:py-24">
             
             {/* Header / Logo */}
