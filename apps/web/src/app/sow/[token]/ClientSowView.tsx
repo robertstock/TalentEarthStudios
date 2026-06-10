@@ -73,7 +73,7 @@ export default function ClientSowView({
                     Prepared for <span className="text-white font-medium">{companyName}</span>
                 </p>
             </div>
-            
+
             {/* Document Container */}
             <div className="bg-[#0B0F15]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden relative z-10">
                 

@@ -51,7 +51,7 @@ const getProgressBarColor = (health: ProjectHealth) => {
 };
 
 export default function DashboardClient({ projects }: DashboardClientProps) {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || "");
   const [activeTab, setActiveTab] = useState<"SCOPE" | "FINANCIALS" | "MEETING_NOTES">("SCOPE");
   const [newNoteTitle, setNewNoteTitle] = useState("");
   const [newNoteContent, setNewNoteContent] = useState("");
@@ -59,6 +59,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
 
   const [sidebarTab, setSidebarTab] = useState<"ACTIVE" | "COMPLETED" | "CANCELLED">("ACTIVE");
   const [isCancellationModalOpen, setIsCancellationModalOpen] = useState(false);

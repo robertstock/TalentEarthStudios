@@ -28,7 +28,6 @@ export default async function AdminDashboard() {
             status: "PENDING_REVIEW"
         }
     });
-
     return (
         <div className="container mx-auto pt-32 pb-12 px-6 text-white">
             <h1 className="text-3xl font-bold mb-8">Admin Dashboard (Demo)</h1>

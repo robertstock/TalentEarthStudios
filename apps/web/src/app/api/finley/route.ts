@@ -48,7 +48,6 @@ export async function POST(req: Request) {
       experimental_attachments: newAttachments.length > 0 ? newAttachments : undefined,
     });
   }
-
   let teamContext = "";
   if (team && specialtyData[team as SpecialtySlug]) {
     const data = specialtyData[team as SpecialtySlug];

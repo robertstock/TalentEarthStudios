@@ -211,7 +211,6 @@ function ChatContent() {
                                             ))}
                                         </div>
                                     )}
-
                                     {/* Tool Execution States */}
                                     {m.toolInvocations?.map((tool, index) => (
                                         <div key={index} className="mt-4 p-4 bg-black/30 rounded-lg border border-slate-700/50">

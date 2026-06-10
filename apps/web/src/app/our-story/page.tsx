@@ -63,6 +63,8 @@ export default function OurStoryPage() {
                                 </div>
                             </div>
                         </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Right: Text Content */}
@@ -95,7 +97,6 @@ export default function OurStoryPage() {
                         <p>
                             Together, Robert and Laurie built TalentEarthStudios as both a representation and project management company for a curated network of top talent and specialty teams across disciplines including fabrication, film and video, experiential marketing, software development, 3D modeling, animation, visual communications, and emerging technologies.
                         </p>
-
                         <p>
                             Clients bring us an idea, a challenge, or a vision.
                         </p>
