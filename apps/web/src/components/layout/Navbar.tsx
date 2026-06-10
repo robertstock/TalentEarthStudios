@@ -32,24 +32,31 @@ export default function Navbar() {
                 </Link>
 
                 {/* Desktop Menu */}
-                <div className="hidden md:flex gap-8 text-xs font-medium tracking-widest uppercase text-slate-400">
+                <div className="hidden md:flex items-center gap-8 text-xs font-medium tracking-widest uppercase text-slate-400">
                     <Link href="/" className={navLinkClass}>Overview</Link>
-                    <Link href="/talent" className={navLinkClass}>Talent</Link>
-                    <Link href="/teams" className={navLinkClass}>Teams</Link>
+                    <Link href="/our-story" className={navLinkClass}>Our Story</Link>
+                    <Link href="/specialty" className={navLinkClass}>Specialty Teams</Link>
+                    {session?.user?.role === 'ADMIN' && (
+                        <>
+                            <Link href="/talent" className={navLinkClass}>Talent</Link>
+                            <Link href="/teams" className={navLinkClass}>Teams</Link>
+                            <Link href="/business-demo" className={navLinkClass}>Business Demo</Link>
+                        </>
+                    )}
                     <Link href="/request" className={navLinkClass}>Request</Link>
-                    <Link href="/business-demo" className={navLinkClass}>Business Demo</Link>
 
                     {session ? (
                         <>
                             {session.user.role === 'ADMIN' && (
-                                <Link href="/admin" className={navLinkClass}>Admin</Link>
+                                <Link href="/admin/incoming" className={navLinkClass}>Admin</Link>
                             )}
                             <UserDropdown user={session.user} />
                         </>
                     ) : (
-                        <div className="flex flex-col items-center gap-1 -mt-1">
-                            <Link href="/auth/signin" className={navLinkClass}>Sign In</Link>
-                            <Link href="/auth/register" className="text-[9px] uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors">Sign Up</Link>
+                        <div className="flex items-center ml-4">
+                            <Link href="/auth/signin" className="px-6 py-2 border border-slate-700 hover:border-slate-500 rounded-md text-xs font-medium tracking-widest uppercase text-white transition-colors">
+                                Sign In
+                            </Link>
                         </div>
                     )}
                 </div>
@@ -67,10 +74,16 @@ export default function Navbar() {
             <div className={`fixed inset-0 z-40 bg-wme-base/95 backdrop-blur-xl flex flex-col justify-center items-center transition-all duration-300 transform ${mobileMenuOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                 <div className="flex flex-col gap-8 text-center">
                     <Link href="/" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Overview</Link>
-                    <Link href="/talent" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Talent</Link>
-                    <Link href="/teams" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Teams</Link>
+                    <Link href="/our-story" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Our Story</Link>
+                    <Link href="/specialty" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Specialty Teams</Link>
+                    {session?.user?.role === 'ADMIN' && (
+                        <>
+                            <Link href="/talent" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Talent</Link>
+                            <Link href="/teams" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Teams</Link>
+                            <Link href="/business-demo" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Business Demo</Link>
+                        </>
+                    )}
                     <Link href="/request" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Request</Link>
-                    <Link href="/business-demo" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Business Demo</Link>
 
                     {session ? (
                         <>

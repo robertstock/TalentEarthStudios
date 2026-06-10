@@ -1,6 +1,9 @@
 import { db as prisma } from "@/lib/db";
 import { Metadata } from "next";
 import TalentBrowser from "@/components/TalentBrowser";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
     title: "Talent Index | TalentEarthStudios",
@@ -8,6 +11,11 @@ export const metadata: Metadata = {
 };
 
 export default async function TalentDirectory() {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'ADMIN') {
+        redirect('/auth/signin');
+    }
+
     let talents: any[] = [];
     try {
         talents = await prisma.user.findMany({

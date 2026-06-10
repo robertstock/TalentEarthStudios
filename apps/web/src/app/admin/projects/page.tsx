@@ -10,6 +10,8 @@ import { canAccessAdmin } from "@/lib/auth-guards";
 export const revalidate = 0; 
 
 function calculateDerivedHealth(project: any): ProjectHealth {
+    if (project.status === "CANCELLED") return "Red";
+    if (project.status === "COMPLETED") return "Green";
     if (project.requiresRpmReview) return "Yellow";
     if (project.status === "CLOSED" || project.status === "APPROVED_FOR_SOW") return "Green";
     
@@ -29,6 +31,8 @@ function calculateProgress(status: string): number {
         case "APPROVED_FOR_SOW": return 75;
         case "SUBMITTED": return 90;
         case "CLOSED": return 100;
+        case "COMPLETED": return 100;
+        case "CANCELLED": return 0;
         default: return 20;
     }
 }
@@ -46,15 +50,17 @@ export default async function AdminProjectsPage() {
             team: {
                 include: { members: { include: { user: true } } }
             },
-            talent: {
-                include: { user: true }
-            },
+            talent: true,
             sows: {
-                orderBy: { createdAt: 'desc' },
-                take: 1
+                orderBy: { versionNumber: 'desc' },
+                take: 1,
+                include: { clientResponses: true }
             },
             vendorBills: true,
             invoice: true,
+            meetingNotes: {
+                orderBy: { createdAt: 'asc' }
+            }
         },
         orderBy: { updatedAt: "desc" }
     });
@@ -68,16 +74,24 @@ export default async function AdminProjectsPage() {
                 role: m.roleInTeam || "Member",
                 avatar: `${m.user?.firstName?.[0] || ''}${m.user?.lastName?.[0] || ''}`.toUpperCase()
             }));
-        } else if (p.talent && p.talent.user) {
+        } else if (p.talent) {
             teamMembers = [{
-                name: `${p.talent.user.firstName || ''} ${p.talent.user.lastName || ''}`.trim(),
+                name: p.talent.name,
                 role: "Lead Talent",
-                avatar: `${p.talent.user.firstName?.[0] || ''}${p.talent.user.lastName?.[0] || ''}`.toUpperCase()
+                avatar: `${p.talent.name?.[0] || ''}`.toUpperCase()
             }];
         }
 
-        const latestSow = p.sows.length > 0 ? p.sows[0].bodyRichText : null;
-        const parsedSowParagraphs = latestSow ? latestSow.split("\\n\\n").filter(Boolean) : [];
+        const latestSow = p.sows.length > 0 ? p.sows[0] : null;
+        const sowVersion = latestSow ? latestSow.versionNumber : 1;
+        const parsedSowParagraphs = latestSow?.bodyRichText ? latestSow.bodyRichText.split("\n\n").filter(Boolean) : [];
+        const shareToken = latestSow?.shareToken || null;
+        
+        // Determine if client has signed off
+        let clientStatus = "Pending";
+        if (latestSow && latestSow.clientResponses.length > 0) {
+            clientStatus = latestSow.clientResponses[latestSow.clientResponses.length - 1].responseType;
+        }
 
         return {
             id: p.id,
@@ -92,9 +106,16 @@ export default async function AdminProjectsPage() {
             aiConfidenceScore: p.aiConfidenceScore || 0,
             teamMembers,
             sow: parsedSowParagraphs,
+            sowVersion,
+            shareToken,
+            clientStatus,
             budgetRange: p.budgetRange || "Pending",
             vendorBills: p.vendorBills || [],
             invoice: p.invoice || null,
+            meetingNotes: p.meetingNotes || [],
+            completedAt: p.completedAt,
+            cancelledAt: p.cancelledAt,
+            cancellationReason: p.cancellationReason,
         };
     });
 

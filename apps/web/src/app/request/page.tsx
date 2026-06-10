@@ -1,10 +1,369 @@
-import { Suspense } from "react";
-import RequestForm from "./form";
+"use client";
 
-export default function RequestPage() {
+import { useChat } from "@ai-sdk/react";
+import { useEffect, useRef, Suspense, useState } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import Image from "next/image";
+import { useSearchParams } from "next/navigation";
+import { specialtyData, SpecialtySlug } from "@/lib/specialty-data";
+
+function ChatContent() {
+    const searchParams = useSearchParams();
+    const teamSlug = searchParams.get('team') as SpecialtySlug | null;
+    const teamData = teamSlug ? specialtyData[teamSlug] : null;
+
+    const [input, setInput] = useState("");
+    const { messages, append, status } = useChat({
+        api: "/api/finley",
+        body: { team: teamSlug }
+    });
+    
+    const isLoading = status === 'submitted' || status === 'streaming';
+    
+    // File upload states & refs
+    const [attachments, setAttachments] = useState<{ name: string; type: string; dataUrl: string }[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Speech-to-text state & refs
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
+
+    useEffect(() => {
+        // Initialize SpeechRecognition on mount
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const rec = new SpeechRecognition();
+            rec.continuous = false;
+            rec.interimResults = false;
+            rec.lang = 'en-US';
+
+            rec.onstart = () => {
+                setIsListening(true);
+            };
+
+            rec.onresult = (event: any) => {
+                const transcript = event.results[0][0].transcript;
+                if (transcript) {
+                    setInput(prev => (prev ? prev + " " + transcript : transcript));
+                }
+            };
+
+            rec.onerror = (e: any) => {
+                console.error("Speech recognition error", e);
+                setIsListening(false);
+            };
+
+            rec.onend = () => {
+                setIsListening(false);
+            };
+
+            recognitionRef.current = rec;
+        }
+    }, []);
+
+    const toggleListen = () => {
+        if (!recognitionRef.current) {
+            alert("Speech recognition is not supported in this browser. Please try Chrome or Safari.");
+            return;
+        }
+
+        if (isListening) {
+            recognitionRef.current.stop();
+        } else {
+            recognitionRef.current.start();
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files) return;
+        const selectedFiles = Array.from(e.target.files);
+        selectedFiles.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const dataUrl = event.target?.result as string;
+                setAttachments(prev => [...prev, { name: file.name, type: file.type, dataUrl }]);
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const removeAttachment = (index: number) => {
+        setAttachments(prev => prev.filter((_, idx) => idx !== index));
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value);
+    
+    const handleSubmit = (e?: React.FormEvent) => {
+        e?.preventDefault();
+        const hasInput = input.trim();
+        const hasAttachments = attachments.length > 0;
+        if ((!hasInput && !hasAttachments) || isLoading) return;
+        
+        append({ 
+            role: 'user', 
+            content: input,
+            experimental_attachments: attachments.map(att => ({
+                name: att.name,
+                contentType: att.type,
+                url: att.dataUrl
+            }))
+        });
+        
+        setInput("");
+        setAttachments([]);
+    };
+
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+    const hasGreeted = useRef(false);
+
+    // On mount, trigger Finley to send its own opening message
+    useEffect(() => {
+        if (hasGreeted.current) return;
+        hasGreeted.current = true;
+
+        const trigger = teamData
+            ? `[SYSTEM: The client has navigated to start a project with the ${teamData.title} team. Begin the intake conversation. Greet them warmly, mention the ${teamData.title} team, and ask for their first name and email address to get started. Do not ask for any other project details yet. Wait for their response.]`
+            : `[SYSTEM: A new client has arrived. Begin the intake conversation. Greet them warmly as Finley, the AI Project Manager for TalentEarthStudios. Ask for their first name and email address to get started. Do not ask for any other project details yet. Wait for their response.]`;
+
+        append({ role: "user", content: trigger });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Auto-scroll to bottom of messages
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    // Check if the submission tool has been successfully executed
+    const isSubmitted = messages.some(m =>
+        m.toolInvocations?.some(tool => tool.toolName === "submit_project_intake" && tool.state === "result")
+    );
+
+    // Filter out the hidden system trigger messages — user should never see those
+    const visibleMessages = messages.filter(m =>
+        !(m.role === "user" && m.content.startsWith("[SYSTEM:"))
+    );
+
     return (
-        <Suspense fallback={<div className="container mx-auto py-12 px-6 text-center">Loading form...</div>}>
-            <RequestForm />
+        <div className="min-h-screen bg-wme-base pt-32 pb-12 flex flex-col items-center px-4 md:px-8">
+            <div className="w-full max-w-3xl flex-1 flex flex-col">
+
+                <div className="mb-8 text-center">
+                    <div className="w-20 h-20 rounded-full border border-slate-700 mx-auto mb-4 overflow-hidden relative shadow-[0_0_20px_rgba(0,174,239,0.2)]">
+                        <Image src="/finley-logo.png" alt="Finley" fill className="object-cover" />
+                    </div>
+                    <h1 className="text-3xl font-light text-white tracking-tight">Finley</h1>
+                    <p className="text-sm text-slate-500 uppercase tracking-widest mt-2">Project Intake Protocol</p>
+                </div>
+
+                <div className="flex-1 bg-wme-panel border border-wme-border rounded-2xl flex flex-col overflow-hidden shadow-2xl relative backdrop-blur-sm">
+
+                    {/* Chat Window */}
+                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth min-h-[360px]">
+
+                        {/* Loading dots shown before Finley's first message arrives */}
+                        {visibleMessages.length === 0 && (
+                            <div className="flex justify-start">
+                                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl rounded-bl-none px-6 py-4 flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                    <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                    <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {visibleMessages.map(m => (
+                            <motion.div
+                                key={m.id}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            >
+                                <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-6 py-4 ${
+                                    m.role === 'user'
+                                    ? 'bg-brand-blue text-white rounded-br-none'
+                                    : 'bg-slate-800/50 text-slate-200 border border-slate-700/50 rounded-bl-none'
+                                }`}>
+                                    <div className="whitespace-pre-wrap font-light text-sm md:text-base leading-relaxed">
+                                        {m.content}
+                                    </div>
+
+                                    {/* Message Attachments Rendering */}
+                                    {m.experimental_attachments && m.experimental_attachments.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/10">
+                                            {m.experimental_attachments.map((att, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 bg-black/20 border border-white/5 px-3 py-1.5 rounded-lg max-w-[200px] overflow-hidden">
+                                                    {att.contentType?.startsWith("image/") ? (
+                                                        <a href={att.url} target="_blank" rel="noopener noreferrer">
+                                                            <img src={att.url} alt={att.name || "attachment"} className="w-10 h-10 object-cover rounded hover:opacity-80 transition" />
+                                                        </a>
+                                                    ) : (
+                                                        <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-blue-300 hover:underline">
+                                                            <i className="ph ph-file-text text-base flex-shrink-0"></i>
+                                                            <span className="truncate max-w-[120px]">{att.name || "document"}</span>
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Tool Execution States */}
+                                    {m.toolInvocations?.map((tool, index) => (
+                                        <div key={index} className="mt-4 p-4 bg-black/30 rounded-lg border border-slate-700/50">
+                                            {tool.toolName === "submit_project_intake" && (
+                                                <div className="flex items-center gap-3">
+                                                    {tool.state === "call" ? (
+                                                        <>
+                                                            <div className="w-4 h-4 border-2 border-brand-green border-t-transparent rounded-full animate-spin"></div>
+                                                            <span className="text-xs text-brand-green uppercase tracking-wider">Submitting Project Details...</span>
+                                                        </>
+                                                    ) : tool.state === "result" ? (
+                                                        <>
+                                                            <i className="ph ph-check-circle text-brand-green text-lg"></i>
+                                                            <span className="text-xs text-brand-green uppercase tracking-wider">Project Successfully Transmitted</span>
+                                                        </>
+                                                    ) : null}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        ))}
+
+                        {/* Typing indicator while Finley is responding */}
+                        {isLoading && visibleMessages.length > 0 && visibleMessages[visibleMessages.length - 1]?.role === 'user' && (
+                            <div className="flex justify-start">
+                                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl rounded-bl-none px-6 py-4 flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                    <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                    <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Input Area */}
+                    <div className="p-4 bg-wme-surface border-t border-wme-border">
+                        {isSubmitted ? (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex flex-col items-center justify-center p-4 gap-4"
+                            >
+                                <p className="text-slate-400 text-sm">Finley has successfully routed your project.</p>
+                                <Link
+                                    href="/app"
+                                    className="px-8 py-4 bg-brand-green hover:bg-brand-green/90 text-white rounded-md font-medium text-sm transition-colors uppercase tracking-widest flex items-center gap-2"
+                                >
+                                    Access Your Dashboard
+                                    <i className="ph ph-arrow-right"></i>
+                                </Link>
+                            </motion.div>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="flex flex-col gap-2 w-full">
+                                {/* Attachment Previews */}
+                                {attachments.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-2 p-2 bg-slate-900/30 border border-slate-800 rounded-xl">
+                                        {attachments.map((att, index) => (
+                                            <div key={index} className="relative group flex items-center gap-2 bg-slate-800/80 border border-slate-700 px-3 py-2 rounded-lg max-w-[200px]">
+                                                {att.type.startsWith("image/") ? (
+                                                    <img src={att.dataUrl} alt={att.name} className="w-8 h-8 object-cover rounded" />
+                                                ) : (
+                                                    <i className="ph ph-file-text text-xl text-brand-blue"></i>
+                                                )}
+                                                <span className="text-xs text-slate-300 truncate flex-1">{att.name}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeAttachment(index)}
+                                                    className="w-4 h-4 bg-slate-700 text-slate-300 hover:text-white rounded-full flex items-center justify-center text-[10px] absolute -top-1.5 -right-1.5 shadow"
+                                                >
+                                                    <i className="ph ph-x text-[8px]"></i>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="relative flex items-end gap-2 w-full">
+                                    {/* Action Buttons: Attachment & Microphone */}
+                                    <div className="flex gap-1.5 mb-2">
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept="image/*,application/pdf,text/*"
+                                            onChange={handleFileChange}
+                                            ref={fileInputRef}
+                                            className="hidden"
+                                            disabled={isLoading || visibleMessages.length === 0}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={isLoading || visibleMessages.length === 0}
+                                            title="Attach Photo or Document"
+                                            className="p-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 hover:text-white rounded-lg transition-colors flex items-center justify-center h-10 w-10 border border-slate-700"
+                                        >
+                                            <i className="ph ph-paperclip text-lg"></i>
+                                        </button>
+                                        
+                                        <button
+                                            type="button"
+                                            onClick={toggleListen}
+                                            disabled={isLoading || visibleMessages.length === 0}
+                                            title="Talk to Text"
+                                            className={`p-2.5 disabled:opacity-50 rounded-lg transition-colors flex items-center justify-center h-10 w-10 border ${
+                                                isListening 
+                                                    ? "bg-red-600 hover:bg-red-500 text-white border-red-500 animate-pulse" 
+                                                    : "bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700"
+                                            }`}
+                                        >
+                                            <i className="ph ph-microphone text-lg"></i>
+                                        </button>
+                                    </div>
+
+                                    <div className="relative flex-1">
+                                        <textarea
+                                            value={input}
+                                            onChange={handleInputChange}
+                                            placeholder={visibleMessages.length === 0 ? "Finley is thinking..." : "Reply to Finley..."}
+                                            className="w-full bg-slate-900/50 border border-slate-700 focus:border-brand-blue/50 rounded-xl px-4 py-4 pr-12 text-white placeholder-slate-600 outline-none resize-none min-h-[60px] max-h-[150px] transition-colors"
+                                            rows={1}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    if ((input || '').trim() || attachments.length > 0) handleSubmit(e);
+                                                }
+                                            }}
+                                            disabled={isLoading || visibleMessages.length === 0}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={isLoading || (!(input || '').trim() && attachments.length === 0) || visibleMessages.length === 0}
+                                            className="absolute right-3 bottom-3 p-2 bg-brand-blue hover:bg-brand-blue/80 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors flex items-center justify-center"
+                                        >
+                                            <i className="ph ph-paper-plane-right text-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function FinleyChat() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-wme-base flex items-center justify-center text-white font-light tracking-widest uppercase">Initializing Finley...</div>}>
+            <ChatContent />
         </Suspense>
     );
 }

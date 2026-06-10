@@ -4,26 +4,71 @@ export default function Home() {
     return (
         <>
             {/* Hero Section */}
-            <section className="min-h-screen flex items-center px-6 md:px-16 lg:px-24 pt-20 md:pt-0 pointer-events-none">
-                <div className="max-w-3xl w-full pointer-events-auto">
-                    <h1 className="text-4xl xs:text-5xl md:text-6xl lg:text-7xl font-light text-white leading-tight mb-6 md:mb-8 select-none">
-                        A representation layer<br />
-                        <span className="text-slate-500">for those who create.</span>
+            <section className="min-h-screen flex items-center px-6 md:px-16 lg:px-24 pt-32 md:pt-20 pointer-events-none">
+                <div className="max-w-4xl w-full pointer-events-auto">
+                    <span className="text-brand-blue text-[10px] md:text-xs font-semibold tracking-[0.2em] uppercase mb-6 block">
+                        WHERE TALENT AND OPPORTUNITY COME TOGETHER.
+                    </span>
+                    
+                    <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-bold text-white leading-[1.1] mb-4 tracking-tight">
+                        From Idea to <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-green">
+                            Delivered Project.
+                        </span>
                     </h1>
 
-                    <p className="text-lg md:text-2xl text-slate-200 font-normal leading-relaxed max-w-xl md:max-w-3xl border-l-2 border-slate-700 pl-4 md:pl-6 select-text mb-8 shadow-black drop-shadow-sm">
-                        Designers, engineers, fabricators, and operators represented through a managed execution system built for real production.
+                    <h2 className="text-2xl md:text-4xl text-slate-400 font-light mb-8">
+                        A representation layer for those who create.
+                    </h2>
+
+                    <p className="text-sm md:text-lg text-slate-300 font-light leading-relaxed max-w-2xl mb-12">
+                        Submit your project requirements and TalentEarthStudios will scope the work, align the right team, build the schedule, and manage delivery from start to finish.
                     </p>
 
-                    <div className="mt-8 md:mt-12 flex flex-wrap gap-4 md:gap-6 text-[10px] md:text-xs uppercase tracking-widest text-slate-500 select-none">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-green-900/10 border border-green-900/20 rounded-full md:bg-transparent md:border-none md:p-0 md:rounded-none">
-                            <div className="w-1.5 h-1.5 bg-green-500 md:bg-green-900 rounded-full animate-pulse"></div>
-                            System Active
+                    {/* Process Graphics */}
+                    <div className="flex items-center gap-4 md:gap-8 mb-16 overflow-x-auto pb-4 hide-scrollbar">
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-16 h-16 rounded-full border border-slate-600 flex items-center justify-center text-brand-blue">
+                                <i className="ph ph-lightbulb text-2xl"></i>
+                            </div>
+                            <span className="text-xs text-white">Idea In</span>
                         </div>
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/30 border border-slate-700/30 rounded-full md:bg-transparent md:border-none md:p-0 md:rounded-none">
-                            <div className="w-1.5 h-1.5 bg-slate-400 md:bg-slate-600 rounded-full"></div>
-                            Global Nodes: 247
+                        <i className="ph ph-caret-right text-slate-600 text-xl -mt-6"></i>
+                        
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-16 h-16 rounded-full border border-slate-600 flex items-center justify-center text-brand-blue">
+                                <i className="ph ph-users text-2xl"></i>
+                            </div>
+                            <span className="text-xs text-white">Team Aligned</span>
                         </div>
+                        <i className="ph ph-caret-right text-slate-600 text-xl -mt-6"></i>
+
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-16 h-16 rounded-full border border-slate-600 flex items-center justify-center text-brand-green">
+                                <i className="ph ph-calendar-blank text-2xl"></i>
+                            </div>
+                            <span className="text-xs text-white">Schedule Built</span>
+                        </div>
+                        <i className="ph ph-caret-right text-slate-600 text-xl -mt-6"></i>
+
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-16 h-16 rounded-full border border-brand-green flex items-center justify-center text-brand-green">
+                                <i className="ph ph-check-circle text-2xl"></i>
+                            </div>
+                            <span className="text-xs text-white">Project Delivered</span>
+                        </div>
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <Link href="/request" className="flex items-center justify-between gap-4 px-8 py-4 bg-brand-green hover:bg-brand-green/90 text-white rounded-md font-medium text-sm transition-colors">
+                            Start Your Project
+                            <i className="ph ph-arrow-right"></i>
+                        </Link>
+                        <Link href="/specialty" className="flex items-center justify-between gap-4 px-8 py-4 bg-slate-900/40 hover:bg-slate-800/60 border border-slate-700 text-white rounded-md font-medium text-sm transition-colors backdrop-blur-sm">
+                            Explore Specialty Teams
+                            <i className="ph ph-arrow-right"></i>
+                        </Link>
                     </div>
                 </div>
             </section>

@@ -1,25 +1,14 @@
-
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { PrismaClient } from '@prisma/client';
+const db = new PrismaClient();
 
 async function main() {
-    try {
-        const projectCount = await prisma.project.count()
-        console.log(`Project count: ${projectCount}`)
-
-        if (projectCount > 0) {
-            const projects = await prisma.project.findMany({
-                take: 2,
-                include: { client: true }
-            })
-            console.log('Sample projects:', JSON.stringify(projects, null, 2))
+    const projects = await db.project.findMany({
+        where: {
+            status: { in: ["SOW_DRAFT", "APPROVED_FOR_SOW"] }
         }
-    } catch (error) {
-        console.error('Error connecting to DB:', error)
-    } finally {
-        await prisma.$disconnect()
-    }
+    });
+    console.log(`Found ${projects.length} incoming projects`);
+    console.log(projects.map(p => ({ id: p.id, name: p.name, status: p.status })));
 }
 
-main()
+main().catch(console.error).finally(() => db.$disconnect());

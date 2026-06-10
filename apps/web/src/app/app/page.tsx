@@ -4,24 +4,66 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import Image from "next/image";
+import { MOCK_TALENTS } from "@/lib/mock-data";
 
 export default async function Dashboard() {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-        redirect("/api/auth/signin");
+        return (
+            <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8 text-center">
+                <i className="ph ph-warning-circle text-6xl text-red-500 mb-4"></i>
+                <h1 className="text-2xl font-bold mb-2">Session Verification Failed</h1>
+                <p className="text-slate-400 max-w-md">
+                    The server could not detect your authentication cookie. This usually happens if you are accessing the site via a custom domain (like demo.talentearth.com) but the NextAuth configuration is expecting the Vercel URL.
+                </p>
+                <div className="mt-8 flex gap-4">
+                    <Link href="/auth/signin" className="px-6 py-2 bg-blue-600 rounded text-white font-medium">
+                        Try Logging In Again
+                    </Link>
+                </div>
+            </div>
+        );
     }
 
-    // Fetch latest data
-    const user = await db.user.findUnique({
-        where: { id: session.user.id },
-        include: {
-            profile: true,
-            _count: {
-                select: { assignedProjects: true }
+    let user = null;
+    try {
+        // Fetch latest data
+        user = await db.user.findUnique({
+            where: { id: session.user.id },
+            include: {
+                profile: true,
+                _count: {
+                    select: { assignedProjects: true }
+                }
             }
+        });
+    } catch (error) {
+        console.error("Database connection failed, falling back to mock data:", error);
+        
+        // Fallback to mock data if DB is offline
+        const mockTalent = MOCK_TALENTS.find(t => t.id === session.user.id || t.email === session.user.email);
+        if (mockTalent) {
+            user = {
+                id: mockTalent.id,
+                email: mockTalent.email,
+                firstName: mockTalent.firstName,
+                lastName: mockTalent.lastName,
+                status: "APPROVED",
+                profile: {
+                    publicSlug: mockTalent.profile.publicSlug || mockTalent.id,
+                    headline: mockTalent.profile.headline,
+                    bio: mockTalent.profile.bio,
+                    profileImage: mockTalent.profile.profileImage,
+                    skills: mockTalent.profile.skills || [],
+                    primaryDiscipline: mockTalent.profile.primaryDiscipline
+                },
+                _count: {
+                    assignedProjects: 0
+                }
+            } as any;
         }
-    });
+    }
 
     // Helper for Status Badge
     const getStatusColor = (status: string) => {
@@ -69,7 +111,7 @@ export default async function Dashboard() {
 
                             <div className="relative p-6 z-10">
                                 <div className="flex items-start justify-between mb-6">
-                                    <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 overflow-hidden relative shadow-lg">
+                                    <Link href="/app/portfolio" className="w-20 h-20 rounded-full bg-white/5 border border-white/10 overflow-hidden relative shadow-lg hover:ring-2 hover:ring-blue-500 transition-all cursor-pointer block">
                                         {user?.profile?.profileImage ? (
                                             <Image src={user.profile.profileImage} alt="Profile" fill className="object-cover" />
                                         ) : (
@@ -77,7 +119,7 @@ export default async function Dashboard() {
                                                 <i className="ph ph-user text-3xl text-slate-600"></i>
                                             </div>
                                         )}
-                                    </div>
+                                    </Link>
                                     <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${getStatusColor(user?.status || 'DRAFT')}`}>
                                         {user?.status}
                                     </div>

@@ -50,6 +50,8 @@ enum ProjectStatus {
   AWAITING_CLIENT
   IN_PROGRESS
   STALLED
+  COMPLETED
+  CANCELLED
 }
 
 enum QuoteStatus {
@@ -286,6 +288,11 @@ model Project {
   sows            SOW[]
   vendorBills     VendorBill[]
   invoice         Invoice?
+  meetingNotes    MeetingNote[]
+
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String?
 
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
@@ -511,4 +518,13 @@ model Invoice {
   paidAt          DateTime?
   
   createdAt       DateTime @default(now())
+}
+
+model MeetingNote {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
 }
