@@ -62,9 +62,6 @@ export default function OurStoryPage() {
                                     <p className="text-blue-300 text-xs font-semibold tracking-widest uppercase mt-1">Co-Founder</p>
                                 </div>
                             </div>
-                        </div>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Right: Text Content */}

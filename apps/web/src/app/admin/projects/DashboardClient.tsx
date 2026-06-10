@@ -59,7 +59,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
+
 
   const [sidebarTab, setSidebarTab] = useState<"ACTIVE" | "COMPLETED" | "CANCELLED">("ACTIVE");
   const [isCancellationModalOpen, setIsCancellationModalOpen] = useState(false);
