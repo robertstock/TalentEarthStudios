@@ -31,37 +31,64 @@ export default function OurStoryPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
                     
                     {/* Left: Images */}
-                    <div className="lg:col-span-5 grid grid-cols-2 gap-4 relative">
-                        {/* Robert Card */}
-                        <div className="relative group">
-                            <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                            <div className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden border border-white/10 bg-white/5">
-                                <img 
-                                    src="/robert_stock.jpg" 
-                                    alt="Robert Stock - Co-Founder" 
-                                    className="object-cover w-full h-full transform group-hover:scale-105 transition-transform duration-700 ease-in-out"
-                                />
-                                <div className="absolute bottom-0 w-full p-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent text-left">
-                                    <p className="text-white font-bold text-lg leading-tight">Robert Stock</p>
-                                    <p className="text-blue-300 text-xs font-semibold tracking-widest uppercase mt-1">Co-Founder</p>
+                    <div className="lg:col-span-5 flex flex-col gap-6 relative">
+                        <div className="grid grid-cols-2 gap-4 relative">
+                            {/* Robert Card */}
+                            <div className="relative group">
+                                <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                                <div className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden border border-white/10 bg-white/5">
+                                    <img 
+                                        src="/robert_stock.jpg" 
+                                        alt="Robert Stock - Co-Founder" 
+                                        className="object-cover w-full h-full transform group-hover:scale-105 transition-transform duration-700 ease-in-out"
+                                    />
+                                    <div className="absolute bottom-0 w-full p-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent text-left">
+                                        <p className="text-white font-bold text-lg leading-tight">Robert Stock</p>
+                                        <p className="text-blue-300 text-xs font-semibold tracking-widest uppercase mt-1">Co-Founder</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Laurie Card */}
+                            <div className="relative group">
+                                <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                                <div className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden border border-white/10 bg-white/5">
+                                    <img 
+                                        src="/laurie_stock.jpg" 
+                                        alt="Laurie Stock - Co-Founder" 
+                                        className="object-cover w-full h-full transform group-hover:scale-105 transition-transform duration-700 ease-in-out"
+                                    />
+                                    <div className="absolute bottom-0 w-full p-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent text-left">
+                                        <p className="text-white font-bold text-lg leading-tight">Laurie Stock</p>
+                                        <p className="text-blue-300 text-xs font-semibold tracking-widest uppercase mt-1">Co-Founder</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Laurie Card */}
-                        <div className="relative group">
-                            <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                            <div className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden border border-white/10 bg-white/5">
-                                <img 
-                                    src="/laurie_stock.jpg" 
-                                    alt="Laurie Stock - Co-Founder" 
-                                    className="object-cover w-full h-full transform group-hover:scale-105 transition-transform duration-700 ease-in-out"
-                                />
-                                <div className="absolute bottom-0 w-full p-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent text-left">
-                                    <p className="text-white font-bold text-lg leading-tight">Laurie Stock</p>
-                                    <p className="text-blue-300 text-xs font-semibold tracking-widest uppercase mt-1">Co-Founder</p>
-                                </div>
+                        {/* Intro Video Button */}
+                        <a 
+                            href="https://youtu.be/qcHoezhl_-g?si=YOxao-7rzanh57-i" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="group relative flex items-center justify-center gap-4 w-full p-5 bg-gradient-to-r from-blue-600/10 to-blue-400/10 hover:from-blue-600/20 hover:to-blue-400/20 border border-blue-500/20 hover:border-blue-400/40 rounded-2xl transition-all duration-500 overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-blue-500/10 blur-2xl group-hover:bg-blue-400/30 transition-all duration-500"></div>
+                            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-12"></div>
+                            
+                            <div className="relative z-10 flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/20 group-hover:bg-blue-500/40 transition-colors duration-300">
+                                <i className="ph-fill ph-play text-xl text-blue-300 group-hover:text-white transition-colors ml-1"></i>
                             </div>
+                            
+                            <div className="relative z-10 flex flex-col text-left">
+                                <span className="text-blue-100 font-semibold tracking-widest uppercase text-sm group-hover:text-white transition-colors duration-300">
+                                    Watch Intro Video
+                                </span>
+                                <span className="text-blue-400/70 text-xs font-light tracking-wide group-hover:text-blue-300/90 transition-colors duration-300">
+                                    See our story in action
+                                </span>
+                            </div>
+                        </a>
                     </div>
 
                     {/* Right: Text Content */}
