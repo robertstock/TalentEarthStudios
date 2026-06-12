@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig = {
-  distDir: "../../.next",
+// distDir: "../../.next",
   images: {
     remotePatterns: [
       {
