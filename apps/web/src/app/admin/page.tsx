@@ -16,18 +16,24 @@ export default async function AdminDashboard() {
         redirect("/app");
     }
 
-    const incomingCount = await db.project.count({
-        where: {
-            status: { in: ["SOW_DRAFT", "APPROVED_FOR_SOW"] }
-        }
-    });
-
-    const pendingTalentCount = await db.user.count({
-        where: {
-            role: "TALENT",
-            status: "PENDING_REVIEW"
-        }
-    });
+    const [incomingCount, pendingTalentCount, activeProjectCount] = await Promise.all([
+        db.project.count({
+            where: {
+                status: { in: ["SOW_DRAFT", "APPROVED_FOR_SOW"] }
+            }
+        }),
+        db.user.count({
+            where: {
+                role: "TALENT",
+                status: "PENDING_REVIEW"
+            }
+        }),
+        db.project.count({
+            where: {
+                status: { in: ["IN_PROGRESS", "STALLED"] }
+            }
+        })
+    ]);
     return (
         <div className="container mx-auto pt-32 pb-12 px-6 text-white">
             <h1 className="text-3xl font-bold mb-8">Admin Dashboard (Demo)</h1>
@@ -59,7 +65,7 @@ export default async function AdminDashboard() {
                         <h3 className="text-gray-400 group-hover:text-blue-200 transition-colors font-bold uppercase text-xs tracking-wider">Active Projects</h3>
                         <i className="ph ph-arrow-up-right text-gray-500 group-hover:text-blue-400 transition-colors"></i>
                     </div>
-                    <p className="text-4xl font-bold mt-2 text-white group-hover:text-blue-100 transition-colors">5</p>
+                    <p className="text-4xl font-bold mt-2 text-white group-hover:text-blue-100 transition-colors">{activeProjectCount}</p>
                 </Link>
                 <div className="bg-white/5 border border-white/10 p-6 rounded-lg hover:bg-white/10 transition">
                     <h3 className="text-gray-400 font-bold uppercase text-xs tracking-wider">New Leads</h3>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -17,6 +18,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             where: { id },
             data: { status: 'IN_PROGRESS' }
         });
+
+        revalidatePath("/admin");
+        revalidatePath("/admin/incoming");
+        revalidatePath("/admin/projects");
 
         return NextResponse.json({ success: true });
     } catch (error) {
