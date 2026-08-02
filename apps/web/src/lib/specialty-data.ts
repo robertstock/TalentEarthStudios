@@ -82,7 +82,7 @@ export const specialtyData = {
         portfolioFolder: "AUSTIN_Portfolio",
         mediaFiles: [
             "https://youtu.be/wcz71RPKKm4",
-            "https://samsungflip.netlify.app",
+            "https://samsungmemoryflip.netlify.app",
             "Screenshot_05.jpg.webp",
             "Screenshot_07.jpg.webp"
         ]
