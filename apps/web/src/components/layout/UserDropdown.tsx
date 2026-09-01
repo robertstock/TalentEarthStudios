@@ -12,6 +12,7 @@ interface UserDropdownProps {
         email?: string | null;
         image?: string | null;
         id?: string;
+        role?: string;
     };
 }
 
@@ -63,14 +64,14 @@ export default function UserDropdown({ user }: UserDropdownProps) {
                     </div>
 
                     <Link
-                        href={user.email === "finley@talentearth.com" ? "/admin/incoming" : "/app"}
+                        href={user.role === "ADMIN" ? "/admin" : "/app"}
                         onClick={() => setIsOpen(false)}
                         className="block px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors"
                     >
                         Dashboard
                     </Link>
 
-                    {user.email !== "finley@talentearth.com" && (
+                    {user.role !== "ADMIN" && (
                         <Link
                             href="/app/portfolio"
                             onClick={() => setIsOpen(false)}
@@ -80,7 +81,7 @@ export default function UserDropdown({ user }: UserDropdownProps) {
                         </Link>
                     )}
 
-                    {user.id && user.email !== "finley@talentearth.com" && (() => {
+                    {user.id && user.role !== "ADMIN" && (() => {
                         const mockTalent = MOCK_TALENTS.find(t => t.id === user.id || t.email === user.email);
                         const slug = mockTalent?.profile?.publicSlug || user.id;
                         return (
@@ -93,6 +94,14 @@ export default function UserDropdown({ user }: UserDropdownProps) {
                             </Link>
                         );
                     })()}
+
+                    <Link
+                        href="/app/security"
+                        onClick={() => setIsOpen(false)}
+                        className="block px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors"
+                    >
+                        Change Password
+                    </Link>
 
                     <div className="border-t border-white/10 my-1"></div>
 
