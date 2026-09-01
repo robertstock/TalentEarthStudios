@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hash } from "bcryptjs";
-import crypto from "crypto";
+import { hashPasswordResetToken } from "@/lib/password-reset";
 import { z } from "zod";
 
 const resetSchema = z.object({
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
         }
 
         const { token, password } = parsed.data;
-        const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+        const tokenHash = hashPasswordResetToken(token);
 
         const user = await db.user.findFirst({
             where: {
@@ -46,6 +46,7 @@ export async function POST(req: Request) {
             },
         });
 
+        console.info("[PASSWORD_RESET_COMPLETED]");
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("[RESET_PASSWORD_ERROR]", error);

@@ -13,11 +13,11 @@ export async function sendPasswordResetEmail(email: string, token: string) {
         const { error } = await resend.emails.send({
             from: process.env.PASSWORD_RESET_FROM_EMAIL || "TalentEarth Studios <no-reply@talentearth.com>",
             to: email,
-            subject: "Reset your TalentEarth Studios password",
+            subject: "Set up or reset your TalentEarth Studios password",
             html: `
                 <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.6; max-width: 560px; margin: 0 auto;">
-                    <h1 style="font-size: 24px;">Reset your password</h1>
-                    <p>Use the secure link below to choose a new TalentEarth Studios password. This link expires in one hour and can only be used once.</p>
+                    <h1 style="font-size: 24px;">Choose your password</h1>
+                    <p>Use the secure link below to set up or reset your TalentEarth Studios password. This link expires in one hour and can only be used once.</p>
                     <p style="margin: 28px 0;">
                         <a href="${resetLink}" style="background: #2563eb; color: #ffffff; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 600;">Choose a new password</a>
                     </p>

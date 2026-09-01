@@ -73,8 +73,8 @@ function ResetPasswordForm() {
         <div className="flex min-h-screen flex-col items-center justify-center p-4">
             <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-8 shadow-2xl">
                 <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Reset Password</h1>
-                    <p className="text-sm text-gray-400">Enter your new password below</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Choose Your Password</h1>
+                    <p className="text-sm text-gray-400">Set up a new password or replace your current one</p>
                 </div>
 
                 {status === "success" ? (

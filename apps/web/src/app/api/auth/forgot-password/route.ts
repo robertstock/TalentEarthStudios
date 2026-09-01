@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { isPasswordResetEmailConfigured, sendPasswordResetEmail } from "@/lib/email";
-import crypto from "crypto";
+import { createPasswordResetToken } from "@/lib/password-reset";
 import { z } from "zod";
 
 const requestSchema = z.object({
@@ -16,6 +16,7 @@ export async function POST(req: Request) {
         }
 
         if (!isPasswordResetEmailConfigured()) {
+            console.warn("[PASSWORD_RESET_EMAIL_NOT_CONFIGURED]");
             return NextResponse.json(
                 { message: "Password recovery email is temporarily unavailable." },
                 { status: 503 },
@@ -24,8 +25,13 @@ export async function POST(req: Request) {
 
         const { email } = parsed.data;
 
-        const user = await db.user.findUnique({
-            where: { email },
+        const user = await db.user.findFirst({
+            where: {
+                email: {
+                    equals: email,
+                    mode: "insensitive",
+                },
+            },
         });
 
         if (!user) {
@@ -33,16 +39,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: true });
         }
 
-        // Generate token
-        const token = crypto.randomBytes(32).toString("hex");
-        const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-        const expiry = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+        const { token, tokenHash, expiresAt } = createPasswordResetToken();
 
         await db.user.update({
             where: { id: user.id },
             data: {
                 resetToken: tokenHash,
-                resetTokenExpiry: expiry,
+                resetTokenExpiry: expiresAt,
             },
         });
 
@@ -60,6 +63,7 @@ export async function POST(req: Request) {
             );
         }
 
+        console.info("[PASSWORD_RESET_EMAIL_SENT]");
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("[FORGOT_PASSWORD_ERROR]", error);

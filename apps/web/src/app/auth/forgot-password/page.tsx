@@ -36,8 +36,8 @@ export default function ForgotPasswordPage() {
         <div className="flex min-h-screen flex-col items-center justify-center p-4">
             <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-8 shadow-2xl">
                 <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Forgot Password</h1>
-                    <p className="text-sm text-gray-400">Enter your email to receive a reset link</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Set Up or Recover Password</h1>
+                    <p className="text-sm text-gray-400">Admins can enter their account email to receive a secure link</p>
                 </div>
 
                 {status === "success" ? (

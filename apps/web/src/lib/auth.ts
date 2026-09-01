@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { compare, hash } from "bcryptjs";
 import { areDemoCredentialsEnabled } from "@/lib/env";
 import { MOCK_TALENTS } from "@/lib/mock-data";
+import { normalizeAccountEmail } from "@/lib/password-reset";
 
 const demoCredentialsEnabled = areDemoCredentialsEnabled();
 
@@ -41,9 +42,11 @@ export const authOptions: NextAuthOptions = {
                         return null;
                     }
 
+                    const normalizedEmail = normalizeAccountEmail(credentials.email);
+
                     if (demoCredentialsEnabled) {
                         // Optional local demo administrator.
-                        if (credentials.email === "robertstock@me.com" && credentials.password === "finley") {
+                        if (normalizedEmail === "robertstock@me.com" && credentials.password === "finley") {
                             return {
                                 id: "demo-admin",
                                 email: "robertstock@me.com",
@@ -54,7 +57,7 @@ export const authOptions: NextAuthOptions = {
                         }
 
                         // Optional local mock talent.
-                        const mockTalent = MOCK_TALENTS.find(t => t.email === credentials.email);
+                        const mockTalent = MOCK_TALENTS.find(t => normalizeAccountEmail(t.email) === normalizedEmail);
                         
                         if (mockTalent && credentials.password === "finley") {
                             let user = null;
@@ -118,8 +121,13 @@ export const authOptions: NextAuthOptions = {
                             };
                         }
                     }
-                    const user = await db.user.findUnique({
-                        where: { email: credentials.email },
+                    const user = await db.user.findFirst({
+                        where: {
+                            email: {
+                                equals: normalizedEmail,
+                                mode: "insensitive",
+                            },
+                        },
                         include: { profile: true }
                     });
                     if (!user || !user.passwordHash) {
