@@ -12,7 +12,7 @@ export const revalidate = 0;
 export default async function AdminDashboard() {
     const session = await getServerSession(authOptions);
 
-    if (!canAccessAdmin(session)) {
+    if (!(await canAccessAdmin(session))) {
         redirect("/app");
     }
 
@@ -100,6 +100,10 @@ export default async function AdminDashboard() {
                         <Link href="/admin/teams" className="flex w-full items-center justify-center gap-2 py-3 border border-white/15 hover:border-blue-500/40 hover:bg-blue-900/20 rounded text-white transition-colors">
                             <i className="ph ph-users-three text-lg"></i>
                             Manage Teams
+                        </Link>
+                        <Link href="/admin/administrators" className="flex w-full items-center justify-center gap-2 py-3 border border-white/15 hover:border-blue-500/40 hover:bg-blue-900/20 rounded text-white transition-colors">
+                            <i className="ph ph-shield-check text-lg"></i>
+                            Manage Administrators
                         </Link>
                     </div>
                 </div>

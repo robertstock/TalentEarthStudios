@@ -133,6 +133,9 @@ export const authOptions: NextAuthOptions = {
                     if (!user || !user.passwordHash) {
                         return null;
                     }
+                    if (user.role === "ADMIN" && user.status !== "APPROVED") {
+                        return null;
+                    }
                     const isValid = await compare(credentials.password, user.passwordHash);
                     if (!isValid) {
                         return null;

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { isAdmin, isTalent } from "@/lib/rbac";
 
 export async function requireSession() {
@@ -25,7 +26,7 @@ export async function requireAdmin() {
     return result;
   }
 
-  if (!isAdmin(result.session)) {
+  if (!(await canAccessAdmin(result.session))) {
     return {
       session: result.session,
       error: NextResponse.json({ message: "Forbidden" }, { status: 403 }),
@@ -42,7 +43,9 @@ export async function requireTalentOrAdmin() {
     return result;
   }
 
-  if (!isTalent(result.session) && !isAdmin(result.session)) {
+  const activeAdministrator = isAdmin(result.session) && (await canAccessAdmin(result.session));
+
+  if (!isTalent(result.session) && !activeAdministrator) {
     return {
       session: result.session,
       error: NextResponse.json({ message: "Forbidden" }, { status: 403 }),
@@ -52,6 +55,15 @@ export async function requireTalentOrAdmin() {
   return result;
 }
 
-export function canAccessAdmin(session: Session | null) {
-  return isAdmin(session);
+export async function canAccessAdmin(session: Session | null) {
+  if (!isAdmin(session) || !session?.user?.id) {
+    return false;
+  }
+
+  const administrator = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true, status: true },
+  });
+
+  return administrator?.role === "ADMIN" && administrator.status === "APPROVED";
 }

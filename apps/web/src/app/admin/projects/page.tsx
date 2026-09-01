@@ -40,7 +40,7 @@ function calculateProgress(status: string): number {
 export default async function AdminProjectsPage() {
     const session = await getServerSession(authOptions);
 
-    if (!canAccessAdmin(session)) {
+    if (!(await canAccessAdmin(session))) {
         redirect("/app");
     }
 

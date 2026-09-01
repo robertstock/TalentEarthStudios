@@ -11,7 +11,7 @@ export const revalidate = 0;
 export default async function AdminReportsPage() {
     const session = await getServerSession(authOptions);
 
-    if (!canAccessAdmin(session)) {
+    if (!(await canAccessAdmin(session))) {
         redirect("/app");
     }
 
