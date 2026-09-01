@@ -59,7 +59,10 @@ export async function createAdministrator(formData: FormData): Promise<Administr
     });
 
     if (existingUser) {
-        return { status: "error", message: "An account with that email address already exists." };
+        return {
+            status: "error",
+            message: "That email already belongs to a user account. Open All User Accounts to change its role or status.",
+        };
     }
 
     const reset = createPasswordResetToken();
@@ -123,7 +126,10 @@ export async function createAdministrator(formData: FormData): Promise<Administr
         };
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-            return { status: "error", message: "An account with that email address already exists." };
+            return {
+                status: "error",
+                message: "That email already belongs to a user account. Open All User Accounts to change its role or status.",
+            };
         }
 
         return { status: "error", message: "The administrator could not be added. Please try again." };

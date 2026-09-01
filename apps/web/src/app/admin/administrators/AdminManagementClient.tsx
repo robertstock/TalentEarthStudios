@@ -101,6 +101,12 @@ export default function AdminManagementClient({
                     Add trusted administrators, send secure password setup links, and control access. Passwords are
                     never displayed or emailed.
                 </p>
+                <Link
+                    href="/admin/users"
+                    className="mt-4 inline-flex items-center gap-2 rounded-lg border border-blue-500/30 px-4 py-2 text-sm font-semibold text-blue-300 transition hover:bg-blue-500/10"
+                >
+                    <i className="ph ph-address-book" aria-hidden="true" /> View All User Accounts
+                </Link>
             </div>
 
             {result.status !== "idle" && (
@@ -114,6 +120,9 @@ export default function AdminManagementClient({
                     <h2 className="text-xl font-bold">Add an Administrator</h2>
                     <p className="mt-1 text-sm text-gray-400">
                         They will receive a one-time link that expires after one hour so they can choose their own password.
+                    </p>
+                    <p className="mt-2 text-xs text-gray-500">
+                        If the email already exists, find the account under All User Accounts and change its role to Administrator.
                     </p>
                 </div>
 

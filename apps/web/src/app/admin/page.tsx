@@ -105,6 +105,10 @@ export default async function AdminDashboard() {
                             <i className="ph ph-shield-check text-lg"></i>
                             Manage Administrators
                         </Link>
+                        <Link href="/admin/users" className="flex w-full items-center justify-center gap-2 py-3 border border-white/15 hover:border-blue-500/40 hover:bg-blue-900/20 rounded text-white transition-colors">
+                            <i className="ph ph-address-book text-lg"></i>
+                            All User Accounts
+                        </Link>
                     </div>
                 </div>
                 <div className="border border-white/10 rounded-lg p-6 bg-white/5">
