@@ -1,39 +1,59 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth-guards";
+import {
+    getProjectCostCategoryLabel,
+    isProjectCostCategory,
+} from "@/lib/project-costs";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const session = await getServerSession(authOptions);
-        if (session?.user?.role !== "ADMIN") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
-        }
+        const { error } = await requireAdmin();
+        if (error) return error;
 
         const { id } = await params;
         const body = await req.json();
-        const { vendorName, amount, status, date } = body;
+        const { costName, category, amount, status, date } = body;
 
-        if (!vendorName || !vendorName.trim()) {
-            return NextResponse.json({ message: "Missing vendor name" }, { status: 400 });
+        if (!isProjectCostCategory(category)) {
+            return NextResponse.json({ message: "Choose a valid cost category" }, { status: 400 });
         }
 
-        const parsedAmount = parseFloat(amount);
-        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        const trimmedCostName = typeof costName === "string" ? costName.trim() : "";
+        if (category === "OTHER" && !trimmedCostName) {
+            return NextResponse.json({ message: "Enter a custom cost name" }, { status: 400 });
+        }
+
+        const parsedAmount = Number(amount);
+        if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
             return NextResponse.json({ message: "Amount must be a positive number" }, { status: 400 });
         }
 
-        const parsedDate = date ? new Date(date) : new Date();
+        if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            return NextResponse.json({ message: "Invalid date" }, { status: 400 });
+        }
+
+        const parsedDate = new Date(`${date}T12:00:00.000Z`);
         if (isNaN(parsedDate.getTime())) {
             return NextResponse.json({ message: "Invalid date" }, { status: 400 });
+        }
+
+        if (status !== "UNPAID" && status !== "PAID") {
+            return NextResponse.json({ message: "Choose a valid payment status" }, { status: 400 });
+        }
+
+        const project = await db.project.findUnique({ where: { id }, select: { id: true } });
+        if (!project) {
+            return NextResponse.json({ message: "Project not found" }, { status: 404 });
         }
 
         const bill = await db.vendorBill.create({
             data: {
                 projectId: id,
-                vendorName: vendorName.trim(),
+                category,
+                vendorName: trimmedCostName || getProjectCostCategoryLabel(category),
                 amount: parsedAmount,
-                status: status || "UNPAID",
+                status,
                 date: parsedDate
             }
         });
@@ -47,10 +67,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const session = await getServerSession(authOptions);
-        if (session?.user?.role !== "ADMIN") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
-        }
+        const { error } = await requireAdmin();
+        if (error) return error;
 
         const body = await req.json();
         const { billId } = body;
@@ -59,10 +77,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
             return NextResponse.json({ message: "Missing bill ID" }, { status: 400 });
         }
 
-        // Delete the bill
-        await db.vendorBill.delete({
-            where: { id: billId }
+        const deleted = await db.vendorBill.deleteMany({
+            where: { id: billId, projectId: id }
         });
+
+        if (deleted.count === 0) {
+            return NextResponse.json({ message: "Cost item not found" }, { status: 404 });
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {

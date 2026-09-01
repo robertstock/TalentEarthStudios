@@ -2,6 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  getProjectCostCategoryLabel,
+  PROJECT_COST_CATEGORIES,
+  type ProjectCostCategory,
+} from "@/lib/project-costs";
+import {
+  createCustomerInvoicePdf,
+  getCustomerInvoicePdfFilename,
+} from "@/lib/customer-invoice-pdf";
+import { calculateProjectPricing } from "@/lib/project-pricing";
 
 export type ProjectHealth = "Green" | "Yellow" | "Red";
 
@@ -9,6 +19,8 @@ export interface DashboardProject {
   id: string;
   name: string;
   client: string;
+  linkedClientName: string;
+  clientNameOverride: string | null;
   status: string;
   health: ProjectHealth;
   progress: number;
@@ -22,11 +34,12 @@ export interface DashboardProject {
   shareToken: string | null;
   clientStatus: string;
   budgetRange: string;
-  vendorBills: { id: string, amount: number, vendorName: string, status: string, date: Date | string }[];
+  retailMultiplier: number;
+  vendorBills: { id: string, amount: number, vendorName: string, category: string, status: string, date: string }[];
   invoice: { amount: number, status: string } | null;
-  meetingNotes: { id: string, title: string, content: string, createdAt: Date }[];
-  completedAt?: Date | string | null;
-  cancelledAt?: Date | string | null;
+  meetingNotes: { id: string, title: string, content: string, createdAt: string }[];
+  completedAt?: string | null;
+  cancelledAt?: string | null;
   cancellationReason?: string | null;
 }
 
@@ -50,6 +63,11 @@ const getProgressBarColor = (health: ProjectHealth) => {
   }
 };
 
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
 export default function DashboardClient({ projects }: DashboardClientProps) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || "");
   const [activeTab, setActiveTab] = useState<"SCOPE" | "FINANCIALS" | "MEETING_NOTES">("SCOPE");
@@ -67,13 +85,24 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   const [isCompleting, setIsCompleting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
-  // Vendor Bill log state variables
+  // A project-specific client label avoids renaming the linked client record on other jobs.
+  const [isClientNameModalOpen, setIsClientNameModalOpen] = useState(false);
+  const [clientNameInput, setClientNameInput] = useState("");
+  const [isSavingClientName, setIsSavingClientName] = useState(false);
+  const [clientNameError, setClientNameError] = useState("");
+
+  // Project cost form state
   const [isLogBillModalOpen, setIsLogBillModalOpen] = useState(false);
-  const [billVendorName, setBillVendorName] = useState("");
+  const [billCategory, setBillCategory] = useState<ProjectCostCategory>("OUTSIDE_PRINTING");
+  const [billCostName, setBillCostName] = useState("");
   const [billAmount, setBillAmount] = useState("");
   const [billStatus, setBillStatus] = useState("UNPAID");
   const [billDate, setBillDate] = useState(new Date().toISOString().substring(0, 10));
   const [isSavingBill, setIsSavingBill] = useState(false);
+  const [retailMultipliers, setRetailMultipliers] = useState<Record<string, number>>(
+    () => Object.fromEntries(projects.map((project) => [project.id, project.retailMultiplier])),
+  );
+  const [pricingSaveState, setPricingSaveState] = useState<"IDLE" | "SAVING" | "SAVED" | "ERROR">("IDLE");
 
   const activeProjects = projects.filter(p => p.status !== "COMPLETED" && p.status !== "CANCELLED");
   const completedProjects = projects.filter(p => p.status === "COMPLETED");
@@ -84,27 +113,20 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
     sidebarTab === "COMPLETED" ? completedProjects : 
     cancelledProjects;
 
-  // Initialize selectedProjectId if not set
-  if (!selectedProjectId && currentTabProjects.length > 0) {
-    setSelectedProjectId(currentTabProjects[0].id);
-  }
+  const effectiveSelectedProjectId = selectedProjectId || currentTabProjects[0]?.id || projects[0]?.id || "";
+  const selectedProject = projects.find(p => p.id === effectiveSelectedProjectId) || projects[0];
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId) || currentTabProjects[0] || projects[0];
-
-  const numericBudget = (() => {
-    if (!selectedProject || !selectedProject.budgetRange) return 0;
-    const clean = selectedProject.budgetRange.replace(/,/g, '');
-    const matches = clean.match(/\d+(\.\d+)?/g);
-    if (!matches || matches.length === 0) return 0;
-    return parseFloat(matches[0]);
-  })();
-
-  const totalCosts = selectedProject ? selectedProject.vendorBills.reduce((acc, bill) => acc + bill.amount, 0) : 0;
-  const projectMargin = numericBudget - totalCosts;
-
-  const formattedBudget = "$" + numericBudget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const formattedCosts = "$" + totalCosts.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const formattedMargin = (projectMargin < 0 ? "-" : "") + "$" + Math.abs(projectMargin).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const retailMultiplier = selectedProject ? retailMultipliers[selectedProject.id] ?? selectedProject.retailMultiplier : 1;
+  const projectPricing = calculateProjectPricing(selectedProject?.vendorBills ?? [], retailMultiplier);
+  const {
+      customerLineItems,
+      deliveryCosts,
+      grossMargin,
+      grossProfit,
+      markupEligibleCosts,
+      retailPrice,
+      totalCosts,
+  } = projectPricing;
 
   const statOnTrack = activeProjects.filter(p => p.health === "Green").length;
   const statAtRisk = activeProjects.filter(p => p.health === "Red").length;
@@ -121,6 +143,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       } else {
           setSelectedProjectId("");
       }
+      setPricingSaveState("IDLE");
   };
 
   const groupProjectsByDate = (projList: DashboardProject[], dateField: "completedAt" | "cancelledAt") => {
@@ -190,22 +213,109 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       }
   };
 
+  const handleSavePricing = async () => {
+      if (!selectedProject) return;
+      setPricingSaveState("SAVING");
+      try {
+          const res = await fetch(`/api/admin/projects/${selectedProject.id}/pricing`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ multiplier: retailMultiplier }),
+          });
+
+          if (!res.ok) {
+              throw new Error("Failed to save pricing");
+          }
+
+          setPricingSaveState("SAVED");
+      } catch (error) {
+          console.error(error);
+          setPricingSaveState("ERROR");
+      }
+  };
+
+  const openClientNameModal = () => {
+      if (!selectedProject) return;
+      setClientNameInput(selectedProject.client);
+      setClientNameError("");
+      setIsClientNameModalOpen(true);
+  };
+
+  const handleSaveClientName = async (clientName: string | null = clientNameInput) => {
+      if (!selectedProject) return;
+      if (clientName !== null && !clientName.trim()) {
+          setClientNameError("Enter a client name.");
+          return;
+      }
+
+      setIsSavingClientName(true);
+      setClientNameError("");
+      try {
+          const res = await fetch(`/api/admin/projects/${selectedProject.id}/client-name`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ clientName: clientName === null ? null : clientName.trim() }),
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+              throw new Error(data.message || "Could not update client name.");
+          }
+
+          window.location.reload();
+      } catch (error) {
+          console.error(error);
+          setClientNameError(error instanceof Error ? error.message : "Could not update client name.");
+          setIsSavingClientName(false);
+      }
+  };
+
+  const handleExportInvoicePdf = () => {
+      if (!selectedProject || customerLineItems.length === 0 || retailPrice <= 0) return;
+
+      const invoiceDate = new Date();
+      const dueDate = new Date(invoiceDate);
+      dueDate.setDate(dueDate.getDate() + 30);
+      const pdf = createCustomerInvoicePdf({
+          projectId: selectedProject.id,
+          projectName: selectedProject.name,
+          customerName: selectedProject.client,
+          invoiceDate,
+          dueDate,
+          lineItems: customerLineItems.map((line) => ({
+              description: line.description,
+              amount: line.amount,
+          })),
+      });
+      const url = URL.createObjectURL(pdf);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = getCustomerInvoicePdfFilename(selectedProject.name, selectedProject.id);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+  };
+
   const handleSaveBill = async () => {
-      if (!selectedProject || !billVendorName.trim() || !billAmount.trim()) return;
+      if (!selectedProject || !billAmount.trim()) return;
+      if (billCategory === "OTHER" && !billCostName.trim()) return;
       setIsSavingBill(true);
       try {
           const res = await fetch(`/api/admin/projects/${selectedProject.id}/bills`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                  vendorName: billVendorName.trim(),
+                  category: billCategory,
+                  costName: billCostName.trim(),
                   amount: parseFloat(billAmount),
                   status: billStatus,
                   date: billDate
               })
           });
           if (res.ok) {
-              setBillVendorName("");
+              setBillCategory("OUTSIDE_PRINTING");
+              setBillCostName("");
               setBillAmount("");
               setBillStatus("UNPAID");
               setIsLogBillModalOpen(false);
@@ -222,7 +332,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   };
 
   const handleDeleteBill = async (billId: string) => {
-      if (!selectedProject || !confirm("Are you sure you want to delete this vendor bill?")) return;
+      if (!selectedProject || !confirm("Are you sure you want to delete this project cost?")) return;
       try {
           const res = await fetch(`/api/admin/projects/${selectedProject.id}/bills`, {
               method: 'DELETE',
@@ -240,22 +350,27 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   };
 
   const renderProjectCard = (project: DashboardProject) => {
+    const isSelected = effectiveSelectedProjectId === project.id;
+
     return (
       <button
         key={project.id}
-        onClick={() => setSelectedProjectId(project.id)}
+        onClick={() => {
+          setSelectedProjectId(project.id);
+          setPricingSaveState("IDLE");
+        }}
         className={`text-left w-full p-5 rounded-xl border transition-all duration-300 relative overflow-hidden group ${
-          selectedProjectId === project.id 
+          isSelected
             ? "bg-blue-900/30 border-blue-500/50 shadow-[0_0_30px_-10px_rgba(59,130,246,0.3)]" 
             : "bg-white/5 border-white/10 hover:bg-white/10"
         }`}
       >
-        {selectedProjectId === project.id && (
+        {isSelected && (
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
         )}
 
         <div className="flex justify-between items-start mb-2">
-          <h3 className={`font-bold text-lg ${selectedProjectId === project.id ? "text-white" : "text-gray-200"}`}>
+          <h3 className={`font-bold text-lg ${isSelected ? "text-white" : "text-gray-200"}`}>
             {project.name}
           </h3>
           <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border ${getHealthStyles(project.health)}`}>
@@ -274,7 +389,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
           <div className="w-full mr-4">
             <div className="flex justify-between text-xs mb-1">
               <span className="text-gray-500">Progress</span>
-              <span className={selectedProjectId === project.id ? "text-blue-300" : "text-gray-400"}>{project.progress}%</span>
+              <span className={isSelected ? "text-blue-300" : "text-gray-400"}>{project.progress}%</span>
             </div>
             <div className="w-full h-1.5 bg-black/50 rounded-full overflow-hidden">
               <div 
@@ -538,7 +653,18 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                     Health: {selectedProject.health}
                   </span>
                 </div>
-                <p className="text-lg text-gray-400">Client: <span className="text-gray-200">{selectedProject.client}</span></p>
+                <div className="flex items-center gap-2">
+                  <p className="text-lg text-gray-400">Client: <span className="text-gray-200">{selectedProject.client}</span></p>
+                  <button
+                    type="button"
+                    onClick={openClientNameModal}
+                    className="p-1.5 rounded-md text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
+                    aria-label={`Edit client name for ${selectedProject.name}`}
+                    title="Edit client name for this project"
+                  >
+                    <i className="ph ph-pencil-simple"></i>
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-col items-start md:items-end gap-3 text-sm md:text-right">
@@ -767,61 +893,127 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div className="bg-black/40 border border-white/5 rounded-xl p-5">
                             <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">Estimated Budget</div>
-                            <div className="text-2xl font-light text-white">{formattedBudget}</div>
-                            {selectedProject.budgetRange && selectedProject.budgetRange !== formattedBudget && selectedProject.budgetRange !== String(numericBudget) && (
-                                <div className="text-xs mt-1 text-gray-400 font-mono line-clamp-1" title={selectedProject.budgetRange}>Ref: {selectedProject.budgetRange}</div>
-                            )}
+                            <div className="text-2xl font-light text-white">{selectedProject.budgetRange || "Pending"}</div>
                         </div>
                         <div className="bg-black/40 border border-white/5 rounded-xl p-5">
-                            <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">Total Vendor Costs</div>
-                            <div className="text-2xl font-light text-white">{formattedCosts}</div>
+                            <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">Total COGS</div>
+                            <div className="text-2xl font-light text-white">{currencyFormatter.format(totalCosts)}</div>
+                            <div className="text-xs mt-1 text-gray-500">{selectedProject.vendorBills.length} cost item{selectedProject.vendorBills.length === 1 ? "" : "s"}</div>
                         </div>
-                        <div className={`border rounded-xl p-5 ${
-                            projectMargin >= 0 
-                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]" 
-                                : "bg-red-500/10 border-red-500/20 text-red-400 shadow-[0_0_15px_-3px_rgba(239,68,68,0.2)]"
-                        }`}>
-                            <div className="text-xs uppercase tracking-widest mb-2 opacity-80">Project Margin</div>
-                            <div className="text-2xl font-bold">{formattedMargin}</div>
-                            <div className="text-xs mt-1 opacity-70">
-                                {numericBudget > 0 
-                                    ? `${((projectMargin / numericBudget) * 100).toFixed(1)}% margin` 
-                                    : "N/A"
-                                }
-                            </div>
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-5 text-blue-300">
+                            <div className="text-xs uppercase tracking-widest mb-2 opacity-80">Retail Price</div>
+                            <div className="text-2xl font-bold">{currencyFormatter.format(retailPrice)}</div>
+                            <div className="text-xs mt-1 opacity-70">Marked costs × {retailMultiplier.toFixed(1)} + delivery at cost</div>
                         </div>
-                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-5">
-                            <div className="text-xs text-emerald-500 uppercase tracking-widest mb-2">Client Invoice Status</div>
-                            <div className="text-2xl font-light text-emerald-400">
-                                {selectedProject.invoice ? selectedProject.invoice.status : "Pending Draft"}
-                            </div>
-                            {selectedProject.invoice && (
-                                <div className="text-xs mt-1 text-emerald-500/80">${selectedProject.invoice.amount.toLocaleString()}</div>
-                            )}
+                        <div className={`${grossProfit >= 0 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400"} border rounded-xl p-5`}>
+                            <div className="text-xs uppercase tracking-widest mb-2 opacity-80">Gross Profit</div>
+                            <div className="text-2xl font-bold">{currencyFormatter.format(grossProfit)}</div>
+                            <div className="text-xs mt-1 opacity-70">{retailPrice > 0 ? `${grossMargin.toFixed(1)}% margin` : "Add costs to calculate"}</div>
                         </div>
                     </div>
 
-                    <div>
+                    <section className="bg-gradient-to-br from-emerald-950/30 to-blue-950/20 border border-emerald-500/20 rounded-2xl p-6 md:p-8 shadow-[0_0_35px_-20px_rgba(16,185,129,0.6)]">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
+                            <div>
+                                <div className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400 mb-2">Retail Pricing Calculator</div>
+                                <h3 className="text-2xl font-light text-white">Set your non-delivery cost multiplier</h3>
+                                <p className="text-sm text-gray-400 mt-2 max-w-2xl">The slider marks up printing, materials, labor, rentals, travel, and custom costs. Courier, delivery, and freight always pass through at the entered amount.</p>
+                            </div>
+                            <div className="min-w-[150px] rounded-xl bg-black/30 border border-white/10 px-5 py-3 text-center">
+                                <div className="text-[10px] uppercase tracking-widest text-gray-500">Multiplier</div>
+                                <div className="text-3xl font-bold text-emerald-400">{retailMultiplier.toFixed(1)}×</div>
+                            </div>
+                        </div>
+
+                        <label htmlFor="retail-multiplier" className="sr-only">Retail price multiplier</label>
+                        <input
+                            id="retail-multiplier"
+                            type="range"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            value={retailMultiplier}
+                            onChange={(event) => {
+                                setRetailMultipliers((current) => ({
+                                    ...current,
+                                    [selectedProject.id]: Number(event.target.value),
+                                }));
+                                setPricingSaveState("IDLE");
+                            }}
+                            disabled={selectedProject.status === "COMPLETED" || selectedProject.status === "CANCELLED"}
+                            className="w-full h-3 rounded-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 accent-emerald-500"
+                        />
+                        <div className="flex justify-between text-[10px] text-gray-500 font-mono mt-2" aria-hidden="true">
+                            <span>0×</span>
+                            <span>2×</span>
+                            <span>4×</span>
+                            <span>6×</span>
+                            <span>8×</span>
+                            <span>10×</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-7">
+                            <div className="bg-black/25 border border-white/5 rounded-xl p-4">
+                                <div className="text-[10px] uppercase tracking-widest text-gray-500">Costs Marked Up</div>
+                                <div className="text-xl text-white mt-1">{currencyFormatter.format(markupEligibleCosts)}</div>
+                            </div>
+                            <div className="bg-black/25 border border-white/5 rounded-xl p-4">
+                                <div className="text-[10px] uppercase tracking-widest text-gray-500">Delivery Pass-Through</div>
+                                <div className="text-xl text-white mt-1">{currencyFormatter.format(deliveryCosts)}</div>
+                            </div>
+                            <div className="bg-black/25 border border-white/5 rounded-xl p-4">
+                                <div className="text-[10px] uppercase tracking-widest text-gray-500">Retail Price</div>
+                                <div className="text-xl text-blue-300 mt-1">{currencyFormatter.format(retailPrice)}</div>
+                            </div>
+                            <div className="bg-black/25 border border-white/5 rounded-xl p-4">
+                                <div className="text-[10px] uppercase tracking-widest text-gray-500">Gross Profit</div>
+                                <div className={`text-xl mt-1 ${grossProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>{currencyFormatter.format(grossProfit)}</div>
+                            </div>
+                        </div>
+
+                        {selectedProject.status !== "COMPLETED" && selectedProject.status !== "CANCELLED" && (
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-6">
+                                <div className={`text-xs ${pricingSaveState === "ERROR" ? "text-red-400" : "text-gray-500"}`} role="status">
+                                    {pricingSaveState === "SAVING" && "Saving pricing…"}
+                                    {pricingSaveState === "SAVED" && "Pricing saved to this project."}
+                                    {pricingSaveState === "ERROR" && "Pricing could not be saved. Please try again."}
+                                    {pricingSaveState === "IDLE" && "Save when you are happy with the retail price."}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleSavePricing}
+                                    disabled={pricingSaveState === "SAVING"}
+                                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {pricingSaveState === "SAVING" ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-floppy-disk"></i>}
+                                    Save Retail Price
+                                </button>
+                            </div>
+                        )}
+                    </section>
+
+                    <section>
                         <div className="flex justify-between items-end mb-4">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                <i className="ph ph-receipt"></i> Outside Vendor Bills
+                                <i className="ph ph-receipt"></i> Project Cost Ledger
                             </h3>
                             {selectedProject.status !== "COMPLETED" && selectedProject.status !== "CANCELLED" && (
                                 <button 
                                     onClick={() => setIsLogBillModalOpen(true)}
                                     className="text-[10px] uppercase font-bold tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
                                 >
-                                    + Log Bill
+                                    + Add Cost
                                 </button>
                             )}
                         </div>
-                        <div className="bg-black/30 border border-white/5 rounded-xl p-4">
+                        <div className="bg-black/30 border border-white/5 rounded-xl p-4 overflow-x-auto">
                             {selectedProject.vendorBills.length > 0 ? (
-                                <table className="w-full text-left text-sm">
+                                <table className="w-full min-w-[720px] text-left text-sm">
                                     <thead>
                                         <tr className="text-gray-500 border-b border-white/5">
                                             <th className="pb-3 font-medium">Date</th>
-                                            <th className="pb-3 font-medium">Vendor</th>
+                                            <th className="pb-3 font-medium">Category</th>
+                                            <th className="pb-3 font-medium">Cost Name</th>
                                             <th className="pb-3 font-medium">Status</th>
                                             <th className="pb-3 font-medium text-right">Amount</th>
                                             <th className="pb-3 font-medium text-right">Action</th>
@@ -831,8 +1023,9 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                         {selectedProject.vendorBills.map((bill, i) => (
                                             <tr key={bill.id || i} className="border-b border-white/5 last:border-0 text-gray-300">
                                                 <td className="py-3 font-mono text-xs">
-                                                    {bill.date ? new Date(bill.date).toLocaleDateString() : 'N/A'}
+                                                    {bill.date ? new Date(bill.date).toLocaleDateString(undefined, { timeZone: "UTC" }) : 'N/A'}
                                                 </td>
+                                                <td className="py-3 text-gray-400">{getProjectCostCategoryLabel(bill.category || "OTHER")}</td>
                                                 <td className="py-3">{bill.vendorName}</td>
                                                 <td className="py-3">
                                                     <span className={`px-2 py-1 rounded text-[10px] uppercase font-bold border ${
@@ -855,22 +1048,36 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                                 </td>
                                             </tr>
                                         ))}
+                                        <tr className="text-white border-t border-white/10">
+                                            <td colSpan={4} className="pt-4 text-xs font-bold uppercase tracking-widest text-gray-500">Total COGS</td>
+                                            <td className="pt-4 text-right font-bold text-lg">{currencyFormatter.format(totalCosts)}</td>
+                                            <td></td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             ) : (
-                                <div className="text-center text-gray-500 py-6 text-sm">No vendor bills attached to this project.</div>
+                                <div className="text-center text-gray-500 py-8 text-sm">
+                                    <i className="ph ph-receipt text-3xl block mb-2 opacity-50"></i>
+                                    No project costs yet. Add the first cost to begin calculating COGS.
+                                </div>
                             )}
                         </div>
-                    </div>
+                    </section>
 
                     <div className="mt-auto border-t border-white/10 pt-6">
-                        <div className="flex justify-between items-center bg-blue-900/10 border border-blue-500/20 p-5 rounded-xl">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-blue-900/10 border border-blue-500/20 p-5 rounded-xl">
                             <div>
-                                <div className="text-sm font-bold text-white mb-1"><i className="ph ph-arrows-left-right text-blue-500 mr-2"></i> QuickBooks Sync</div>
-                                <div className="text-xs text-gray-400">Push vendor data and generate draft client invoice natively into QBO.</div>
+                                <div className="text-sm font-bold text-white mb-1"><i className="ph ph-file-pdf text-blue-500 mr-2"></i> Customer Invoice PDF</div>
+                                <div className="text-xs text-gray-400">Downloads every customer-facing line item at its retail amount. Internal costs, COGS, margin, and multiplier are never included.</div>
                             </div>
-                            <button className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] md:text-xs font-bold uppercase tracking-widest rounded transition-colors shadow">
-                                Sync Financials
+                            <button
+                                type="button"
+                                onClick={handleExportInvoicePdf}
+                                disabled={customerLineItems.length === 0 || retailPrice <= 0}
+                                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] md:text-xs font-bold uppercase tracking-widest rounded transition-colors shadow whitespace-nowrap"
+                                title={customerLineItems.length === 0 || retailPrice <= 0 ? "Add line items and set a retail price above $0 before exporting" : "Download customer invoice PDF"}
+                            >
+                                Export Invoice PDF
                             </button>
                         </div>
                     </div>
@@ -995,23 +1202,109 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
         </div>
       )}
 
-      {/* Log Bill Modal */}
+      {/* Project-specific Client Name Modal */}
+      {isClientNameModalOpen && selectedProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-[#0B0F15] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
+            <h3 className="text-xl font-bold text-white mb-2">Edit Client Name</h3>
+            <p className="text-sm text-gray-400 mb-6 font-light">
+              This changes the client name on this project and its invoice export only. Other projects linked to {selectedProject.linkedClientName} will not change.
+            </p>
+
+            <label htmlFor="project-client-name" className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Client Name</label>
+            <input
+              id="project-client-name"
+              type="text"
+              maxLength={160}
+              autoFocus
+              value={clientNameInput}
+              onChange={(event) => {
+                setClientNameInput(event.target.value);
+                setClientNameError("");
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && clientNameInput.trim()) void handleSaveClientName();
+              }}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+            />
+            {clientNameError && <p className="text-xs text-red-400 mt-2" role="alert">{clientNameError}</p>}
+
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-8">
+              <div>
+                {selectedProject.clientNameOverride && (
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveClientName(null)}
+                    disabled={isSavingClientName}
+                    className="px-4 py-2 text-sm text-gray-400 hover:text-white disabled:opacity-50 transition-colors"
+                  >
+                    Use linked name: {selectedProject.linkedClientName}
+                  </button>
+                )}
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsClientNameModalOpen(false)}
+                  disabled={isSavingClientName}
+                  className="px-4 py-2 border border-white/10 rounded text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSaveClientName()}
+                  disabled={isSavingClientName || !clientNameInput.trim()}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
+                >
+                  {isSavingClientName ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-floppy-disk"></i>}
+                  Save Client Name
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Project Cost Modal */}
       {isLogBillModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
           <div className="bg-[#0B0F15] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
-            <h3 className="text-xl font-bold text-white mb-2">Log Vendor Bill</h3>
-            <p className="text-sm text-gray-400 mb-6 font-light">Add a new cost item to this project's financial ledger.</p>
+            <h3 className="text-xl font-bold text-white mb-2">Add Project Cost</h3>
+            <p className="text-sm text-gray-400 mb-6 font-light">Record a cost as the job progresses. It will be included in total COGS immediately.</p>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Vendor Name</label>
+                <label htmlFor="cost-category" className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Cost Category</label>
+                <select
+                  id="cost-category"
+                  value={billCategory}
+                  onChange={(event) => setBillCategory(event.target.value as ProjectCostCategory)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
+                >
+                  {PROJECT_COST_CATEGORIES.map((category) => (
+                    <option key={category.value} value={category.value} className="bg-[#0B0F15]">
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="cost-name" className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">
+                  Custom Cost Name {billCategory === "OTHER" ? "" : <span className="normal-case tracking-normal text-gray-600">(optional)</span>}
+                </label>
                 <input
+                  id="cost-name"
                   type="text"
-                  placeholder="e.g. Acme Fabrication"
-                  value={billVendorName}
-                  onChange={(e) => setBillVendorName(e.target.value)}
+                  placeholder={billCategory === "OTHER" ? "e.g. Permit fee" : "e.g. Lobby banner printing"}
+                  value={billCostName}
+                  onChange={(e) => setBillCostName(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
                 />
+                <p className="text-[11px] text-gray-600 mt-1.5">
+                  {billCategory === "OTHER" ? "A name is required for custom costs." : `Leave blank to use “${getProjectCostCategoryLabel(billCategory)}”.`}
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1055,7 +1348,8 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
               <button
                 onClick={() => {
                   setIsLogBillModalOpen(false);
-                  setBillVendorName("");
+                  setBillCategory("OUTSIDE_PRINTING");
+                  setBillCostName("");
                   setBillAmount("");
                   setBillStatus("UNPAID");
                 }}
@@ -1065,11 +1359,11 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
               </button>
               <button
                 onClick={handleSaveBill}
-                disabled={isSavingBill || !billVendorName.trim() || !billAmount.trim() || parseFloat(billAmount) <= 0}
+                disabled={isSavingBill || (billCategory === "OTHER" && !billCostName.trim()) || !billAmount.trim() || parseFloat(billAmount) <= 0}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
               >
                 {isSavingBill ? <i className="ph ph-spinner animate-spin"></i> : null}
-                Save Bill
+                Add Cost
               </button>
             </div>
           </div>

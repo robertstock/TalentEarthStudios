@@ -96,7 +96,9 @@ export default async function AdminProjectsPage() {
         return {
             id: p.id,
             name: p.name,
-            client: p.client?.companyName || "Unknown Client",
+            client: p.clientNameOverride || p.client?.companyName || "Unknown Client",
+            linkedClientName: p.client?.companyName || "Unknown Client",
+            clientNameOverride: p.clientNameOverride,
             status: p.status,
             health: calculateDerivedHealth(p),
             progress: calculateProgress(p.status),
@@ -110,11 +112,27 @@ export default async function AdminProjectsPage() {
             shareToken,
             clientStatus,
             budgetRange: p.budgetRange || "Pending",
-            vendorBills: p.vendorBills || [],
-            invoice: p.invoice || null,
-            meetingNotes: p.meetingNotes || [],
-            completedAt: p.completedAt,
-            cancelledAt: p.cancelledAt,
+            retailMultiplier: p.retailMultiplier,
+            vendorBills: p.vendorBills.map(bill => ({
+                id: bill.id,
+                amount: bill.amount,
+                vendorName: bill.vendorName,
+                category: bill.category,
+                status: bill.status,
+                date: bill.date.toISOString(),
+            })),
+            invoice: p.invoice ? {
+                amount: p.invoice.amount,
+                status: p.invoice.status,
+            } : null,
+            meetingNotes: p.meetingNotes.map(note => ({
+                id: note.id,
+                title: note.title,
+                content: note.content,
+                createdAt: note.createdAt.toISOString(),
+            })),
+            completedAt: p.completedAt?.toISOString() || null,
+            cancelledAt: p.cancelledAt?.toISOString() || null,
             cancellationReason: p.cancellationReason,
         };
     });
