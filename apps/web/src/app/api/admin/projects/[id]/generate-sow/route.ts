@@ -37,7 +37,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
         // Generate mock content based on project details
         const sowContent = `
-# Statement of Work: ${project.name}
+# Statement of Work: ${project.jobName || project.name}
 **Client:** ${project.client?.companyName || 'N/A'}
 **Date:** ${new Date().toLocaleDateString()}
 

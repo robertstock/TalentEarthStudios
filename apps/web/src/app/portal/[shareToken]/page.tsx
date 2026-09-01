@@ -37,7 +37,7 @@ export default async function PortalPage({ params }: Props) {
             <PortalClient 
                 sowId={sow.id}
                 projectId={sow.projectId}
-                projectName={sow.project.name}
+                projectName={sow.project.jobName || sow.project.name}
                 companyName={sow.project.client?.companyName || "Client"}
                 bodyRichText={sow.bodyRichText || ""}
                 currentStatus={sow.status}

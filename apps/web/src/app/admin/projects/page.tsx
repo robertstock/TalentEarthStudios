@@ -47,6 +47,7 @@ export default async function AdminProjectsPage() {
     const rawProjects = await db.project.findMany({
         include: {
             client: true,
+            category: true,
             team: {
                 include: { members: { include: { user: true } } }
             },
@@ -95,7 +96,9 @@ export default async function AdminProjectsPage() {
 
         return {
             id: p.id,
-            name: p.name,
+            name: p.jobName || p.name,
+            jobName: p.jobName,
+            categoryName: p.category?.name || p.name,
             client: p.clientNameOverride || p.client?.companyName || "Unknown Client",
             linkedClientName: p.client?.companyName || "Unknown Client",
             clientNameOverride: p.clientNameOverride,

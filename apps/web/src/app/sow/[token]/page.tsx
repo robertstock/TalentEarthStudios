@@ -30,7 +30,7 @@ export default async function ClientSowPage({ params }: { params: Promise<{ toke
             <ClientSowView 
                 sowId={sow.id}
                 token={token}
-                projectName={sow.project.name}
+                projectName={sow.project.jobName || sow.project.name}
                 companyName={sow.project.client?.companyName || "Client"}
                 version={sow.versionNumber}
                 bodyRichText={sow.bodyRichText || ""}

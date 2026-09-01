@@ -23,9 +23,15 @@ export async function POST() {
       ADD COLUMN IF NOT EXISTS "resetTokenExpiry" TIMESTAMP(3);
     `);
 
+        // 3. Add the editable project job name while preserving the original intake title.
+        await db.$executeRawUnsafe(`
+      ALTER TABLE "Project"
+      ADD COLUMN IF NOT EXISTS "jobName" TEXT;
+    `);
+
         return NextResponse.json({
             success: true,
-            message: "Database schema fixed successfully! You can now use Forgot Password."
+            message: "Database schema is up to date."
         });
     } catch (error: any) {
         console.error("Migration failed:", error);

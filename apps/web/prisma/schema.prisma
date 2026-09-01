@@ -239,6 +239,7 @@ model Project {
   createdBy       User               @relation("CreatedBy", fields: [createdById], references: [id])
 
   name            String             @map("title")
+  jobName         String?
   description     String?
   categoryId      String?
   category        Category?           @relation(fields: [categoryId], references: [id])

@@ -18,6 +18,8 @@ export type ProjectHealth = "Green" | "Yellow" | "Red";
 export interface DashboardProject {
   id: string;
   name: string;
+  jobName: string | null;
+  categoryName: string;
   client: string;
   linkedClientName: string;
   clientNameOverride: string | null;
@@ -88,6 +90,11 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   const [deleteProjectConfirmation, setDeleteProjectConfirmation] = useState("");
   const [deleteProjectError, setDeleteProjectError] = useState("");
   const [isDeletingProject, setIsDeletingProject] = useState(false);
+
+  const [isJobNameModalOpen, setIsJobNameModalOpen] = useState(false);
+  const [jobNameInput, setJobNameInput] = useState("");
+  const [isSavingJobName, setIsSavingJobName] = useState(false);
+  const [jobNameError, setJobNameError] = useState("");
 
   // A project-specific client label avoids renaming the linked client record on other jobs.
   const [isClientNameModalOpen, setIsClientNameModalOpen] = useState(false);
@@ -235,6 +242,41 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       } catch (error) {
           console.error(error);
           setPricingSaveState("ERROR");
+      }
+  };
+
+  const openJobNameModal = () => {
+      if (!selectedProject) return;
+      setJobNameInput(selectedProject.jobName || "");
+      setJobNameError("");
+      setIsJobNameModalOpen(true);
+  };
+
+  const handleSaveJobName = async () => {
+      if (!selectedProject || !jobNameInput.trim()) {
+          setJobNameError("Enter a job name.");
+          return;
+      }
+
+      setIsSavingJobName(true);
+      setJobNameError("");
+      try {
+          const res = await fetch(`/api/admin/projects/${selectedProject.id}/job-name`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ jobName: jobNameInput.trim() }),
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+              throw new Error(data.message || "Could not update job name.");
+          }
+
+          window.location.reload();
+      } catch (error) {
+          console.error(error);
+          setJobNameError(error instanceof Error ? error.message : "Could not update job name.");
+          setIsSavingJobName(false);
       }
   };
 
@@ -406,10 +448,15 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
         )}
 
-        <div className="flex justify-between items-start mb-2">
-          <h3 className={`font-bold text-lg ${isSelected ? "text-white" : "text-gray-200"}`}>
-            {project.name}
-          </h3>
+        <div className="flex justify-between items-start gap-3 mb-2">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1 line-clamp-1">
+              {project.categoryName}
+            </p>
+            <h3 className={`font-bold text-lg ${isSelected ? "text-white" : "text-gray-200"}`}>
+              {project.jobName || "Add Job Name"}
+            </h3>
+          </div>
           <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border ${getHealthStyles(project.health)}`}>
             {project.status.replace("_", " ")}
           </span>
@@ -684,8 +731,27 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
             {/* Header Details */}
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 relative z-10 border-b border-white/5 pb-8">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-3xl font-bold text-white">{selectedProject.name}</h2>
+                <div className="flex items-start gap-3 mb-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-blue-400 font-semibold mb-1">Job Name</p>
+                    <div className="flex items-center gap-2">
+                      <h2 className={`text-3xl font-bold ${selectedProject.jobName ? "text-white" : "text-gray-500"}`}>
+                        {selectedProject.jobName || "Add Job Name"}
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={openJobNameModal}
+                        className="p-1.5 rounded-md text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
+                        aria-label={`Edit job name for ${selectedProject.name}`}
+                        title="Edit job name"
+                      >
+                        <i className="ph ph-pencil-simple"></i>
+                      </button>
+                    </div>
+                    <p className="text-xs uppercase tracking-wider text-gray-500 mt-2">
+                      Category: <span className="normal-case tracking-normal text-gray-400">{selectedProject.categoryName}</span>
+                    </p>
+                  </div>
                   <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full border ${getHealthStyles(selectedProject.health)}`}>
                     Health: {selectedProject.health}
                   </span>
@@ -1323,6 +1389,57 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
               >
                 {isDeletingProject ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-trash"></i>}
                 Delete Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Project Job Name Modal */}
+      {isJobNameModalOpen && selectedProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-[#0B0F15] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
+            <h3 className="text-xl font-bold text-white mb-2">Edit Job Name</h3>
+            <p className="text-sm text-gray-400 mb-6 font-light">
+              This is the main title shown in the tracker and customer exports. The category remains {selectedProject.categoryName}.
+            </p>
+
+            <label htmlFor="project-job-name" className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Job Name</label>
+            <input
+              id="project-job-name"
+              type="text"
+              maxLength={160}
+              autoFocus
+              value={jobNameInput}
+              onChange={(event) => {
+                setJobNameInput(event.target.value);
+                setJobNameError("");
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && jobNameInput.trim()) void handleSaveJobName();
+              }}
+              placeholder="Enter the job name"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+            />
+            {jobNameError && <p className="text-xs text-red-400 mt-2" role="alert">{jobNameError}</p>}
+
+            <div className="flex justify-end gap-3 mt-8">
+              <button
+                type="button"
+                onClick={() => setIsJobNameModalOpen(false)}
+                disabled={isSavingJobName}
+                className="px-4 py-2 border border-white/10 rounded text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSaveJobName()}
+                disabled={isSavingJobName || !jobNameInput.trim()}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
+              >
+                {isSavingJobName ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-floppy-disk"></i>}
+                Save Job Name
               </button>
             </div>
           </div>
