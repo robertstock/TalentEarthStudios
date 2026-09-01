@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import {
+    normalizeSubmittedProjectClientName,
+    UNASSIGNED_PROJECT_CLIENT_NAME,
+} from "@/lib/project-client";
 
 export const dynamic = 'force-dynamic';
 
@@ -51,19 +55,15 @@ export async function POST(req: Request) {
         }
 
         // 2. Ensure Default Client Exists (Fail-safe)
-        let defaultClient = await db.client.findFirst({
-            where: { companyName: 'Acme Corp' }
+        const defaultClient = await db.client.upsert({
+            where: { id: "default-client" },
+            update: { companyName: UNASSIGNED_PROJECT_CLIENT_NAME },
+            create: {
+                id: "default-client",
+                companyName: UNASSIGNED_PROJECT_CLIENT_NAME,
+                primaryContactName: "Pending Assignment",
+            },
         });
-
-        if (!defaultClient) {
-            defaultClient = await db.client.create({
-                data: {
-                    companyName: 'Acme Corp',
-                    primaryContactName: 'Default Contact',
-                    email: 'contact@acme.com'
-                }
-            });
-        }
 
         // Prepare answer processing
         let processedAnswers = Object.entries(answers || {});
@@ -126,10 +126,11 @@ export async function POST(req: Request) {
 
         // Resolve Client Logic
         let targetClientId = defaultClient.id;
-        if (clientNameFromAnswers) {
-            console.log(`Found Client Name in answers: ${clientNameFromAnswers}`);
+        const submittedClientName = normalizeSubmittedProjectClientName(clientNameFromAnswers);
+        if (submittedClientName !== UNASSIGNED_PROJECT_CLIENT_NAME) {
+            console.log(`Found Client Name in answers: ${submittedClientName}`);
             const existingClient = await db.client.findFirst({
-                where: { companyName: { equals: clientNameFromAnswers, mode: 'insensitive' } }
+                where: { companyName: { equals: submittedClientName, mode: 'insensitive' } }
             });
 
             if (existingClient) {
@@ -137,7 +138,7 @@ export async function POST(req: Request) {
             } else {
                 const newClient = await db.client.create({
                     data: {
-                        companyName: clientNameFromAnswers,
+                        companyName: submittedClientName,
                         primaryContactName: 'Pending Contact' // Placeholder
                     }
                 });
@@ -171,6 +172,7 @@ export async function POST(req: Request) {
                 categoryId: categoryId,
                 status: "SUBMITTED",
                 clientId: targetClientId,
+                clientNameOverride: submittedClientName,
                 assignedType: "INDIVIDUAL", // Required by DB constraint
                 description: finalName, // Fallback for required field
                 timeline: "",      // Fallback for required field

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import crypto from "crypto";
 import { specialtyData, SpecialtySlug } from "@/lib/specialty-data";
+import { normalizeSubmittedProjectClientName } from "@/lib/project-client";
 
 // Set max duration for edge functions (if deployed to Vercel edge)
 export const maxDuration = 60;
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
   const processedMessages = [];
   for (const message of messages) {
     let content = message.content || "";
-    let attachments = message.experimental_attachments || [];
+    const attachments = message.experimental_attachments || [];
     const newAttachments = [];
 
     for (const attachment of attachments) {
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
           const base64Data = attachment.url.split(";base64,").pop();
           if (base64Data) {
             const buf = Buffer.from(base64Data, "base64");
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
             const pdf = require("pdf-parse");
             const instance = new pdf.PDFParse(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
             const parsed = await instance.getText();
@@ -104,6 +106,8 @@ Instructions:
           confidenceScore, urgencyScore, complexityScore, projectSummary, deliverables, missingInfo, recommendedAutoRoute
         }) => {
           try {
+            const projectClientName = normalizeSubmittedProjectClientName(company);
+
             // 1. Create or find the Client
             let client = await db.client.findFirst({ where: { email } });
             if (!client) {
@@ -172,6 +176,7 @@ ${missingInfo !== "None" ? `**Pending Clarification:** ${missingInfo}` : "All st
                   budgetRange,
                   timeline,
                   clientId: client.id,
+                  clientNameOverride: projectClientName,
                   createdById,
                   status: matchedTalentId ? "APPROVED_FOR_SOW" : "SOW_DRAFT",
                   aiConfidenceScore: confidenceScore,

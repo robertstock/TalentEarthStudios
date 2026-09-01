@@ -4,6 +4,7 @@ import { generateObject } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import crypto from "crypto"; 
+import { normalizeSubmittedProjectClientName } from "@/lib/project-client";
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -12,7 +13,8 @@ const openai = createOpenAI({
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { name, email, company, projectType, timeline, budgetRange, message, talentSlug } = body;
+        const { name, email, company, projectType, timeline, budgetRange, message } = body;
+        const projectClientName = normalizeSubmittedProjectClientName(company);
 
         if (!name || !email || !message) {
             return NextResponse.json({ error: "Missing fields" }, { status: 400 });
@@ -108,6 +110,7 @@ Project Details: ${message}
                 budgetRange: aiResult.estimatedBudget,
                 timeline: timeline,
                 clientId: client.id,
+                clientNameOverride: projectClientName,
                 createdById: createdById, // Mandatory field
                 status: matchedTalentId ? "APPROVED_FOR_SOW" : "SOW_DRAFT",
                 aiConfidenceScore: aiResult.confidenceScore,

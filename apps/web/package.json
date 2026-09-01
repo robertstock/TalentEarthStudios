@@ -11,7 +11,7 @@
     "test:password-reset": "node --test src/lib/password-reset.test.ts",
     "test:admin-management": "node --test src/lib/admin-management.test.ts",
     "test:user-account-management": "node --test src/lib/user-account-management.test.ts",
-    "test:project-costs": "node --test src/lib/project-costs.test.ts src/lib/project-pricing.test.ts"
+    "test:project-costs": "node --test src/lib/project-client.test.ts src/lib/project-costs.test.ts src/lib/project-pricing.test.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

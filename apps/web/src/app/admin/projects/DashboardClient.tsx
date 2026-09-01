@@ -16,6 +16,9 @@ import {
 } from "@/lib/customer-invoice-pdf";
 import {
   calculateProjectPricing,
+  calculateRetailMultiplier,
+  getRetailPriceRange,
+  parseRetailPriceInput,
   removeProjectCostLine,
   upsertProjectCostLine,
 } from "@/lib/project-pricing";
@@ -77,6 +80,11 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
   currency: "USD",
 });
 
+function formatMultiplier(multiplier: number) {
+  const fixedMultiplier = multiplier.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+  return `${fixedMultiplier.includes(".") ? fixedMultiplier : `${fixedMultiplier}.0`}×`;
+}
+
 export default function DashboardClient({ projects }: DashboardClientProps) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || "");
   const [activeTab, setActiveTab] = useState<"SCOPE" | "FINANCIALS" | "MEETING_NOTES">("SCOPE");
@@ -126,6 +134,8 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   const [retailMultipliers, setRetailMultipliers] = useState<Record<string, number>>(
     () => Object.fromEntries(projects.map((project) => [project.id, project.retailMultiplier])),
   );
+  const [retailPriceInputs, setRetailPriceInputs] = useState<Record<string, string>>({});
+  const [retailPriceError, setRetailPriceError] = useState("");
   const [pricingSaveState, setPricingSaveState] = useState<"IDLE" | "SAVING" | "SAVED" | "ERROR">("IDLE");
 
   const activeProjects = projects.filter(p => p.status !== "COMPLETED" && p.status !== "CANCELLED");
@@ -154,6 +164,10 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       retailPrice,
       totalCosts,
   } = projectPricing;
+  const retailPriceInput = selectedProject
+    ? retailPriceInputs[selectedProject.id] ?? retailPrice.toFixed(2)
+    : "";
+  const retailPriceRange = getRetailPriceRange(markupEligibleCosts, deliveryCosts);
 
   const statOnTrack = activeProjects.filter(p => p.health === "Green").length;
   const statAtRisk = activeProjects.filter(p => p.health === "Red").length;
@@ -170,6 +184,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       } else {
           setSelectedProjectId("");
       }
+      setRetailPriceError("");
       setPricingSaveState("IDLE");
   };
 
@@ -240,20 +255,94 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       }
   };
 
+  const setPricingFromMultiplier = (multiplier: number) => {
+      if (!selectedProject) return;
+
+      const nextRetailPrice = calculateProjectPricing(selectedVendorBills, multiplier).retailPrice;
+      setRetailMultipliers((current) => ({
+          ...current,
+          [selectedProject.id]: multiplier,
+      }));
+      setRetailPriceInputs((current) => ({
+          ...current,
+          [selectedProject.id]: nextRetailPrice.toFixed(2),
+      }));
+      setRetailPriceError("");
+      setPricingSaveState("IDLE");
+  };
+
+  const handleRetailPriceChange = (value: string) => {
+      if (!selectedProject) return;
+
+      setRetailPriceInputs((current) => ({ ...current, [selectedProject.id]: value }));
+      setPricingSaveState("IDLE");
+
+      const requestedRetailPrice = parseRetailPriceInput(value);
+      if (requestedRetailPrice === null) {
+          setRetailPriceError(value.trim() ? "Enter a valid retail price." : "");
+          return;
+      }
+
+      const nextMultiplier = calculateRetailMultiplier(
+          requestedRetailPrice,
+          markupEligibleCosts,
+          deliveryCosts,
+      );
+      if (nextMultiplier === null) {
+          setRetailPriceError(
+              `Enter a retail price from ${currencyFormatter.format(retailPriceRange.minimumRetailPrice)} to ${currencyFormatter.format(retailPriceRange.maximumRetailPrice)}.`,
+          );
+          return;
+      }
+
+      setRetailMultipliers((current) => ({
+          ...current,
+          [selectedProject.id]: nextMultiplier,
+      }));
+      setRetailPriceError("");
+  };
+
   const handleSavePricing = async () => {
       if (!selectedProject) return;
+
+      const requestedRetailPrice = parseRetailPriceInput(retailPriceInput);
+      const nextMultiplier = requestedRetailPrice === null
+          ? null
+          : calculateRetailMultiplier(requestedRetailPrice, markupEligibleCosts, deliveryCosts);
+      if (requestedRetailPrice === null || nextMultiplier === null) {
+          setRetailPriceError(
+              `Enter a retail price from ${currencyFormatter.format(retailPriceRange.minimumRetailPrice)} to ${currencyFormatter.format(retailPriceRange.maximumRetailPrice)}.`,
+          );
+          return;
+      }
+
       setPricingSaveState("SAVING");
       try {
           const res = await fetch(`/api/admin/projects/${selectedProject.id}/pricing`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ multiplier: retailMultiplier }),
+              body: JSON.stringify({ retailPrice: requestedRetailPrice }),
           });
 
-          if (!res.ok) {
-              throw new Error("Failed to save pricing");
-          }
+          const data: {
+              message?: string;
+              project?: { retailMultiplier: number; retailPrice: number };
+          } = await res.json();
 
+          if (!res.ok || !data.project) {
+              throw new Error(data.message || "Failed to save pricing");
+          }
+          const savedProject = data.project;
+
+          setRetailMultipliers((current) => ({
+              ...current,
+              [selectedProject.id]: savedProject.retailMultiplier,
+          }));
+          setRetailPriceInputs((current) => ({
+              ...current,
+              [selectedProject.id]: savedProject.retailPrice.toFixed(2),
+          }));
+          setRetailPriceError("");
           setPricingSaveState("SAVED");
       } catch (error) {
           console.error(error);
@@ -426,6 +515,16 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       resetBillForm();
   };
 
+  const resetRetailPriceDraft = (projectId: string) => {
+      setRetailPriceInputs((current) => {
+          const next = { ...current };
+          delete next[projectId];
+          return next;
+      });
+      setRetailPriceError("");
+      setPricingSaveState("IDLE");
+  };
+
   const handleSaveBill = async () => {
       if (!selectedProject) return;
 
@@ -475,6 +574,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                   savedBill,
               ),
           }));
+          resetRetailPriceDraft(selectedProject.id);
           closeBillModal();
       } catch (error) {
           console.error(error);
@@ -507,6 +607,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                   billId,
               ),
           }));
+          resetRetailPriceDraft(selectedProject.id);
       } catch (error) {
           console.error(error);
           alert(error instanceof Error ? error.message : "Failed to delete cost.");
@@ -523,6 +624,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
         key={project.id}
         onClick={() => {
           setSelectedProjectId(project.id);
+          setRetailPriceError("");
           setPricingSaveState("IDLE");
         }}
         className={`text-left w-full p-5 rounded-xl border transition-all duration-300 relative overflow-hidden group ${
@@ -1121,7 +1223,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                         <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-5 text-blue-300">
                             <div className="text-xs uppercase tracking-widest mb-2 opacity-80">Retail Price</div>
                             <div className="text-2xl font-bold">{currencyFormatter.format(retailPrice)}</div>
-                            <div className="text-xs mt-1 opacity-70">Marked costs × {retailMultiplier.toFixed(1)} + delivery at cost</div>
+                            <div className="text-xs mt-1 opacity-70">Marked costs × {formatMultiplier(retailMultiplier).replace("×", "")} + delivery at cost</div>
                         </div>
                         <div className={`${grossProfit >= 0 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400"} border rounded-xl p-5`}>
                             <div className="text-xs uppercase tracking-widest mb-2 opacity-80">Gross Profit</div>
@@ -1134,13 +1236,45 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
                             <div>
                                 <div className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400 mb-2">Retail Pricing Calculator</div>
-                                <h3 className="text-2xl font-light text-white">Set your non-delivery cost multiplier</h3>
-                                <p className="text-sm text-gray-400 mt-2 max-w-2xl">The slider marks up printing, materials, labor, rentals, travel, and custom costs. Courier, delivery, and freight always pass through at the entered amount.</p>
+                                <h3 className="text-2xl font-light text-white">Set an exact retail price or use the slider</h3>
+                                <p className="text-sm text-gray-400 mt-2 max-w-2xl">Enter the exact price you want, or move the slider. Both stay synchronized. Courier, delivery, and freight always pass through at the entered amount.</p>
                             </div>
                             <div className="min-w-[150px] rounded-xl bg-black/30 border border-white/10 px-5 py-3 text-center">
                                 <div className="text-[10px] uppercase tracking-widest text-gray-500">Multiplier</div>
-                                <div className="text-3xl font-bold text-emerald-400">{retailMultiplier.toFixed(1)}×</div>
+                                <div className="text-3xl font-bold text-emerald-400">{formatMultiplier(retailMultiplier)}</div>
                             </div>
+                        </div>
+
+                        <div className="max-w-sm mb-7">
+                            <label htmlFor="retail-price-input" className="block text-xs uppercase tracking-widest text-gray-400 font-semibold mb-2">Exact Retail Price</label>
+                            <div className={`flex items-center rounded-xl bg-black/30 border ${retailPriceError ? "border-red-500/60" : "border-white/10 focus-within:border-emerald-500"} transition-colors`}>
+                                <span className="pl-4 text-lg text-gray-500" aria-hidden="true">$</span>
+                                <input
+                                    id="retail-price-input"
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={retailPriceInput}
+                                    onChange={(event) => handleRetailPriceChange(event.target.value)}
+                                    onBlur={() => {
+                                        const parsedPrice = parseRetailPriceInput(retailPriceInput);
+                                        if (parsedPrice !== null && !retailPriceError) {
+                                            setRetailPriceInputs((current) => ({
+                                                ...current,
+                                                [selectedProject.id]: parsedPrice.toFixed(2),
+                                            }));
+                                        }
+                                    }}
+                                    disabled={selectedProject.status === "COMPLETED" || selectedProject.status === "CANCELLED" || markupEligibleCosts <= 0}
+                                    aria-invalid={Boolean(retailPriceError)}
+                                    aria-describedby="retail-price-help"
+                                    className="min-w-0 w-full bg-transparent px-2 py-3 text-xl font-semibold text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+                            </div>
+                            <p id="retail-price-help" className={`text-xs mt-2 ${retailPriceError ? "text-red-400" : "text-gray-500"}`} role={retailPriceError ? "alert" : undefined}>
+                                {retailPriceError || (markupEligibleCosts > 0
+                                    ? `Allowed range: ${currencyFormatter.format(retailPriceRange.minimumRetailPrice)} to ${currencyFormatter.format(retailPriceRange.maximumRetailPrice)}.`
+                                    : "Add a non-delivery cost to set retail pricing. Delivery remains at cost.")}
+                            </p>
                         </div>
 
                         <label htmlFor="retail-multiplier" className="sr-only">Retail price multiplier</label>
@@ -1149,16 +1283,10 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                             type="range"
                             min="0"
                             max="10"
-                            step="0.1"
+                            step="0.01"
                             value={retailMultiplier}
-                            onChange={(event) => {
-                                setRetailMultipliers((current) => ({
-                                    ...current,
-                                    [selectedProject.id]: Number(event.target.value),
-                                }));
-                                setPricingSaveState("IDLE");
-                            }}
-                            disabled={selectedProject.status === "COMPLETED" || selectedProject.status === "CANCELLED"}
+                            onChange={(event) => setPricingFromMultiplier(Number(event.target.value))}
+                            disabled={selectedProject.status === "COMPLETED" || selectedProject.status === "CANCELLED" || markupEligibleCosts <= 0}
                             className="w-full h-3 rounded-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 accent-emerald-500"
                         />
                         <div className="flex justify-between text-[10px] text-gray-500 font-mono mt-2" aria-hidden="true">
@@ -1195,12 +1323,12 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                     {pricingSaveState === "SAVING" && "Saving pricing…"}
                                     {pricingSaveState === "SAVED" && "Pricing saved to this project."}
                                     {pricingSaveState === "ERROR" && "Pricing could not be saved. Please try again."}
-                                    {pricingSaveState === "IDLE" && "Save when you are happy with the retail price."}
+                                    {pricingSaveState === "IDLE" && "Enter an exact price or use the slider, then save."}
                                 </div>
                                 <button
                                     type="button"
                                     onClick={handleSavePricing}
-                                    disabled={pricingSaveState === "SAVING"}
+                                    disabled={pricingSaveState === "SAVING" || Boolean(retailPriceError) || markupEligibleCosts <= 0}
                                     className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
                                 >
                                     {pricingSaveState === "SAVING" ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-floppy-disk"></i>}

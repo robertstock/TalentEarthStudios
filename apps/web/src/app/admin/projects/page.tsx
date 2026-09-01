@@ -5,11 +5,16 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/auth-guards";
+import { resolveProjectClientName, UNASSIGNED_PROJECT_CLIENT_NAME } from "@/lib/project-client";
 
 // Revalidate occasionally, or rely on client-side router refreshes
 export const revalidate = 0; 
 
-function calculateDerivedHealth(project: any): ProjectHealth {
+function calculateDerivedHealth(project: {
+    status: string;
+    requiresRpmReview: boolean;
+    aiConfidenceScore: number | null;
+}): ProjectHealth {
     if (project.status === "CANCELLED") return "Red";
     if (project.status === "COMPLETED") return "Green";
     if (project.requiresRpmReview) return "Yellow";
@@ -43,6 +48,7 @@ export default async function AdminProjectsPage() {
     if (!(await canAccessAdmin(session))) {
         redirect("/app");
     }
+    const administratorEmail = session?.user?.email;
 
     const rawProjects = await db.project.findMany({
         include: {
@@ -94,13 +100,21 @@ export default async function AdminProjectsPage() {
             clientStatus = latestSow.clientResponses[latestSow.clientResponses.length - 1].responseType;
         }
 
+        const linkedClientName = p.client?.companyName || UNASSIGNED_PROJECT_CLIENT_NAME;
+        const projectClientName = resolveProjectClientName({
+            clientNameOverride: p.clientNameOverride,
+            linkedClientName,
+            linkedClientEmail: p.client?.email,
+            administratorEmail,
+        });
+
         return {
             id: p.id,
             name: p.jobName || p.name,
             jobName: p.jobName,
             categoryName: p.category?.name || p.name,
-            client: p.clientNameOverride || p.client?.companyName || "Unknown Client",
-            linkedClientName: p.client?.companyName || "Unknown Client",
+            client: projectClientName,
+            linkedClientName,
             clientNameOverride: p.clientNameOverride,
             status: p.status,
             health: calculateDerivedHealth(p),

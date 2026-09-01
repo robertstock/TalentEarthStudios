@@ -3,6 +3,9 @@ import test from "node:test";
 
 import {
     calculateProjectPricing,
+    calculateRetailMultiplier,
+    getRetailPriceRange,
+    parseRetailPriceInput,
     removeProjectCostLine,
     upsertProjectCostLine,
     type ProjectPricingLine,
@@ -57,4 +60,50 @@ test("delivery remains pass-through while other costs use the multiplier", () =>
     assert.equal(pricing.totalCosts, 150);
     assert.equal(pricing.retailPrice, 350);
     assert.equal(pricing.grossProfit, 200);
+});
+
+test("an exact retail price derives a precise multiplier while delivery remains at cost", () => {
+    const markupEligibleCosts = 640;
+    const deliveryCosts = 25;
+    const requestedRetailPrice = 1_299.99;
+    const multiplier = calculateRetailMultiplier(requestedRetailPrice, markupEligibleCosts, deliveryCosts);
+
+    assert.equal(multiplier, 1.99217188);
+
+    const pricing = calculateProjectPricing([
+        { id: "delivery", amount: deliveryCosts, category: "COURIER_FREIGHT", vendorName: "Courier" },
+        { id: "production", amount: markupEligibleCosts, category: "MATERIALS", vendorName: "Production" },
+    ], multiplier!);
+
+    assert.equal(pricing.deliveryCosts, 25);
+    assert.equal(pricing.retailPrice, requestedRetailPrice);
+});
+
+test("retail price input accepts currency-style numbers and enforces the 0x to 10x range", () => {
+    assert.equal(parseRetailPriceInput("1,299.99"), 1_299.99);
+    assert.deepEqual(getRetailPriceRange(100, 25), {
+        minimumRetailPrice: 25,
+        maximumRetailPrice: 1_025,
+    });
+    assert.equal(calculateRetailMultiplier(24.99, 100, 25), null);
+    assert.equal(calculateRetailMultiplier(1_025.01, 100, 25), null);
+});
+
+test("exact retail pricing remains exact across multiple rounded invoice line items", () => {
+    const lines: ProjectPricingLine[] = [
+        { id: "printing", amount: 333.33, category: "OUTSIDE_PRINTING", vendorName: "Printing" },
+        { id: "materials", amount: 306.67, category: "MATERIALS", vendorName: "Materials" },
+        { id: "delivery", amount: 25, category: "COURIER_FREIGHT", vendorName: "Courier" },
+    ];
+    const multiplier = calculateRetailMultiplier(1_299.99, 640, 25);
+    assert.notEqual(multiplier, null);
+
+    const pricing = calculateProjectPricing(lines, multiplier!);
+
+    assert.equal(pricing.retailPrice, 1_299.99);
+    assert.equal(
+        pricing.customerLineItems.reduce((total, line) => total + line.amount, 0),
+        1_299.99,
+    );
+    assert.equal(pricing.customerLineItems.find((line) => line.isDelivery)?.amount, 25);
 });

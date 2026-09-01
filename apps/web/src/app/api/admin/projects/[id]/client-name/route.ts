@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
+import { resolveProjectClientName } from "@/lib/project-client";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const { error } = await requireAdmin();
+        const { error, session } = await requireAdmin();
         if (error) return error;
 
         const { id } = await params;
@@ -38,13 +39,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             select: {
                 id: true,
                 clientNameOverride: true,
-                client: { select: { companyName: true } },
+                client: { select: { companyName: true, email: true } },
             },
         });
 
         return NextResponse.json({
             success: true,
-            clientName: project.clientNameOverride || project.client?.companyName || "Unknown Client",
+            clientName: resolveProjectClientName({
+                clientNameOverride: project.clientNameOverride,
+                linkedClientName: project.client?.companyName,
+                linkedClientEmail: project.client?.email,
+                administratorEmail: session?.user?.email,
+            }),
         });
     } catch (error) {
         console.error("UPDATE_PROJECT_CLIENT_NAME_ERROR", error);
