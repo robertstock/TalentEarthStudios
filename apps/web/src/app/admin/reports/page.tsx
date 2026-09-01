@@ -1,10 +1,20 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { canAccessAdmin } from "@/lib/auth-guards";
 
 // Dynamic report, don't cache
 export const revalidate = 0;
 
 export default async function AdminReportsPage() {
+    const session = await getServerSession(authOptions);
+
+    if (!canAccessAdmin(session)) {
+        redirect("/app");
+    }
+
     // Bring in all financial structures
     const projects = await db.project.findMany({
         where: {

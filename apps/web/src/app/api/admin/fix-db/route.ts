@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth-guards";
 
-export async function GET() {
+export async function POST() {
+    const { error } = await requireAdmin();
+    if (error) {
+        return error;
+    }
+
     try {
         console.log("Starting manual migration...");
 

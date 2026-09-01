@@ -43,7 +43,7 @@ export default function SimulatorPage() {
     <div className="app-container" style={{ minHeight: '100vh' }}>
       <header className="header" style={{ paddingTop: '40px' }}>
         <h1>TalentEarth Operations Simulator</h1>
-        <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Automated Intake, Scoping, and Team Assignment Demo</p>
+        <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Automated Intake, Scoping, and Team Assignment Simulator</p>
       </header>
 
       <main className="main-layout">

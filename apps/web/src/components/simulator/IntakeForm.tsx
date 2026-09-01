@@ -20,7 +20,7 @@ const IntakeForm = ({ formData, setFormData, onSimulate, isProcessing }: any) =>
       </div>
 
       <div className="demo-scenarios">
-        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>Demo Scenarios</div>
+        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>Sample Scenarios</div>
         {demoScenarios.map((scenario) => (
           <button 
             key={scenario.id} 

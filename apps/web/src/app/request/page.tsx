@@ -8,6 +8,11 @@ import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { specialtyData, SpecialtySlug } from "@/lib/specialty-data";
 
+function wasProjectSubmissionSaved(tool: { toolName: string; state: string; result?: unknown }) {
+    if (tool.toolName !== "submit_project_intake" || tool.state !== "result") return false;
+    return Boolean((tool.result as { success?: boolean } | undefined)?.success);
+}
+
 function ChatContent() {
     const searchParams = useSearchParams();
     const teamSlug = searchParams.get('team') as SpecialtySlug | null;
@@ -139,7 +144,7 @@ function ChatContent() {
 
     // Check if the submission tool has been successfully executed
     const isSubmitted = messages.some(m =>
-        m.toolInvocations?.some(tool => tool.toolName === "submit_project_intake" && tool.state === "result")
+        m.toolInvocations?.some(wasProjectSubmissionSaved)
     );
 
     // Filter out the hidden system trigger messages — user should never see those
@@ -222,10 +227,17 @@ function ChatContent() {
                                                             <span className="text-xs text-brand-green uppercase tracking-wider">Submitting Project Details...</span>
                                                         </>
                                                     ) : tool.state === "result" ? (
-                                                        <>
-                                                            <i className="ph ph-check-circle text-brand-green text-lg"></i>
-                                                            <span className="text-xs text-brand-green uppercase tracking-wider">Project Successfully Transmitted</span>
-                                                        </>
+                                                        wasProjectSubmissionSaved(tool) ? (
+                                                            <>
+                                                                <i className="ph ph-check-circle text-brand-green text-lg"></i>
+                                                                <span className="text-xs text-brand-green uppercase tracking-wider">Project Saved Successfully</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <i className="ph ph-warning-circle text-red-400 text-lg"></i>
+                                                                <span className="text-xs text-red-400 uppercase tracking-wider">Project Could Not Be Saved</span>
+                                                            </>
+                                                        )
                                                     ) : null}
                                                 </div>
                                             )}

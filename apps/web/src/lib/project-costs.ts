@@ -2,6 +2,8 @@ export const PROJECT_COST_CATEGORIES = [
   { value: "OUTSIDE_PRINTING", label: "Outside printing" },
   { value: "COURIER_FREIGHT", label: "Courier / delivery / freight" },
   { value: "MATERIALS", label: "Materials" },
+  { value: "PROTOTYPE", label: "Prototype" },
+  { value: "CHANGE_ORDER", label: "Change Order" },
   { value: "OUTSIDE_LABOR", label: "Outside labor" },
   { value: "EQUIPMENT_RENTAL", label: "Equipment rental" },
   { value: "TRAVEL", label: "Travel" },

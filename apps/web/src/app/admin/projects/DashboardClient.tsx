@@ -84,6 +84,10 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   const [cancellationReasonInput, setCancellationReasonInput] = useState("");
   const [isCompleting, setIsCompleting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isDeleteProjectModalOpen, setIsDeleteProjectModalOpen] = useState(false);
+  const [deleteProjectConfirmation, setDeleteProjectConfirmation] = useState("");
+  const [deleteProjectError, setDeleteProjectError] = useState("");
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
 
   // A project-specific client label avoids renaming the linked client record on other jobs.
   const [isClientNameModalOpen, setIsClientNameModalOpen] = useState(false);
@@ -295,6 +299,39 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
+  };
+
+  const openDeleteProjectModal = () => {
+      setDeleteProjectConfirmation("");
+      setDeleteProjectError("");
+      setIsDeleteProjectModalOpen(true);
+  };
+
+  const handleDeleteProject = async () => {
+      if (!selectedProject || selectedProject.status !== "CANCELLED") return;
+      if (deleteProjectConfirmation.trim().toUpperCase() !== "DELETE") {
+          setDeleteProjectError("Type DELETE to confirm permanent removal.");
+          return;
+      }
+
+      setIsDeletingProject(true);
+      setDeleteProjectError("");
+      try {
+          const res = await fetch(`/api/admin/projects/${selectedProject.id}`, {
+              method: "DELETE",
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+              throw new Error(data.message || "Could not delete the project.");
+          }
+
+          window.location.reload();
+      } catch (error) {
+          console.error(error);
+          setDeleteProjectError(error instanceof Error ? error.message : "Could not delete the project.");
+          setIsDeletingProject(false);
+      }
   };
 
   const handleSaveBill = async () => {
@@ -726,6 +763,34 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                     <p className="text-sm text-gray-300 italic">"{selectedProject.cancellationReason}"</p>
                   </div>
                 )}
+                <div className="bg-red-950/20 border border-red-500/20 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-white mb-1">Archive, then delete</h4>
+                    <p className="text-xs text-gray-400 max-w-2xl">
+                      Export the customer invoice PDF first if you need a permanent copy. Deleting removes this project and all of its related records and cannot be undone.
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleExportInvoicePdf}
+                      disabled={customerLineItems.length === 0 || retailPrice <= 0}
+                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-1.5"
+                      title={customerLineItems.length === 0 || retailPrice <= 0 ? "No invoice line items are available to export" : "Download customer invoice PDF"}
+                    >
+                      <i className="ph ph-file-pdf"></i>
+                      Export PDF
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openDeleteProjectModal}
+                      className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-1.5"
+                    >
+                      <i className="ph ph-trash"></i>
+                      Delete Project
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1196,6 +1261,68 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
               >
                 {isCancelling ? <i className="ph ph-spinner animate-spin"></i> : null}
                 Confirm Cancellation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Permanently Delete Cancelled Project Modal */}
+      {isDeleteProjectModalOpen && selectedProject?.status === "CANCELLED" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0B0F15] border border-red-500/30 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
+            <div className="w-11 h-11 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 text-xl mb-4">
+              <i className="ph ph-warning"></i>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Permanently Delete Project?</h3>
+            <p className="text-sm text-gray-400 font-light">
+              <span className="text-white font-medium">{selectedProject.name}</span> and all related costs, invoices, SOWs, notes, recordings, and attachments will be removed. This cannot be undone.
+            </p>
+            <p className="text-xs text-amber-400/90 mt-3">Export the invoice PDF before continuing if you need an archive copy.</p>
+
+            <label htmlFor="delete-project-confirmation" className="block text-xs uppercase tracking-wider text-gray-500 mt-6 mb-1.5 font-semibold">
+              Type DELETE to confirm
+            </label>
+            <input
+              id="delete-project-confirmation"
+              type="text"
+              autoFocus
+              autoComplete="off"
+              value={deleteProjectConfirmation}
+              onChange={(event) => {
+                setDeleteProjectConfirmation(event.target.value);
+                setDeleteProjectError("");
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && deleteProjectConfirmation.trim().toUpperCase() === "DELETE") {
+                  void handleDeleteProject();
+                }
+              }}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-red-500 transition-colors"
+            />
+            {deleteProjectError && <p className="text-xs text-red-400 mt-2" role="alert">{deleteProjectError}</p>}
+
+            <div className="flex justify-end gap-3 mt-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteProjectModalOpen(false);
+                  setDeleteProjectConfirmation("");
+                  setDeleteProjectError("");
+                }}
+                disabled={isDeletingProject}
+                className="px-4 py-2 border border-white/10 rounded text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50 transition"
+              >
+                Keep Project
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeleteProject()}
+                disabled={isDeletingProject || deleteProjectConfirmation.trim().toUpperCase() !== "DELETE"}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
+              >
+                {isDeletingProject ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-trash"></i>}
+                Delete Permanently
               </button>
             </div>
           </div>

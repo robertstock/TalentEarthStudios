@@ -142,39 +142,6 @@ Instructions:
               }
             }
 
-            // 2. Create the Project
-            const project = await db.project.create({
-              data: {
-                name: `${company || name} - ${projectType}`,
-                description: message,
-                budgetRange: budgetRange,
-                timeline: timeline,
-                clientId: client.id,
-                createdById: createdById,
-                status: matchedTalentId ? "APPROVED_FOR_SOW" : "SOW_DRAFT",
-                aiConfidenceScore: confidenceScore,
-                urgencyScore: urgencyScore,
-                complexityScore: complexityScore,
-                isAutoRouted: !requiresRpmReview,
-                requiresRpmReview: requiresRpmReview,
-                exceptionReason: requiresRpmReview ? missingInfo : null,
-                talentId: matchedTalentId,
-              }
-            });
-
-            // Create Routing Log if auto-routed
-            if (matchedTalentId) {
-              await db.routingLog.create({
-                data: {
-                  projectId: project.id,
-                  talentScanned: 1,
-                  selectedTalentId: matchedTalentId,
-                  routingDecision: "AI confidence > 85%. Automated best-match selection executed by Finley."
-                }
-              });
-            }
-
-            // 3. Draft the SOW
             const sowBodyText = `
 ## Project Summary
 ${projectSummary}
@@ -194,15 +161,51 @@ ${missingInfo !== "None" ? `**Pending Clarification:** ${missingInfo}` : "All st
 
             const shareToken = crypto.randomBytes(16).toString("hex");
 
-            await db.sOW.create({
-              data: {
-                projectId: project.id,
-                versionNumber: 1,
-                status: "DRAFT",
-                bodyRichText: sowBodyText,
-                createdById: createdById,
-                shareToken: shareToken,
+            // Save the project, routing decision, and first SOW together so the
+            // UI never reports success for a partially persisted intake.
+            const project = await db.$transaction(async (tx) => {
+              const savedProject = await tx.project.create({
+                data: {
+                  name: `${company || name} - ${projectType}`,
+                  description: message,
+                  budgetRange,
+                  timeline,
+                  clientId: client.id,
+                  createdById,
+                  status: matchedTalentId ? "APPROVED_FOR_SOW" : "SOW_DRAFT",
+                  aiConfidenceScore: confidenceScore,
+                  urgencyScore,
+                  complexityScore,
+                  isAutoRouted: !requiresRpmReview,
+                  requiresRpmReview,
+                  exceptionReason: requiresRpmReview ? missingInfo : null,
+                  talentId: matchedTalentId,
+                }
+              });
+
+              if (matchedTalentId) {
+                await tx.routingLog.create({
+                  data: {
+                    projectId: savedProject.id,
+                    talentScanned: 1,
+                    selectedTalentId: matchedTalentId,
+                    routingDecision: "AI confidence > 85%. Automated best-match selection executed by Finley."
+                  }
+                });
               }
+
+              await tx.sOW.create({
+                data: {
+                  projectId: savedProject.id,
+                  versionNumber: 1,
+                  status: "DRAFT",
+                  bodyRichText: sowBodyText,
+                  createdById,
+                  shareToken,
+                }
+              });
+
+              return savedProject;
             });
 
             return {

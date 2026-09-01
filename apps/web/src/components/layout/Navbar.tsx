@@ -40,7 +40,7 @@ export default function Navbar() {
                         <>
                             <Link href="/talent" className={navLinkClass}>Talent</Link>
                             <Link href="/teams" className={navLinkClass}>Teams</Link>
-                            <Link href="/business-demo" className={navLinkClass}>Business Demo</Link>
+                            <Link href="/business-demo" className={navLinkClass}>Business Overview</Link>
                         </>
                     )}
                     <Link href="/request" className={navLinkClass}>Request</Link>
@@ -48,7 +48,7 @@ export default function Navbar() {
                     {session ? (
                         <>
                             {session.user.role === 'ADMIN' && (
-                                <Link href="/admin/incoming" className={navLinkClass}>Admin</Link>
+                                <Link href="/admin" className={navLinkClass}>Admin</Link>
                             )}
                             <UserDropdown user={session.user} />
                         </>
@@ -80,14 +80,14 @@ export default function Navbar() {
                         <>
                             <Link href="/talent" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Talent</Link>
                             <Link href="/teams" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Teams</Link>
-                            <Link href="/business-demo" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Business Demo</Link>
+                            <Link href="/business-demo" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Business Overview</Link>
                         </>
                     )}
                     <Link href="/request" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Request</Link>
 
                     {session ? (
                         <>
-                            <Link href="/app" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Dashboard</Link>
+                            <Link href={session.user.role === 'ADMIN' ? '/admin' : '/app'} onClick={() => setMobileMenuOpen(false)} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Dashboard</Link>
                             <button onClick={() => { setMobileMenuOpen(false); handleSignOut(); }} className="text-2xl font-light text-white tracking-widest uppercase hover:text-slate-400 transition-colors">Sign Out</button>
                         </>
                     ) : (

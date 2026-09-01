@@ -43,9 +43,12 @@ export default function PortfolioPage() {
             if (res.ok) {
                 const data = await res.json();
                 setItems(data);
+            } else {
+                throw new Error("Portfolio data could not be loaded.");
             }
         } catch (error) {
             console.error("Failed to fetch items", error);
+            alert("Portfolio data could not be loaded. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -58,9 +61,13 @@ export default function PortfolioPage() {
             const res = await fetch(`/api/portfolio?id=${id}`, { method: "DELETE" });
             if (res.ok) {
                 setItems(items.filter(item => item.id !== id));
+            } else {
+                const data = await res.json();
+                throw new Error(data.message || "Portfolio item could not be deleted.");
             }
         } catch (error) {
             console.error("Failed to delete item", error);
+            alert(error instanceof Error ? error.message : "Portfolio item could not be deleted.");
         }
     };
 
@@ -100,6 +107,9 @@ export default function PortfolioPage() {
                     const updatedItem = await res.json();
                     setItems(items.map(item => item.id === editingItemId ? updatedItem : item));
                     handleCancelForm();
+                } else {
+                    const data = await res.json();
+                    throw new Error(data.message || "Portfolio item could not be updated.");
                 }
             } else {
                 // CREATE NEW ITEM
@@ -113,10 +123,14 @@ export default function PortfolioPage() {
                     const addedItem = await res.json();
                     setItems([...items, addedItem]);
                     handleCancelForm();
+                } else {
+                    const data = await res.json();
+                    throw new Error(data.message || "Portfolio item could not be saved.");
                 }
             }
         } catch (error) {
             console.error("Failed to save item", error);
+            alert(error instanceof Error ? error.message : "Portfolio item could not be saved.");
         } finally {
             setSubmitting(false);
         }

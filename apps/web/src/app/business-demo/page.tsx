@@ -79,11 +79,11 @@ export default function Dashboard() {
             {/* CARD 1: DEMO (MOVED TO LEFT) */}
             <div className="bg-[#11161F] border border-[#1E2530] rounded-xl p-6 flex flex-col gap-6 shadow-md md:col-span-1 lg:col-span-1">
               <div className="flex justify-between items-start">
-                <h2 className="text-lg font-medium text-[#E2E8F0]">Demo</h2>
+                <h2 className="text-lg font-medium text-[#E2E8F0]">Platform Overview</h2>
               </div>
 
               <p className="text-[#94A3B8] text-sm leading-relaxed">
-                Live view of the platform in action. This demo shows how projects are captured, priced, and managed, with an optional subscription layer and real-time revenue visibility across both recurring users and project-based work.
+                Live view of the platform in action, showing how projects are captured, priced, and managed, with an optional subscription layer and real-time revenue visibility across both recurring users and project-based work.
               </p>
 
               <div className="flex flex-col gap-4 mt-auto">

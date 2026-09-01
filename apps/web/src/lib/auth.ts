@@ -7,15 +7,14 @@ import { compare, hash } from "bcryptjs";
 import { areDemoCredentialsEnabled } from "@/lib/env";
 import { MOCK_TALENTS } from "@/lib/mock-data";
 
-const demoCredentialsEnabled = true; // Always enable for the demo platform
+const demoCredentialsEnabled = areDemoCredentialsEnabled();
 
-// FORCE NextAuth to trust the custom domain so getServerSession doesn't fail
-if (process.env.NODE_ENV === "production") {
-    process.env.NEXTAUTH_URL = "https://demo.talentearth.com";
+if (process.env.VERCEL_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
+    throw new Error("NEXTAUTH_SECRET must be configured in production");
 }
 
 export const authOptions: NextAuthOptions = {
-    secret: process.env.NEXTAUTH_SECRET || "fallback_secret_for_demo_purposes_only",
+    secret: process.env.NEXTAUTH_SECRET || "local-development-only-secret",
     adapter: PrismaAdapter(db),
     session: {
         strategy: "jwt",
@@ -43,18 +42,18 @@ export const authOptions: NextAuthOptions = {
                     }
 
                     if (demoCredentialsEnabled) {
-                        // Check if it's the admin demo
+                        // Optional local demo administrator.
                         if (credentials.email === "finley@talentearth.com" && credentials.password === "finley") {
                             return {
                                 id: "demo-admin",
                                 email: "finley@talentearth.com",
-                                name: "Finley (Demo)",
+                                name: "Finley Admin",
                                 role: "ADMIN",
                                 image: null,
                             };
                         }
 
-                        // Check if it's a mock talent demo
+                        // Optional local mock talent.
                         const mockTalent = MOCK_TALENTS.find(t => t.email === credentials.email);
                         
                         if (mockTalent && credentials.password === "finley") {

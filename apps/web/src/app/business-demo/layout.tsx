@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Business Demo | TalentEarthStudios",
-    description: "Business model and demo.",
+    title: "Business Overview | TalentEarthStudios",
+    description: "TalentEarthStudios business model and platform overview.",
 };
 
 export default async function BusinessDemoLayout({

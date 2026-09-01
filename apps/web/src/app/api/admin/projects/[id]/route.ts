@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
+import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth-guards";
+import { BUCKET_PRIVATE, s3Client } from "@/lib/storage";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { error } = await requireAdmin();
+    if (error) {
+        return error;
+    }
+
     try {
         const { id } = await params;
         const project = await db.project.findUnique({
@@ -34,6 +42,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { error } = await requireAdmin();
+    if (error) {
+        return error;
+    }
+
     try {
         const { id } = await params;
         const body = await req.json();
@@ -104,13 +117,78 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { error } = await requireAdmin();
+    if (error) {
+        return error;
+    }
+
     try {
         const { id } = await params;
-        await db.project.delete({
-            where: { id }
+        const project = await db.project.findUnique({
+            where: { id },
+            select: {
+                status: true,
+                attachments: {
+                    select: { storageKey: true }
+                }
+            }
         });
-        return NextResponse.json({ success: true });
+
+        if (!project) {
+            return NextResponse.json({ message: "Project not found" }, { status: 404 });
+        }
+
+        if (project.status !== "CANCELLED") {
+            return NextResponse.json({ message: "Only cancelled projects can be permanently deleted" }, { status: 409 });
+        }
+
+        await db.$transaction(async (tx) => {
+            const sows = await tx.sOW.findMany({
+                where: { projectId: id },
+                select: { id: true }
+            });
+            const sowIds = sows.map((sow) => sow.id);
+
+            if (sowIds.length > 0) {
+                await tx.clientResponse.deleteMany({ where: { sowId: { in: sowIds } } });
+            }
+
+            // Delete every dependent record explicitly so older database constraints
+            // without cascading deletes cannot leave cancelled projects undeletable.
+            await tx.transcript.deleteMany({ where: { projectId: id } });
+            await tx.projectAttachment.deleteMany({ where: { projectRequestId: id } });
+            await tx.quote.deleteMany({ where: { projectRequestId: id } });
+            await tx.answer.deleteMany({ where: { projectId: id } });
+            await tx.meetingRecording.deleteMany({ where: { projectId: id } });
+            await tx.adminReview.deleteMany({ where: { projectId: id } });
+            await tx.sOW.deleteMany({ where: { projectId: id } });
+            await tx.routingLog.deleteMany({ where: { projectId: id } });
+            await tx.vendorBill.deleteMany({ where: { projectId: id } });
+            await tx.invoice.deleteMany({ where: { projectId: id } });
+            await tx.meetingNote.deleteMany({ where: { projectId: id } });
+            await tx.project.delete({ where: { id } });
+        });
+
+        const attachmentKeys = project.attachments.map((attachment) => attachment.storageKey).filter(Boolean);
+        let attachmentsDeleted = attachmentKeys.length === 0;
+
+        if (attachmentKeys.length > 0 && BUCKET_PRIVATE) {
+            try {
+                await s3Client.send(new DeleteObjectsCommand({
+                    Bucket: BUCKET_PRIVATE,
+                    Delete: {
+                        Objects: attachmentKeys.map((Key) => ({ Key })),
+                        Quiet: true
+                    }
+                }));
+                attachmentsDeleted = true;
+            } catch (storageError) {
+                console.error("DELETE_PROJECT_ATTACHMENTS_ERROR", storageError);
+            }
+        }
+
+        return NextResponse.json({ success: true, attachmentsDeleted });
     } catch (error) {
         console.error("DELETE_PROJECT_ERROR", error);
         return NextResponse.json({ message: "Internal server error" }, { status: 500 });

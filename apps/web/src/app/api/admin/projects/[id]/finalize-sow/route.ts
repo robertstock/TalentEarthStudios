@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth-guards";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { error } = await requireAdmin();
+    if (error) {
+        return error;
+    }
+
     try {
         const { id } = await params;
         const body = await req.json();

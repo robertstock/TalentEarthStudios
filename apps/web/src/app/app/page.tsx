@@ -15,7 +15,7 @@ export default async function Dashboard() {
                 <i className="ph ph-warning-circle text-6xl text-red-500 mb-4"></i>
                 <h1 className="text-2xl font-bold mb-2">Session Verification Failed</h1>
                 <p className="text-slate-400 max-w-md">
-                    The server could not detect your authentication cookie. This usually happens if you are accessing the site via a custom domain (like demo.talentearth.com) but the NextAuth configuration is expecting the Vercel URL.
+                    The server could not detect your authentication cookie. This usually happens when the authentication domain does not match the site address.
                 </p>
                 <div className="mt-8 flex gap-4">
                     <Link href="/auth/signin" className="px-6 py-2 bg-blue-600 rounded text-white font-medium">

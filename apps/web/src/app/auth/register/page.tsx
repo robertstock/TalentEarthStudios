@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MOCK_TALENTS } from "@/lib/mock-data";
 
-export default function RegisterDemoPage() {
+export default function RegisterPage() {
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -14,54 +13,48 @@ export default function RegisterDemoPage() {
     });
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [tempPortfolio, setTempPortfolio] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData((current) => ({ ...current, [event.target.name]: event.target.value }));
+        setErrorMessage("");
     };
 
-    const handleAutoFill = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedTalent = MOCK_TALENTS.find(t => t.id === e.target.value);
-        if (selectedTalent) {
-            setFormData({
-                firstName: selectedTalent.firstName,
-                lastName: selectedTalent.lastName,
-                email: selectedTalent.email,
-                password: "password123", // Demo default password
-                portfolioUrl: selectedTalent.portfolio?.[0]?.assetUrl || "https://example.com/portfolio",
-            });
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (event: React.FormEvent) => {
+        event.preventDefault();
         setLoading(true);
+        setErrorMessage("");
 
-        // Simulate network delay for approval routing
-        setTimeout(() => {
-            setLoading(false);
+        try {
+            const response = await fetch("/api/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Your application could not be submitted.");
+            }
+
             setSuccess(true);
-        }, 1500);
-    };
-
-    const handleSavePortfolio = () => {
-        if (tempPortfolio) {
-            setFormData({ ...formData, portfolioUrl: tempPortfolio });
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : "Your application could not be submitted.");
+        } finally {
+            setLoading(false);
         }
-        setIsModalOpen(false);
     };
 
     if (success) {
         return (
             <div className="flex min-h-screen flex-col items-center justify-center p-4">
-                <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-8 shadow-2xl text-center">
-                    <div className="mx-auto w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-6">
+                <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-black/40 p-8 text-center shadow-2xl backdrop-blur-xl">
+                    <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/20">
                         <i className="ph ph-check-circle text-4xl text-blue-400"></i>
                     </div>
-                    <h1 className="text-2xl font-bold tracking-tight text-white mb-4">Application Submitted!</h1>
-                    <p className="text-sm text-gray-400 mb-8">
-                        Your profile and portfolio have been sent to our recruitment team for approval. You will receive an email once your account is activated.
+                    <h1 className="mb-4 text-2xl font-bold tracking-tight text-white">Application Submitted</h1>
+                    <p className="mb-8 text-sm text-gray-400">
+                        Your account and portfolio link were saved for review. You will be contacted after the application is approved.
                     </p>
                     <Link href="/" className="inline-block w-full rounded-lg bg-white/10 px-4 py-3 font-semibold text-white transition-all hover:bg-white/20">
                         Return to Home
@@ -73,180 +66,108 @@ export default function RegisterDemoPage() {
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center p-4">
-            <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-8 shadow-2xl">
+            <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl">
                 <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Join TalentEarth</h1>
-                    <p className="text-sm text-gray-400">Apply to join the execution network</p>
-                </div>
-
-                <div className="mb-6 pb-6 border-b border-white/10">
-                    <label className="text-xs font-medium uppercase tracking-wider text-blue-400 mb-2 block">Demo Auto-Fill</label>
-                    <select
-                        onChange={handleAutoFill}
-                        className="w-full rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-all appearance-none cursor-pointer"
-                    >
-                        <option value="">-- Select a mock talent to auto-fill --</option>
-                        {MOCK_TALENTS.map(talent => (
-                            <option key={talent.id} value={talent.id}>
-                                {talent.firstName} {talent.lastName} ({talent.profile.primaryDiscipline})
-                            </option>
-                        ))}
-                    </select>
+                    <h1 className="mb-2 text-3xl font-bold tracking-tight text-white">Join TalentEarth</h1>
+                    <p className="text-sm text-gray-400">Apply to join the execution network.</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-xs font-medium uppercase tracking-wider text-gray-500">First Name</label>
+                            <label htmlFor="register-first-name" className="text-xs font-medium uppercase tracking-wider text-gray-500">First Name</label>
                             <input
+                                id="register-first-name"
                                 type="text"
                                 name="firstName"
+                                autoComplete="given-name"
                                 required
                                 value={formData.firstName}
                                 onChange={handleChange}
-                                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium uppercase tracking-wider text-gray-500">Last Name</label>
+                            <label htmlFor="register-last-name" className="text-xs font-medium uppercase tracking-wider text-gray-500">Last Name</label>
                             <input
+                                id="register-last-name"
                                 type="text"
                                 name="lastName"
+                                autoComplete="family-name"
                                 required
                                 value={formData.lastName}
                                 onChange={handleChange}
-                                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs font-medium uppercase tracking-wider text-gray-500">Email</label>
+                        <label htmlFor="register-email" className="text-xs font-medium uppercase tracking-wider text-gray-500">Email</label>
                         <input
+                            id="register-email"
                             type="email"
                             name="email"
+                            autoComplete="email"
                             required
                             value={formData.email}
                             onChange={handleChange}
-                            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs font-medium uppercase tracking-wider text-gray-500 block">Portfolio</label>
-                        {formData.portfolioUrl ? (
-                            <div className="w-full rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-green-400 flex items-center justify-between cursor-pointer" onClick={() => setIsModalOpen(true)}>
-                                <div className="flex items-center gap-2">
-                                    <i className="ph ph-check-circle text-lg"></i>
-                                    <span className="text-sm truncate max-w-[200px]">{formData.portfolioUrl}</span>
-                                </div>
-                                <span className="text-xs uppercase tracking-wider opacity-60">Edit</span>
-                            </div>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => setIsModalOpen(true)}
-                                className="w-full rounded-lg border border-dashed border-white/20 bg-white/[0.02] px-4 py-4 text-slate-400 hover:text-white hover:border-white/40 hover:bg-white/5 transition-all flex flex-col items-center gap-2"
-                            >
-                                <i className="ph ph-upload-simple text-2xl"></i>
-                                <span className="text-sm">Upload Documents or Link Instagram</span>
-                            </button>
-                        )}
+                        <label htmlFor="register-portfolio" className="text-xs font-medium uppercase tracking-wider text-gray-500">Portfolio Link</label>
+                        <input
+                            id="register-portfolio"
+                            type="url"
+                            name="portfolioUrl"
+                            required
+                            value={formData.portfolioUrl}
+                            onChange={handleChange}
+                            placeholder="https://your-portfolio.com"
+                            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-600 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        />
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs font-medium uppercase tracking-wider text-gray-500">Password</label>
+                        <label htmlFor="register-password" className="text-xs font-medium uppercase tracking-wider text-gray-500">Password</label>
                         <input
+                            id="register-password"
                             type="password"
                             name="password"
+                            autoComplete="new-password"
+                            minLength={8}
                             required
                             value={formData.password}
                             onChange={handleChange}
-                            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-                            placeholder="••••••••"
+                            placeholder="At least 8 characters"
+                            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-600 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                         />
                     </div>
 
+                    {errorMessage && (
+                        <p className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center text-sm text-red-400" role="alert">
+                            {errorMessage}
+                        </p>
+                    )}
+
                     <button
                         type="submit"
-                        disabled={loading || !formData.firstName || !formData.portfolioUrl}
-                        className="w-full mt-4 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-all hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_-5px_rgba(37,99,235,0.5)]"
+                        disabled={loading}
+                        className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white shadow-[0_0_20px_-5px_rgba(37,99,235,0.5)] transition-all hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        {loading ? "Sending for approval..." : "Submit Application"}
+                        {loading ? "Saving application..." : "Submit Application"}
                     </button>
                 </form>
 
                 <p className="mt-6 text-center text-sm text-gray-500">
                     Already approved?{" "}
-                    <Link href="/auth/signin" className="text-blue-400 hover:text-blue-300 font-medium">
+                    <Link href="/auth/signin" className="font-medium text-blue-400 hover:text-blue-300">
                         Sign in
                     </Link>
                 </p>
             </div>
-
-            {/* Portfolio Modal overlay */}
-            {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                    <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl relative">
-                        <button
-                            onClick={() => setIsModalOpen(false)}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
-                        >
-                            <i className="ph ph-x text-xl"></i>
-                        </button>
-                        
-                        <h2 className="text-xl font-bold text-white mb-6">Attach Portfolio</h2>
-                        
-                        <div className="space-y-6">
-                            <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center bg-slate-800/30 hover:bg-slate-800/50 hover:border-blue-500/50 transition-all cursor-pointer group">
-                                <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                                    <i className="ph ph-file-pdf text-2xl text-slate-400 group-hover:text-blue-400 transition-colors"></i>
-                                </div>
-                                <p className="text-sm font-medium text-white mb-1">Click to upload documents</p>
-                                <p className="text-xs text-slate-500">PDF, JPG, PNG (Max 10MB)</p>
-                            </div>
-                            
-                            <div className="relative flex items-center py-2">
-                                <div className="flex-grow border-t border-slate-700"></div>
-                                <span className="flex-shrink-0 mx-4 text-xs text-slate-500 uppercase tracking-widest">OR</span>
-                                <div className="flex-grow border-t border-slate-700"></div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-medium uppercase tracking-wider text-gray-400">Link Instagram or Website</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <i className="ph ph-instagram-logo text-slate-500"></i>
-                                    </div>
-                                    <input
-                                        type="url"
-                                        value={tempPortfolio}
-                                        onChange={(e) => setTempPortfolio(e.target.value)}
-                                        placeholder="https://instagram.com/username"
-                                        className="w-full rounded-lg border border-slate-700 bg-slate-950 py-3 pl-10 pr-4 text-white placeholder-slate-600 focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-8 pt-4 border-t border-slate-800 flex justify-end gap-3">
-                            <button
-                                onClick={() => setIsModalOpen(false)}
-                                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSavePortfolio}
-                                disabled={!tempPortfolio}
-                                className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Save Portfolio
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

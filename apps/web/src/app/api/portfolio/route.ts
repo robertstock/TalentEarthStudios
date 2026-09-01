@@ -11,8 +11,6 @@ const portfolioSchema = z.object({
     thumbnailUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
 });
 
-import { MOCK_TALENTS } from "@/lib/mock-data";
-
 export async function GET() {
     const { session, error } = await requireTalentOrAdmin();
     if (error) {
@@ -27,28 +25,8 @@ export async function GET() {
 
         return NextResponse.json(items);
     } catch (dbError) {
-        console.error("Database connection failed, falling back to mock portfolio:", dbError);
-        
-        // Fallback to mock data if DB is offline
-        const mockTalent = MOCK_TALENTS.find(t => t.id === session.user.id || t.email === session.user.email);
-        if (mockTalent && mockTalent.portfolio) {
-            const fallbackItems = mockTalent.portfolio.map((item, index) => ({
-                id: `mock-item-${index}`,
-                userId: mockTalent.id,
-                title: item.title,
-                description: item.description,
-                type: item.type,
-                assetUrl: item.assetUrl,
-                thumbnailUrl: null,
-                isPublic: item.isPublic,
-                sortOrder: index,
-                createdAt: new Date(),
-                updatedAt: new Date()
-            }));
-            return NextResponse.json(fallbackItems);
-        }
-        
-        return NextResponse.json([]);
+        console.error("PORTFOLIO_GET_ERROR", dbError);
+        return NextResponse.json({ message: "Portfolio data is temporarily unavailable" }, { status: 500 });
     }
 }
 
@@ -80,17 +58,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: "Invalid input", errors: error.errors }, { status: 400 });
         }
         
-        console.error("Database connection failed for POST:", error);
-        // If DB is offline, return a fake success response to keep the demo working seamlessly
-        const body = await req.json().catch(() => ({}));
-        return NextResponse.json({
-            id: `mock-added-${Date.now()}`,
-            userId: session.user.id,
-            ...body,
-            sortOrder: 99,
-            createdAt: new Date(),
-            updatedAt: new Date()
-        }, { status: 201 });
+        console.error("PORTFOLIO_POST_ERROR", error);
+        return NextResponse.json({ message: "Portfolio item could not be saved" }, { status: 500 });
     }
 }
 
@@ -130,15 +99,8 @@ export async function PUT(req: Request) {
             return NextResponse.json({ message: "Invalid input", errors: error.errors }, { status: 400 });
         }
         
-        console.error("Database connection failed for PUT:", error);
-        // If DB is offline, return a fake success response to keep the demo working seamlessly
-        const body = await req.json().catch(() => ({}));
-        return NextResponse.json({
-            id: body.id || `mock-updated-${Date.now()}`,
-            userId: session.user.id,
-            ...body,
-            updatedAt: new Date()
-        }, { status: 200 });
+        console.error("PORTFOLIO_PUT_ERROR", error);
+        return NextResponse.json({ message: "Portfolio item could not be updated" }, { status: 500 });
     }
 }
 
@@ -170,8 +132,7 @@ export async function DELETE(req: Request) {
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error("Database connection failed for DELETE:", error);
-        // If DB is offline, just return success so the demo UI updates anyway
-        return NextResponse.json({ success: true });
+        console.error("PORTFOLIO_DELETE_ERROR", error);
+        return NextResponse.json({ message: "Portfolio item could not be deleted" }, { status: 500 });
     }
 }
