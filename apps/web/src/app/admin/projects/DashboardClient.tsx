@@ -4,6 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   getProjectCostCategoryLabel,
+  isProjectCostCategory,
+  normalizeProjectCostAmountInput,
+  parseProjectCostAmount,
   PROJECT_COST_CATEGORIES,
   type ProjectCostCategory,
 } from "@/lib/project-costs";
@@ -11,7 +14,11 @@ import {
   createCustomerInvoicePdf,
   getCustomerInvoicePdfFilename,
 } from "@/lib/customer-invoice-pdf";
-import { calculateProjectPricing } from "@/lib/project-pricing";
+import {
+  calculateProjectPricing,
+  removeProjectCostLine,
+  upsertProjectCostLine,
+} from "@/lib/project-pricing";
 
 export type ProjectHealth = "Green" | "Yellow" | "Red";
 
@@ -104,12 +111,18 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
 
   // Project cost form state
   const [isLogBillModalOpen, setIsLogBillModalOpen] = useState(false);
+  const [editingBillId, setEditingBillId] = useState<string | null>(null);
   const [billCategory, setBillCategory] = useState<ProjectCostCategory>("OUTSIDE_PRINTING");
   const [billCostName, setBillCostName] = useState("");
   const [billAmount, setBillAmount] = useState("");
   const [billStatus, setBillStatus] = useState("UNPAID");
   const [billDate, setBillDate] = useState(new Date().toISOString().substring(0, 10));
+  const [billFormError, setBillFormError] = useState("");
   const [isSavingBill, setIsSavingBill] = useState(false);
+  const [deletingBillId, setDeletingBillId] = useState<string | null>(null);
+  const [vendorBillsByProjectId, setVendorBillsByProjectId] = useState<Record<string, DashboardProject["vendorBills"]>>(
+    () => Object.fromEntries(projects.map((project) => [project.id, project.vendorBills])),
+  );
   const [retailMultipliers, setRetailMultipliers] = useState<Record<string, number>>(
     () => Object.fromEntries(projects.map((project) => [project.id, project.retailMultiplier])),
   );
@@ -128,7 +141,10 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   const selectedProject = projects.find(p => p.id === effectiveSelectedProjectId) || projects[0];
 
   const retailMultiplier = selectedProject ? retailMultipliers[selectedProject.id] ?? selectedProject.retailMultiplier : 1;
-  const projectPricing = calculateProjectPricing(selectedProject?.vendorBills ?? [], retailMultiplier);
+  const selectedVendorBills = selectedProject
+    ? vendorBillsByProjectId[selectedProject.id] ?? selectedProject.vendorBills
+    : [];
+  const projectPricing = calculateProjectPricing(selectedVendorBills, retailMultiplier);
   const {
       customerLineItems,
       deliveryCosts,
@@ -376,55 +392,126 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       }
   };
 
+  const resetBillForm = () => {
+      setEditingBillId(null);
+      setBillCategory("OUTSIDE_PRINTING");
+      setBillCostName("");
+      setBillAmount("");
+      setBillStatus("UNPAID");
+      setBillDate(new Date().toISOString().substring(0, 10));
+      setBillFormError("");
+  };
+
+  const openAddBillModal = () => {
+      resetBillForm();
+      setIsLogBillModalOpen(true);
+  };
+
+  const openEditBillModal = (bill: DashboardProject["vendorBills"][number]) => {
+      const category = isProjectCostCategory(bill.category) ? bill.category : "OTHER";
+      const defaultCostName = getProjectCostCategoryLabel(category);
+
+      setEditingBillId(bill.id);
+      setBillCategory(category);
+      setBillCostName(category === "OTHER" || bill.vendorName !== defaultCostName ? bill.vendorName : "");
+      setBillAmount(normalizeProjectCostAmountInput(bill.amount));
+      setBillStatus(bill.status === "PAID" ? "PAID" : "UNPAID");
+      setBillDate(bill.date.substring(0, 10));
+      setBillFormError("");
+      setIsLogBillModalOpen(true);
+  };
+
+  const closeBillModal = () => {
+      setIsLogBillModalOpen(false);
+      resetBillForm();
+  };
+
   const handleSaveBill = async () => {
-      if (!selectedProject || !billAmount.trim()) return;
-      if (billCategory === "OTHER" && !billCostName.trim()) return;
+      if (!selectedProject) return;
+
+      const parsedAmount = parseProjectCostAmount(billAmount);
+      if (parsedAmount === null) {
+          setBillFormError("Enter a valid amount greater than $0.00.");
+          return;
+      }
+      if (billCategory === "OTHER" && !billCostName.trim()) {
+          setBillFormError("Enter a custom cost name.");
+          return;
+      }
+
       setIsSavingBill(true);
+      setBillFormError("");
       try {
           const res = await fetch(`/api/admin/projects/${selectedProject.id}/bills`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              method: editingBillId ? "PATCH" : "POST",
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
+                  billId: editingBillId,
                   category: billCategory,
                   costName: billCostName.trim(),
-                  amount: parseFloat(billAmount),
+                  amount: parsedAmount,
                   status: billStatus,
-                  date: billDate
-              })
+                  date: billDate,
+              }),
           });
-          if (res.ok) {
-              setBillCategory("OUTSIDE_PRINTING");
-              setBillCostName("");
-              setBillAmount("");
-              setBillStatus("UNPAID");
-              setIsLogBillModalOpen(false);
-              window.location.reload();
-          } else {
-              const data = await res.json();
-              alert(data.message || "Failed to log bill.");
+          const data: {
+              message?: string;
+              bill?: DashboardProject["vendorBills"][number];
+          } = await res.json();
+
+          if (!res.ok || !data.bill) {
+              throw new Error(data.message || `Failed to ${editingBillId ? "update" : "add"} cost.`);
           }
-      } catch (e) {
-          console.error(e);
+
+          const savedBill = {
+              ...data.bill,
+              amount: Number(data.bill.amount),
+              date: String(data.bill.date),
+          };
+          setVendorBillsByProjectId((current) => ({
+              ...current,
+              [selectedProject.id]: upsertProjectCostLine(
+                  current[selectedProject.id] ?? selectedProject.vendorBills,
+                  savedBill,
+              ),
+          }));
+          closeBillModal();
+      } catch (error) {
+          console.error(error);
+          setBillFormError(error instanceof Error ? error.message : "The cost could not be saved.");
       } finally {
           setIsSavingBill(false);
       }
   };
 
   const handleDeleteBill = async (billId: string) => {
-      if (!selectedProject || !confirm("Are you sure you want to delete this project cost?")) return;
+      if (!selectedProject || !confirm("Delete this project cost? This cannot be undone.")) return;
+
+      setDeletingBillId(billId);
       try {
           const res = await fetch(`/api/admin/projects/${selectedProject.id}/bills`, {
-              method: 'DELETE',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ billId })
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ billId }),
           });
-          if (res.ok) {
-              window.location.reload();
-          } else {
-              alert("Failed to delete bill.");
+          const data: { message?: string } = await res.json();
+
+          if (!res.ok) {
+              throw new Error(data.message || "Failed to delete cost.");
           }
-      } catch (e) {
-          console.error(e);
+
+          setVendorBillsByProjectId((current) => ({
+              ...current,
+              [selectedProject.id]: removeProjectCostLine(
+                  current[selectedProject.id] ?? selectedProject.vendorBills,
+                  billId,
+              ),
+          }));
+      } catch (error) {
+          console.error(error);
+          alert(error instanceof Error ? error.message : "Failed to delete cost.");
+      } finally {
+          setDeletingBillId(null);
       }
   };
 
@@ -826,7 +913,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                 {selectedProject.cancellationReason && (
                   <div className="bg-black/30 border border-white/5 rounded-xl p-5">
                     <h4 className="text-xs uppercase text-gray-500 font-bold tracking-widest mb-2">Reason for Cancellation</h4>
-                    <p className="text-sm text-gray-300 italic">"{selectedProject.cancellationReason}"</p>
+                    <p className="text-sm text-gray-300 italic">&ldquo;{selectedProject.cancellationReason}&rdquo;</p>
                   </div>
                 )}
                 <div className="bg-red-950/20 border border-red-500/20 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -1029,7 +1116,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                         <div className="bg-black/40 border border-white/5 rounded-xl p-5">
                             <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">Total COGS</div>
                             <div className="text-2xl font-light text-white">{currencyFormatter.format(totalCosts)}</div>
-                            <div className="text-xs mt-1 text-gray-500">{selectedProject.vendorBills.length} cost item{selectedProject.vendorBills.length === 1 ? "" : "s"}</div>
+                            <div className="text-xs mt-1 text-gray-500">{selectedVendorBills.length} cost item{selectedVendorBills.length === 1 ? "" : "s"}</div>
                         </div>
                         <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-5 text-blue-300">
                             <div className="text-xs uppercase tracking-widest mb-2 opacity-80">Retail Price</div>
@@ -1130,7 +1217,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                             </h3>
                             {selectedProject.status !== "COMPLETED" && selectedProject.status !== "CANCELLED" && (
                                 <button 
-                                    onClick={() => setIsLogBillModalOpen(true)}
+                                    onClick={openAddBillModal}
                                     className="text-[10px] uppercase font-bold tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
                                 >
                                     + Add Cost
@@ -1138,7 +1225,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                             )}
                         </div>
                         <div className="bg-black/30 border border-white/5 rounded-xl p-4 overflow-x-auto">
-                            {selectedProject.vendorBills.length > 0 ? (
+                            {selectedVendorBills.length > 0 ? (
                                 <table className="w-full min-w-[720px] text-left text-sm">
                                     <thead>
                                         <tr className="text-gray-500 border-b border-white/5">
@@ -1151,8 +1238,8 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {selectedProject.vendorBills.map((bill, i) => (
-                                            <tr key={bill.id || i} className="border-b border-white/5 last:border-0 text-gray-300">
+                                        {selectedVendorBills.map((bill) => (
+                                            <tr key={bill.id} className="border-b border-white/5 last:border-0 text-gray-300">
                                                 <td className="py-3 font-mono text-xs">
                                                     {bill.date ? new Date(bill.date).toLocaleDateString(undefined, { timeZone: "UTC" }) : 'N/A'}
                                                 </td>
@@ -1167,15 +1254,30 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                                         {bill.status}
                                                     </span>
                                                 </td>
-                                                <td className="py-3 text-right font-medium">${bill.amount.toLocaleString()}</td>
+                                                <td className="py-3 text-right font-medium">{currencyFormatter.format(bill.amount)}</td>
                                                 <td className="py-3 text-right">
-                                                    <button 
-                                                        onClick={() => handleDeleteBill(bill.id)}
-                                                        className="text-red-400 hover:text-red-300 p-1 rounded transition-colors"
-                                                        title="Delete Bill"
-                                                    >
-                                                        <i className="ph ph-trash"></i>
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openEditBillModal(bill)}
+                                                            disabled={deletingBillId === bill.id}
+                                                            className="text-blue-400 hover:text-blue-300 disabled:opacity-40 p-1.5 rounded transition-colors"
+                                                            title="Edit cost"
+                                                            aria-label={`Edit ${bill.vendorName}`}
+                                                        >
+                                                            <i className="ph ph-pencil-simple"></i>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void handleDeleteBill(bill.id)}
+                                                            disabled={deletingBillId === bill.id}
+                                                            className="text-red-400 hover:text-red-300 disabled:opacity-40 p-1.5 rounded transition-colors"
+                                                            title="Delete cost"
+                                                            aria-label={`Delete ${bill.vendorName}`}
+                                                        >
+                                                            <i className={`ph ${deletingBillId === bill.id ? "ph-spinner animate-spin" : "ph-trash"}`}></i>
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -1514,8 +1616,12 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       {isLogBillModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
           <div className="bg-[#0B0F15] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
-            <h3 className="text-xl font-bold text-white mb-2">Add Project Cost</h3>
-            <p className="text-sm text-gray-400 mb-6 font-light">Record a cost as the job progresses. It will be included in total COGS immediately.</p>
+            <h3 className="text-xl font-bold text-white mb-2">{editingBillId ? "Edit Project Cost" : "Add Project Cost"}</h3>
+            <p className="text-sm text-gray-400 mb-6 font-light">
+              {editingBillId
+                ? "Update this cost item. COGS and retail calculations will refresh immediately."
+                : "Record a cost as the job progresses. It will be included in total COGS immediately."}
+            </p>
             
             <div className="space-y-4">
               <div>
@@ -1560,9 +1666,17 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                     step="0.01"
                     placeholder="0.00"
                     value={billAmount}
-                    onChange={(e) => setBillAmount(e.target.value)}
+                    onChange={(event) => {
+                      setBillAmount(event.target.value);
+                      setBillFormError("");
+                    }}
+                    onBlur={() => {
+                      const normalizedAmount = normalizeProjectCostAmountInput(billAmount);
+                      if (normalizedAmount) setBillAmount(normalizedAmount);
+                    }}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
                   />
+                  <p className="text-[11px] text-gray-600 mt-1.5">Whole dollars are accepted and shown with two decimals.</p>
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Payment Status</label>
@@ -1587,27 +1701,26 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                 />
               </div>
             </div>
+
+            {billFormError && <p className="text-xs text-red-400 mt-4" role="alert">{billFormError}</p>}
             
             <div className="flex justify-end gap-3 mt-8">
               <button
-                onClick={() => {
-                  setIsLogBillModalOpen(false);
-                  setBillCategory("OUTSIDE_PRINTING");
-                  setBillCostName("");
-                  setBillAmount("");
-                  setBillStatus("UNPAID");
-                }}
-                className="px-4 py-2 border border-white/10 rounded text-sm text-gray-300 hover:bg-white/5 transition"
+                type="button"
+                onClick={closeBillModal}
+                disabled={isSavingBill}
+                className="px-4 py-2 border border-white/10 rounded text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50 transition"
               >
                 Cancel
               </button>
               <button
-                onClick={handleSaveBill}
-                disabled={isSavingBill || (billCategory === "OTHER" && !billCostName.trim()) || !billAmount.trim() || parseFloat(billAmount) <= 0}
+                type="button"
+                onClick={() => void handleSaveBill()}
+                disabled={isSavingBill || (billCategory === "OTHER" && !billCostName.trim()) || parseProjectCostAmount(billAmount) === null}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
               >
                 {isSavingBill ? <i className="ph ph-spinner animate-spin"></i> : null}
-                Add Cost
+                {editingBillId ? "Save Changes" : "Add Cost"}
               </button>
             </div>
           </div>

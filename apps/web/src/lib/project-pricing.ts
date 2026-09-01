@@ -47,3 +47,17 @@ export function calculateProjectPricing(lines: ProjectPricingLine[], multiplier:
     totalCosts,
   };
 }
+
+export function upsertProjectCostLine<T extends { id: string }>(lines: T[], nextLine: T) {
+  const existingLineIndex = lines.findIndex((line) => line.id === nextLine.id);
+
+  if (existingLineIndex === -1) {
+    return [...lines, nextLine];
+  }
+
+  return lines.map((line) => line.id === nextLine.id ? nextLine : line);
+}
+
+export function removeProjectCostLine<T extends { id: string }>(lines: T[], lineId: string) {
+  return lines.filter((line) => line.id !== lineId);
+}

@@ -19,3 +19,26 @@ export function isProjectCostCategory(value: unknown): value is ProjectCostCateg
 export function getProjectCostCategoryLabel(value: string) {
   return PROJECT_COST_CATEGORIES.find((category) => category.value === value)?.label ?? "Other / custom";
 }
+
+function roundCurrency(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+export function parseProjectCostAmount(value: unknown) {
+  const parsedAmount = typeof value === "number"
+    ? value
+    : typeof value === "string" && value.trim()
+      ? Number(value.trim().replaceAll(",", ""))
+      : Number.NaN;
+
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    return null;
+  }
+
+  return roundCurrency(parsedAmount);
+}
+
+export function normalizeProjectCostAmountInput(value: unknown) {
+  const parsedAmount = parseProjectCostAmount(value);
+  return parsedAmount === null ? "" : parsedAmount.toFixed(2);
+}
