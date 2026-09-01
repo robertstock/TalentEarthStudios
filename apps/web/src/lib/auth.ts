@@ -43,10 +43,10 @@ export const authOptions: NextAuthOptions = {
 
                     if (demoCredentialsEnabled) {
                         // Optional local demo administrator.
-                        if (credentials.email === "finley@talentearth.com" && credentials.password === "finley") {
+                        if (credentials.email === "robertstock@me.com" && credentials.password === "finley") {
                             return {
                                 id: "demo-admin",
-                                email: "finley@talentearth.com",
+                                email: "robertstock@me.com",
                                 name: "Finley Admin",
                                 role: "ADMIN",
                                 image: null,

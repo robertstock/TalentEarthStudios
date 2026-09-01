@@ -1,15 +1,28 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { sendPasswordResetEmail } from "@/lib/email";
+import { isPasswordResetEmailConfigured, sendPasswordResetEmail } from "@/lib/email";
 import crypto from "crypto";
+import { z } from "zod";
+
+const requestSchema = z.object({
+    email: z.string().trim().toLowerCase().email(),
+});
 
 export async function POST(req: Request) {
     try {
-        const { email } = await req.json();
-
-        if (!email) {
-            return new NextResponse("Email is required", { status: 400 });
+        const parsed = requestSchema.safeParse(await req.json());
+        if (!parsed.success) {
+            return NextResponse.json({ message: "Enter a valid email address." }, { status: 400 });
         }
+
+        if (!isPasswordResetEmailConfigured()) {
+            return NextResponse.json(
+                { message: "Password recovery email is temporarily unavailable." },
+                { status: 503 },
+            );
+        }
+
+        const { email } = parsed.data;
 
         const user = await db.user.findUnique({
             where: { email },
@@ -22,17 +35,30 @@ export async function POST(req: Request) {
 
         // Generate token
         const token = crypto.randomBytes(32).toString("hex");
+        const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
         const expiry = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
 
         await db.user.update({
             where: { id: user.id },
             data: {
-                resetToken: token,
+                resetToken: tokenHash,
                 resetTokenExpiry: expiry,
             },
         });
 
-        await sendPasswordResetEmail(email, token);
+        try {
+            await sendPasswordResetEmail(email, token);
+        } catch (deliveryError) {
+            await db.user.update({
+                where: { id: user.id },
+                data: { resetToken: null, resetTokenExpiry: null },
+            });
+            console.error("[PASSWORD_RESET_DELIVERY_ERROR]", deliveryError);
+            return NextResponse.json(
+                { message: "The reset email could not be delivered. Please try again later." },
+                { status: 503 },
+            );
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {

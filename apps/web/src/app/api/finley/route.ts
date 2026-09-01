@@ -118,17 +118,18 @@ Instructions:
 
             const requiresRpmReview = !recommendedAutoRoute || confidenceScore < 85;
 
-            const systemAdmin = await db.user.upsert({
-                where: { email: "finley@talentearth.com" },
-                update: { role: "ADMIN" },
-                create: {
-                    email: "finley@talentearth.com",
+            let systemAdmin = await db.user.findFirst({ where: { role: "ADMIN" } });
+            if (!systemAdmin) {
+              systemAdmin = await db.user.create({
+                data: {
+                    email: process.env.ADMIN_EMAIL || "robertstock@me.com",
                     firstName: "Finley",
                     lastName: "System",
                     role: "ADMIN",
                     status: "APPROVED"
                 }
-            });
+              });
+            }
             const createdById = systemAdmin.id;
 
             // Determine Routing match if AutoRoute is true

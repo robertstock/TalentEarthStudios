@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 function SignInForm() {
     const searchParams = useSearchParams();
@@ -57,7 +58,12 @@ function SignInForm() {
                     </div>
 
                     <div className="space-y-2">
-                        <label htmlFor="signin-password" className="text-xs font-medium uppercase tracking-wider text-blue-400 block mb-2">Password</label>
+                        <div className="flex items-center justify-between gap-3">
+                            <label htmlFor="signin-password" className="text-xs font-medium uppercase tracking-wider text-blue-400 block">Password</label>
+                            <Link href="/auth/forgot-password" className="text-xs text-blue-300 transition-colors hover:text-white">
+                                Forgot password?
+                            </Link>
+                        </div>
                         <input
                             id="signin-password"
                             type="password"

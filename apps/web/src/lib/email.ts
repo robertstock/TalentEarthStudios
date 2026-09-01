@@ -1,40 +1,54 @@
+import { Resend } from "resend";
+
+export function isPasswordResetEmailConfigured() {
+    return Boolean(process.env.RESEND_API_KEY || process.env.MAKE_WEBHOOK_URL);
+}
+
 export async function sendPasswordResetEmail(email: string, token: string) {
-    const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/reset-password?token=${token}`;
-    const webhookUrl = process.env.MAKE_WEBHOOK_URL;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const resetLink = `${appUrl}/auth/reset-password?token=${encodeURIComponent(token)}`;
 
-    // Log for debugging
-    console.log("========================================");
-    console.log("📧 EMAIL SERVICE: Password Reset");
-    console.log(`To: ${email}`);
-    console.log(`Link: ${resetLink}`);
+    if (process.env.RESEND_API_KEY) {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const { error } = await resend.emails.send({
+            from: process.env.PASSWORD_RESET_FROM_EMAIL || "TalentEarth Studios <no-reply@talentearth.com>",
+            to: email,
+            subject: "Reset your TalentEarth Studios password",
+            html: `
+                <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.6; max-width: 560px; margin: 0 auto;">
+                    <h1 style="font-size: 24px;">Reset your password</h1>
+                    <p>Use the secure link below to choose a new TalentEarth Studios password. This link expires in one hour and can only be used once.</p>
+                    <p style="margin: 28px 0;">
+                        <a href="${resetLink}" style="background: #2563eb; color: #ffffff; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 600;">Choose a new password</a>
+                    </p>
+                    <p style="font-size: 13px; color: #6b7280;">If you did not request this, you can safely ignore this email.</p>
+                </div>
+            `,
+        });
 
-    if (!webhookUrl) {
-        console.warn("⚠️ MAKE_WEBHOOK_URL is not defined in .env. Email will NOT be sent to Make.com.");
-        console.log("========================================");
+        if (error) {
+            throw new Error(`Resend delivery failed: ${error.message}`);
+        }
         return;
     }
 
-    try {
-        const response = await fetch(webhookUrl, {
+    if (process.env.MAKE_WEBHOOK_URL) {
+        const response = await fetch(process.env.MAKE_WEBHOOK_URL, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 type: "PASSWORD_RESET",
                 email,
                 resetLink,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             }),
         });
 
         if (!response.ok) {
-            console.error(`Failed to send email webhook: ${response.status} ${response.statusText}`);
-        } else {
-            console.log("✅ Webhook sent to Make.com successfully");
+            throw new Error(`Password reset webhook failed with status ${response.status}`);
         }
-    } catch (error) {
-        console.error("Error sending email webhook:", error);
+        return;
     }
-    console.log("========================================");
+
+    throw new Error("Password reset email is not configured");
 }

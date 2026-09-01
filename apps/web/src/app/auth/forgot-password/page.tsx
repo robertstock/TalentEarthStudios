@@ -17,17 +17,18 @@ export default function ForgotPasswordPage() {
             const res = await fetch("/api/auth/forgot-password", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
+                body: JSON.stringify({ email: email.trim().toLowerCase() }),
             });
 
             if (!res.ok) {
-                throw new Error("Something went wrong");
+                const data = await res.json().catch(() => null);
+                throw new Error(data?.message || "The reset link could not be sent.");
             }
 
             setStatus("success");
         } catch (error) {
             setStatus("error");
-            setErrorMessage("Failed to send reset link. Please try again.");
+            setErrorMessage(error instanceof Error ? error.message : "Failed to send reset link. Please try again.");
         }
     };
 
@@ -42,9 +43,7 @@ export default function ForgotPasswordPage() {
                 {status === "success" ? (
                     <div className="text-center space-y-4">
                         <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
-                            If an account exists for {email}, we have sent a password reset link to it.
-                            <br /><br />
-                            (Check your terminal for the mock link!)
+                            If an account exists for {email}, a secure one-time reset link has been sent. The link expires in one hour.
                         </div>
                         <Link href="/auth/signin" className="block w-full rounded-lg bg-white/10 px-4 py-3 font-semibold text-white transition-all hover:bg-white/20">
                             Return to Sign In

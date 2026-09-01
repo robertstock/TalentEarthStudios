@@ -4,10 +4,10 @@ import { db } from "@/lib/db";
 export async function GET() {
     try {
         const systemAdmin = await db.user.upsert({
-            where: { email: "finley@talentearth.com" },
+            where: { email: "robertstock@me.com" },
             update: { role: "ADMIN" },
             create: {
-                email: "finley@talentearth.com",
+                email: "robertstock@me.com",
                 firstName: "Finley",
                 lastName: "System",
                 role: "ADMIN",

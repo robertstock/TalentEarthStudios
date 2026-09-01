@@ -10,6 +10,7 @@ function ResetPasswordForm() {
     const token = searchParams.get("token");
 
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     const [errorMessage, setErrorMessage] = useState("");
 
@@ -19,6 +20,12 @@ function ResetPasswordForm() {
         if (!token) {
             setStatus("error");
             setErrorMessage("Invalid or missing reset token.");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setStatus("error");
+            setErrorMessage("The passwords do not match.");
             return;
         }
 
@@ -33,8 +40,8 @@ function ResetPasswordForm() {
             });
 
             if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || "Something went wrong");
+                const data = await res.json().catch(() => null);
+                throw new Error(data?.message || "The password could not be reset.");
             }
 
             setStatus("success");
@@ -43,9 +50,9 @@ function ResetPasswordForm() {
                 router.push("/auth/signin");
             }, 3000);
 
-        } catch (error: any) {
+        } catch (error) {
             setStatus("error");
-            setErrorMessage(error.message || "Failed to reset password.");
+            setErrorMessage(error instanceof Error ? error.message : "Failed to reset password.");
         }
     };
 
@@ -96,7 +103,24 @@ function ResetPasswordForm() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                                 placeholder="••••••••"
-                                minLength={6}
+                                minLength={12}
+                                maxLength={128}
+                            />
+                            <p className="text-xs text-gray-500">Use at least 12 characters.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="confirm-reset-password" className="text-xs font-medium uppercase tracking-wider text-gray-500">Confirm New Password</label>
+                            <input
+                                id="confirm-reset-password"
+                                type="password"
+                                required
+                                value={confirmPassword}
+                                onChange={(event) => setConfirmPassword(event.target.value)}
+                                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                placeholder="••••••••"
+                                minLength={12}
+                                maxLength={128}
                             />
                         </div>
 
