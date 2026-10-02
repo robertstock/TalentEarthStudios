@@ -134,6 +134,7 @@ export default async function AdminProjectsPage({
             clientStatus,
             budgetRange: p.budgetRange || "Pending",
             retailMultiplier: p.retailMultiplier,
+            pricingPolicy: p.pricingPolicy,
             vendorBills: p.vendorBills.map(bill => ({
                 id: bill.id,
                 amount: bill.amount,

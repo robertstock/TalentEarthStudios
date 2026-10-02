@@ -1,3 +1,7 @@
+export const ALL_COSTS_POLICY = "ALL_COSTS";
+export const LEGACY_PRICING_POLICY = "LEGACY_DELIVERY_AT_COST";
+export const NEW_PROJECT_MULTIPLIER = 2;
+
 export const DELIVERY_COST_CATEGORY = "COURIER_FREIGHT";
 export const MIN_RETAIL_MULTIPLIER = 0;
 export const MAX_RETAIL_MULTIPLIER = 10;
@@ -67,30 +71,31 @@ export function isDeliveryCost(category: string) {
   return category === DELIVERY_COST_CATEGORY;
 }
 
-export function calculateCustomerLineAmount(amount: number, category: string, multiplier: number) {
-  return roundCurrency(isDeliveryCost(category) ? amount : amount * multiplier);
+export function calculateCustomerLineAmount(amount: number, category: string, multiplier: number, policy = LEGACY_PRICING_POLICY) {
+  return roundCurrency(policy !== ALL_COSTS_POLICY && isDeliveryCost(category) ? amount : amount * multiplier);
 }
 
-export function calculateProjectPricing(lines: ProjectPricingLine[], multiplier: number) {
+export function calculateProjectPricing(lines: ProjectPricingLine[], multiplier: number, policy = LEGACY_PRICING_POLICY) {
   const deliveryCosts = roundCurrency(
     lines.filter((line) => isDeliveryCost(line.category)).reduce((total, line) => total + line.amount, 0),
   );
   const markupEligibleCosts = roundCurrency(
-    lines.filter((line) => !isDeliveryCost(line.category)).reduce((total, line) => total + line.amount, 0),
+    lines.filter((line) => policy === ALL_COSTS_POLICY || !isDeliveryCost(line.category)).reduce((total, line) => total + line.amount, 0),
   );
-  const totalCosts = roundCurrency(deliveryCosts + markupEligibleCosts);
-  const targetRetailPrice = roundCurrency((markupEligibleCosts * multiplier) + deliveryCosts);
+  const passThroughCosts = policy === ALL_COSTS_POLICY ? 0 : deliveryCosts;
+  const totalCosts = roundCurrency(passThroughCosts + markupEligibleCosts);
+  const targetRetailPrice = roundCurrency((markupEligibleCosts * multiplier) + passThroughCosts);
   let customerLineItems = lines.map((line) => ({
     id: line.id,
     description: line.vendorName,
-    amount: calculateCustomerLineAmount(line.amount, line.category, multiplier),
+    amount: calculateCustomerLineAmount(line.amount, line.category, multiplier, policy),
     isDelivery: isDeliveryCost(line.category),
   }));
   const preliminaryRetailPrice = roundCurrency(customerLineItems.reduce((total, line) => total + line.amount, 0));
   const roundingDifference = roundCurrency(targetRetailPrice - preliminaryRetailPrice);
   let finalMarkupLineIndex = -1;
   customerLineItems.forEach((line, index) => {
-    if (!line.isDelivery) finalMarkupLineIndex = index;
+    if (policy === ALL_COSTS_POLICY || !line.isDelivery) finalMarkupLineIndex = index;
   });
 
   if (roundingDifference !== 0 && finalMarkupLineIndex >= 0) {
@@ -106,6 +111,7 @@ export function calculateProjectPricing(lines: ProjectPricingLine[], multiplier:
   return {
     customerLineItems,
     deliveryCosts,
+    passThroughCosts,
     grossMargin,
     grossProfit,
     markupEligibleCosts,

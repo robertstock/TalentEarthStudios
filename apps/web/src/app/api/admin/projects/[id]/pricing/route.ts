@@ -17,65 +17,69 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
         const { id } = await params;
         const body: unknown = await req.json();
-        const input = body && typeof body === "object" ? body as Record<string, unknown> : {};
+        return await db.$transaction(async (tx) => {
+            await tx.$queryRaw`SELECT id FROM "Project" WHERE id = ${id} FOR UPDATE`;
+            const input = body && typeof body === "object" ? body as Record<string, unknown> : {};
 
-        const existingProject = await db.project.findUnique({
-            where: { id },
-            select: {
-                id: true,
-                vendorBills: {
-                    select: { id: true, amount: true, category: true, vendorName: true },
+            const existingProject = await tx.project.findUnique({
+                where: { id },
+                select: {
+                    id: true,
+                    pricingPolicy: true,
+                    vendorBills: {
+                        select: { id: true, amount: true, category: true, vendorName: true },
+                    },
                 },
-            },
-        });
-        if (!existingProject) {
-            return NextResponse.json({ message: "Project not found" }, { status: 404 });
-        }
-
-        const currentPricing = calculateProjectPricing(existingProject.vendorBills, 1);
-        let multiplier: number | null = null;
-
-        if (input.retailPrice !== undefined) {
-            const retailPrice = parseRetailPriceInput(input.retailPrice);
-            multiplier = retailPrice === null
-                ? null
-                : calculateRetailMultiplier(
-                    retailPrice,
-                    currentPricing.markupEligibleCosts,
-                    currentPricing.deliveryCosts,
-                );
-        } else {
-            const requestedMultiplier = Number(input.multiplier);
-            if (
-                Number.isFinite(requestedMultiplier)
-                && requestedMultiplier >= MIN_RETAIL_MULTIPLIER
-                && requestedMultiplier <= MAX_RETAIL_MULTIPLIER
-            ) {
-                multiplier = Math.round(requestedMultiplier * 100_000_000) / 100_000_000;
+            });
+            if (!existingProject) {
+                return NextResponse.json({ message: "Project not found" }, { status: 404 });
             }
-        }
 
-        if (multiplier === null) {
-            return NextResponse.json(
-                { message: "Retail price must be within the 0× to 10× pricing range, with delivery passed through at cost" },
-                { status: 400 },
-            );
-        }
+            const currentPricing = calculateProjectPricing(existingProject.vendorBills, 1, existingProject.pricingPolicy);
+            let multiplier: number | null = null;
 
-        const project = await db.project.update({
-            where: { id },
-            data: { retailMultiplier: multiplier },
-            select: { id: true, retailMultiplier: true },
-        });
+            if (input.retailPrice !== undefined) {
+                const retailPrice = parseRetailPriceInput(input.retailPrice);
+                multiplier = retailPrice === null
+                    ? null
+                    : calculateRetailMultiplier(
+                        retailPrice,
+                        currentPricing.markupEligibleCosts,
+                        currentPricing.passThroughCosts,
+                    );
+            } else {
+                const requestedMultiplier = Number(input.multiplier);
+                if (
+                    Number.isFinite(requestedMultiplier)
+                    && requestedMultiplier >= MIN_RETAIL_MULTIPLIER
+                    && requestedMultiplier <= MAX_RETAIL_MULTIPLIER
+                ) {
+                    multiplier = Math.round(requestedMultiplier * 100_000_000) / 100_000_000;
+                }
+            }
 
-        const savedPricing = calculateProjectPricing(existingProject.vendorBills, project.retailMultiplier);
+            if (multiplier === null) {
+                return NextResponse.json(
+                    { message: "Retail price must be within the pricing range shown for this job" },
+                    { status: 400 },
+                );
+            }
 
-        return NextResponse.json({
-            success: true,
-            project: {
-                ...project,
-                retailPrice: savedPricing.retailPrice,
-            },
+            const project = await tx.project.update({
+                where: { id },
+                data: { retailMultiplier: multiplier, priceApprovedVersion: null, priceApprovedById: null, priceApprovedAt: null },
+                select: { id: true, retailMultiplier: true },
+            });
+
+            const savedPricing = calculateProjectPricing(existingProject.vendorBills, project.retailMultiplier, existingProject.pricingPolicy);
+
+            return NextResponse.json({
+                success: true,
+                project: {
+                    ...project,
+                    retailPrice: savedPricing.retailPrice,
+                },
+            });
         });
     } catch (error) {
         console.error("UPDATE_PROJECT_PRICING_ERROR", error);

@@ -1,0 +1,33 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "react",
+      "react-dom"
+    ],
+    "allowImportingTsExtensions": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/types/**/*.d.ts",
+    "src/lib/job-*.ts",
+    "src/lib/supplier-cost-service.ts",
+    "src/app/api/admin/job-workflow/**/*.ts",
+    "src/app/api/admin/projects/**/*.ts",
+    "src/app/admin/incoming/*.tsx",
+    "src/app/request/*.tsx",
+    "src/app/api/intake/**/*.ts",
+    "src/app/api/finley/**/*.ts",
+    "src/app/api/mobile/projects/**/*.ts",
+    "src/app/api/projects/**/*.ts",
+    "src/app/api/portal/**/*.ts",
+    "src/app/api/sow/**/*.ts",
+    "src/lib/invoice-*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "legacy_prototype"
+  ]
+}

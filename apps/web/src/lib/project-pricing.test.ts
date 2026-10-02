@@ -107,3 +107,26 @@ test("exact retail pricing remains exact across multiple rounded invoice line it
     );
     assert.equal(pricing.customerLineItems.find((line) => line.isDelivery)?.amount, 25);
 });
+
+test("new jobs apply 2x to every cost, including delivery, without changing legacy jobs", () => {
+    const lines = [
+        { id: "print", amount: 1_000, category: "OUTSIDE_PRINTING", vendorName: "Print" },
+        { id: "freight", amount: 50, category: "COURIER_FREIGHT", vendorName: "Freight" },
+    ];
+    const current = calculateProjectPricing(lines, 2, "ALL_COSTS");
+    assert.equal(current.retailPrice, 2_100);
+    assert.equal(current.totalCosts, 1_050);
+    assert.equal(current.passThroughCosts, 0);
+    assert.equal(current.customerLineItems[1].amount, 100);
+    assert.equal(calculateProjectPricing(lines, 2).retailPrice, 2_050);
+    assert.equal(calculateProjectPricing(lines, 1).retailPrice, 1_050);
+    const multiplier = calculateRetailMultiplier(1_999.99, current.markupEligibleCosts, current.passThroughCosts);
+    assert.equal(calculateProjectPricing(lines, multiplier!, "ALL_COSTS").retailPrice, 1_999.99);
+});
+
+test("a delivery-only new job can be priced, including rounding at zero and ten times", () => {
+    const lines = [{ id: "freight", amount: 33.33, category: "COURIER_FREIGHT", vendorName: "Freight" }];
+    assert.equal(calculateProjectPricing(lines, 2, "ALL_COSTS").retailPrice, 66.66);
+    assert.equal(calculateProjectPricing(lines, 0, "ALL_COSTS").retailPrice, 0);
+    assert.equal(calculateProjectPricing(lines, 10, "ALL_COSTS").retailPrice, 333.30);
+});

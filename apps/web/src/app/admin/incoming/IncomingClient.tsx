@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export interface IncomingProject {
     id: string;
+    jobNumber:string|null; sowRevision:number; workflowState:string|null; canApprove:boolean;
     name: string;
     clientName: string;
     clientContact: string | null;
@@ -29,7 +30,8 @@ interface IncomingClientProps {
 
 export default function IncomingClient({ projects }: IncomingClientProps) {
     const router = useRouter();
-    const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || "");
+    const searchParams=useSearchParams();
+    const [selectedProjectId, setSelectedProjectId] = useState<string>(searchParams.get("project") || projects[0]?.id || "");
     const selectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
 
     const [isEditingSow, setIsEditingSow] = useState(false);
@@ -45,10 +47,10 @@ export default function IncomingClient({ projects }: IncomingClientProps) {
         if (!selectedProject) return;
         setIsSaving(true);
         try {
-            const res = await fetch(`/api/admin/projects/${selectedProject.id}/sow`, {
-                method: 'PATCH',
+            const res = await fetch(`/api/admin/projects/${selectedProject.id}/${selectedProject.jobNumber ? "workflow" : "sow"}`, {
+                method: selectedProject.jobNumber ? 'POST' : 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bodyRichText: editedSowText })
+                body: JSON.stringify(selectedProject.jobNumber ? {action:"save",revision:selectedProject.sowRevision,sow:editedSowText} : { bodyRichText: editedSowText })
             });
             if (res.ok) {
                 setIsEditingSow(false);
@@ -69,8 +71,8 @@ export default function IncomingClient({ projects }: IncomingClientProps) {
         if (!selectedProject) return;
         setIsSaving(true);
         try {
-            const res = await fetch(`/api/admin/projects/${selectedProject.id}/move-to-active`, {
-                method: 'POST'
+            const res = await fetch(`/api/admin/projects/${selectedProject.id}/${selectedProject.jobNumber ? "workflow" : "move-to-active"}`, {
+                method: 'POST', headers:{'Content-Type':'application/json'}, body: selectedProject.jobNumber ? JSON.stringify({action:'approve',revision:selectedProject.sowRevision}) : undefined
             });
             if (res.ok) {
                 router.refresh();
@@ -146,9 +148,9 @@ export default function IncomingClient({ projects }: IncomingClientProps) {
                                     {formatDistanceToNow(new Date(project.createdAt), { addSuffix: true })}
                                 </span>
                                 {project.requiresRpmReview ? (
-                                    <span className="bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] uppercase px-2 py-1 rounded-full">Requires Review</span>
+                                    <span className="bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] uppercase px-2 py-1 rounded-full">{project.jobNumber ? "Awaiting Approval" : "Requires Review"}</span>
                                 ) : (
-                                    <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] uppercase px-2 py-1 rounded-full">Auto-Routed</span>
+                                    <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] uppercase px-2 py-1 rounded-full">{project.jobNumber ? "Folder Pending" : "Auto-Routed"}</span>
                                 )}
                             </div>
                         </button>
@@ -244,7 +246,7 @@ export default function IncomingClient({ projects }: IncomingClientProps) {
                                         </button>
                                         <button 
                                             onClick={handleSaveSow}
-                                            disabled={isSaving}
+                                            disabled={isSaving || !!(selectedProject.jobNumber && (!selectedProject.canApprove || selectedProject.workflowState !== "AWAITING_APPROVAL"))}
                                             className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-widest rounded transition-colors shadow-[0_0_20px_rgba(37,99,235,0.4)] disabled:opacity-50 flex items-center gap-2"
                                         >
                                             {isSaving ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-floppy-disk"></i>}
@@ -264,11 +266,11 @@ export default function IncomingClient({ projects }: IncomingClientProps) {
                                         </button>
                                         <button 
                                             onClick={handleApproveProject}
-                                            disabled={isSaving}
+                                            disabled={isSaving || !!(selectedProject.jobNumber && (!selectedProject.canApprove || selectedProject.workflowState !== "AWAITING_APPROVAL"))}
                                             className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-widest rounded transition-colors shadow-[0_0_20px_rgba(37,99,235,0.4)] disabled:opacity-50 flex items-center gap-2"
                                         >
                                             {isSaving ? <i className="ph ph-spinner animate-spin"></i> : null}
-                                            Approve & Move to Active
+                                            {selectedProject.jobNumber ? "Approve Saved SOW" : "Approve & Move to Active"}
                                         </button>
                                     </>
                                 )}

@@ -38,6 +38,8 @@ type Preview = {
   realmId: string | null;
   subtotal: number;
   pricingVersion: string;
+  canApprovePrice: boolean;
+  priceApproved: boolean;
   lines: {
     id: string;
     description: string;
@@ -224,7 +226,7 @@ export default function InvoiceWorkflow({
   const [vendorId, setVendorId] = useState("");
   const [expenseAccountId, setExpenseAccountId] = useState("");
   const [paymentAccountId, setPaymentAccountId] = useState("");
-  const [sendCost, setSendCost] = useState(true);
+  const [sendCost, setSendCost] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const selected = documents.find((document) => document.id === selectedId);
   const approved = selected?.status === "APPROVED";
@@ -486,14 +488,16 @@ export default function InvoiceWorkflow({
       setBusy(false);
     }
   }
-  async function saveCustomer(action: "draft" | "create") {
+  async function saveCustomer(action: "draft" | "approve" | "create") {
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      await request(`${base}/quickbooks-invoice`, json({ action, draft }));
+      await request(`${base}/quickbooks-invoice`, json({ action, draft, pricingVersion: preview?.pricingVersion }));
       setNotice(
-        action === "draft"
+        action === "approve"
+          ? "Robert approved this selling price. Changes to costs or price require a new approval."
+          : action === "draft"
           ? "Invoice draft saved. You can return to it later."
           : "Invoice created in QuickBooks. Open it there to check tax and send it.",
       );
@@ -1270,6 +1274,19 @@ export default function InvoiceWorkflow({
                       final invoice there before sending. Supplier PDFs,
                       internal costs, and margins stay private.
                     </p>
+                    {!preview.pending && (
+                      <div className="rounded-lg border border-slate-200 p-4 text-sm text-slate-700">
+                        <p>{preview.priceApproved
+                          ? "Robert approved this selling price. Create the invoice below, then review and send it from QuickBooks."
+                          : "Robert must review and approve this selling price before an invoice can be created."}</p>
+                        {preview.canApprovePrice && !preview.priceApproved && (
+                          <button type="button" className={`${buttonClass} mt-3`} disabled={busy}
+                            onClick={() => void saveCustomer("approve")}>
+                            Approve selling price: {money(preview.subtotal)}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-4">
                       <button
                         type="button"
@@ -1286,7 +1303,7 @@ export default function InvoiceWorkflow({
                           busy ||
                           !qbo.connected ||
                           (!preview.pending &&
-                            (!draft.customerId || !draft.itemId))
+                            (!draft.customerId || !draft.itemId || !preview.priceApproved))
                         }
                         onClick={() => void saveCustomer("create")}
                       >

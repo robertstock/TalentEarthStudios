@@ -27,6 +27,7 @@ export default async function MonthlySalesPage() {
       clientNameOverride: true,
       client: { select: { companyName: true, email: true } },
       retailMultiplier: true,
+      pricingPolicy: true,
       vendorBills: {
         select: { id: true, amount: true, category: true, vendorName: true },
       },
@@ -38,6 +39,7 @@ export default async function MonthlySalesPage() {
     const pricing = calculateProjectPricing(
       project.vendorBills,
       project.retailMultiplier,
+      project.pricingPolicy,
     );
     return {
       id: project.id,

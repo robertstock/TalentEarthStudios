@@ -19,9 +19,11 @@ function ChatContent() {
     const teamData = teamSlug ? specialtyData[teamSlug] : null;
 
     const [input, setInput] = useState("");
+    const [submissionId,setSubmissionId]=useState("");
+    useEffect(()=>{const key="finley-submission-id";let id=sessionStorage.getItem(key);if(!id){id=crypto.randomUUID();sessionStorage.setItem(key,id);}setSubmissionId(id);},[]);
     const { messages, append, status } = useChat({
         api: "/api/finley",
-        body: { team: teamSlug }
+        body: { team: teamSlug, submissionId }
     });
     
     const isLoading = status === 'submitted' || status === 'streaming';
@@ -124,7 +126,7 @@ function ChatContent() {
 
     // On mount, trigger Finley to send its own opening message
     useEffect(() => {
-        if (hasGreeted.current) return;
+        if (hasGreeted.current || !submissionId) return;
         hasGreeted.current = true;
 
         const trigger = teamData
@@ -133,7 +135,7 @@ function ChatContent() {
 
         append({ role: "user", content: trigger });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [submissionId]);
 
     // Auto-scroll to bottom of messages
     useEffect(() => {
@@ -267,7 +269,8 @@ function ChatContent() {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="flex flex-col items-center justify-center p-4 gap-4"
                             >
-                                <p className="text-slate-400 text-sm">Finley has successfully routed your project.</p>
+                                <p className="text-slate-400 text-sm">Your project is saved and awaiting approval.</p>
+                                <button onClick={()=>{sessionStorage.removeItem("finley-submission-id");window.location.reload();}}>Start a new project</button>
                                 <Link
                                     href="/app"
                                     className="px-8 py-4 bg-brand-green hover:bg-brand-green/90 text-white rounded-md font-medium text-sm transition-colors uppercase tracking-widest flex items-center gap-2"

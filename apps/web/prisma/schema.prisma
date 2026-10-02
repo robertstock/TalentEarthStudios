@@ -234,6 +234,19 @@ model Answer {
 }
 
 model Project {
+  jobNumber String? @unique
+  submission JobSubmission?
+  workflowState String?
+  sowRevision Int @default(0)
+  sowBody String?
+  approvedSowRevision Int?
+  approvedSowBody String?
+  workflowApprovedById String?
+  workflowApprovedAt DateTime?
+  productionFolder String?
+  folderName String?
+  workflowTasks WorkflowTask[]
+  inboundInvoices InboundInvoice[]
   id              String             @id @default(cuid())
   createdById     String             @map("createdByAdminId")
   createdBy       User               @relation("CreatedBy", fields: [createdById], references: [id])
@@ -276,7 +289,11 @@ model Project {
   paidAt          DateTime?
   finalRevenue    Float?
   commissionPaid  Float?
-  retailMultiplier Float @default(1)
+  retailMultiplier Float @default(2)
+  pricingPolicy String @default("ALL_COSTS")
+  priceApprovedVersion String?
+  priceApprovedById String?
+  priceApprovedAt DateTime?
 
   clientId        String
   client          Client?             @relation(fields: [clientId], references: [id])
@@ -636,4 +653,53 @@ model MobileSubmission {
   createdAt          DateTime @default(now())
   @@index([accountId])
   @@index([notificationSentAt])
+}
+
+model JobSubmission {
+  id String @id
+  requestHash String
+  submittedAt DateTime @default(now())
+  projectId String? @unique
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Restrict)
+}
+model DailyJobSequence {
+  day String @id
+  sequence Int
+}
+model WorkflowTask {
+  id String @id
+  projectId String
+  project Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  kind String
+  state String @default("PENDING")
+  revision Int?
+  payload Json
+  leaseToken String?
+  leaseUntil DateTime?
+  attempts Int @default(0)
+  attention String?
+  result Json?
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+  @@index([kind, state])
+}
+model InboundInvoice {
+  id String @id @default(cuid())
+  sha256 String @unique
+  sourceMessageIds String[]
+  fileName String
+  mimeType String
+  fileData Bytes
+  jobNumber String?
+  projectId String?
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  vendorKey String?
+  details Json
+  state String
+  attention String?
+  localPath String?
+  supplierInvoiceId String?
+  createdAt DateTime @default(now())
+  @@index([vendorKey])
+  @@index([projectId, state])
 }

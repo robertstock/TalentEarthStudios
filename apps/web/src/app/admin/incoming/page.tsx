@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { canApprovePrice } from "@/lib/price-approval";
 import { canAccessAdmin } from "@/lib/auth-guards";
 import IncomingClient, { IncomingProject } from "./IncomingClient";
 
@@ -30,7 +31,7 @@ export default async function AdminIncomingPage() {
     });
 
     const formattedProjects: IncomingProject[] = rawProjects.map(p => {
-        const latestSow = p.sows.length > 0 ? p.sows[0].bodyRichText : null;
+        const latestSow = p.jobNumber ? p.sowBody : p.sows.length > 0 ? p.sows[0].bodyRichText : null;
         const parsedSowParagraphs = latestSow ? latestSow.split("\n\n").filter(Boolean) : [];
 
         let assignedTalentName = null;
@@ -40,7 +41,8 @@ export default async function AdminIncomingPage() {
 
         return {
             id: p.id,
-            name: p.name,
+            name: p.jobNumber ? `${p.name} | ${p.jobNumber}` : p.name,
+            jobNumber:p.jobNumber, sowRevision:p.sowRevision, workflowState:p.workflowState, canApprove:canApprovePrice(session?.user?.id),
             clientName: p.client?.companyName || "Unknown Client",
             clientContact: p.client?.primaryContactName || null,
             clientEmail: p.client?.email || null,

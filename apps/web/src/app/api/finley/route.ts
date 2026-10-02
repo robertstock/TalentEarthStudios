@@ -1,11 +1,10 @@
 import { openai } from "@ai-sdk/openai";
 import { streamText, tool } from "ai";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import crypto from "crypto";
+import { after } from "next/server";
+import { submitFinleyJob, deliverConfirmation } from "@/lib/job-workflow";
+import { WorkflowError } from "@/lib/job-workflow-rules";
 import { specialtyData, SpecialtySlug } from "@/lib/specialty-data";
-import { normalizeSubmittedProjectClientName } from "@/lib/project-client";
-import { sendProjectRequestNotification } from "@/lib/email";
 
 // Set max duration for edge functions (if deployed to Vercel edge)
 export const maxDuration = 60;
@@ -14,7 +13,8 @@ export const maxDuration = 60;
 const FINLEY_MODEL = process.env.FINLEY_MODEL ?? "gpt-4o";
 
 export async function POST(req: Request) {
-  const { messages, team } = await req.json();
+  const requestBody = await req.json();
+  const { messages, team, submissionId } = requestBody;
 
   // Pre-process messages to parse PDF attachments into text content to prevent OpenAI API from crashing
   const processedMessages = [];
@@ -69,6 +69,7 @@ You must collect the following information from the user before submitting the p
 5. Project Scope/Description (What are the primary objectives and deliverables?)
 6. Estimated Timeline (Desired deadline or timeframe)
 7. Estimated Budget Range
+8. Project Name (ask the client; do not invent it)
 
 Instructions:
 - Be concise, professional, yet warm and cinematic in your tone.
@@ -87,6 +88,7 @@ Instructions:
       submit_project_intake: tool({
         description: "Submit the gathered project details to the TalentEarthStudios execution layer. Only call this when all required fields have been collected.",
         parameters: z.object({
+          projectName: z.string().min(1).max(160).describe("The project name confirmed by the client"),
           name: z.string().describe("The client's full name"),
           email: z.string().email().describe("The client's email address"),
           company: z.string().describe("The client's company or organization. Use an empty string if not provided."),
@@ -102,144 +104,14 @@ Instructions:
           missingInfo: z.string().describe("Any missing critical info (put 'None' if all good)"),
           recommendedAutoRoute: z.boolean().describe("True if scope is clear and fits within standard parameters")
         }),
-        execute: async ({
-          name, email, company, projectType, timeline, budgetRange, message,
-          confidenceScore, urgencyScore, complexityScore, projectSummary, deliverables, missingInfo, recommendedAutoRoute
-        }) => {
+        execute: async (input) => {
           try {
-            const projectClientName = normalizeSubmittedProjectClientName(company);
-
-            // 1. Create or find the Client
-            let client = await db.client.findFirst({ where: { email } });
-            if (!client) {
-              client = await db.client.create({
-                data: {
-                  companyName: company || name,
-                  primaryContactName: name,
-                  email,
-                }
-              });
-            }
-
-            const requiresRpmReview = !recommendedAutoRoute || confidenceScore < 85;
-
-            let systemAdmin = await db.user.findFirst({ where: { role: "ADMIN" } });
-            if (!systemAdmin) {
-              systemAdmin = await db.user.create({
-                data: {
-                    email: process.env.ADMIN_EMAIL || "robertstock@me.com",
-                    firstName: "Finley",
-                    lastName: "System",
-                    role: "ADMIN",
-                    status: "APPROVED"
-                }
-              });
-            }
-            const createdById = systemAdmin.id;
-
-            // Determine Routing match if AutoRoute is true
-            let matchedTalentId = null;
-            if (!requiresRpmReview) {
-              const availableTalent = await db.talent.findFirst({
-                select: { id: true, name: true }
-              });
-              if (availableTalent) {
-                matchedTalentId = availableTalent.id;
-              }
-            }
-
-            const sowBodyText = `
-## Project Summary
-${projectSummary}
-
-## Objectives
-Successfully deliver the requested ${projectType} within the ${timeline} timeframe.
-
-## Deliverables
-${deliverables.map(d => `- ${d}`).join('\n')}
-
-## Estimated Budget
-${budgetRange}
-
-## Notes
-${missingInfo !== "None" ? `**Pending Clarification:** ${missingInfo}` : "All standard variables present."}
-            `.trim();
-
-            const shareToken = crypto.randomBytes(16).toString("hex");
-
-            // Save the project, routing decision, and first SOW together so the
-            // UI never reports success for a partially persisted intake.
-            const project = await db.$transaction(async (tx) => {
-              const savedProject = await tx.project.create({
-                data: {
-                  name: `${company || name} - ${projectType}`,
-                  description: message,
-                  budgetRange,
-                  timeline,
-                  clientId: client.id,
-                  clientNameOverride: projectClientName,
-                  createdById,
-                  status: matchedTalentId ? "APPROVED_FOR_SOW" : "SOW_DRAFT",
-                  aiConfidenceScore: confidenceScore,
-                  urgencyScore,
-                  complexityScore,
-                  isAutoRouted: !requiresRpmReview,
-                  requiresRpmReview,
-                  exceptionReason: requiresRpmReview ? missingInfo : null,
-                  talentId: matchedTalentId,
-                }
-              });
-
-              if (matchedTalentId) {
-                await tx.routingLog.create({
-                  data: {
-                    projectId: savedProject.id,
-                    talentScanned: 1,
-                    selectedTalentId: matchedTalentId,
-                    routingDecision: "AI confidence > 85%. Automated best-match selection executed by Finley."
-                  }
-                });
-              }
-
-              await tx.sOW.create({
-                data: {
-                  projectId: savedProject.id,
-                  versionNumber: 1,
-                  status: "DRAFT",
-                  bodyRichText: sowBodyText,
-                  createdById,
-                  shareToken,
-                }
-              });
-
-              return savedProject;
-            });
-
-            await sendProjectRequestNotification({
-              requestId: project.id,
-              projectId: project.id,
-              projectName: project.name,
-              clientName: company || name,
-              contactName: name,
-              contactEmail: email,
-              projectType,
-              timeline,
-              budgetRange,
-              description: message,
-              status: project.status,
-            });
-
-            return {
-              success: true,
-              projectId: project.id,
-              message: "Project successfully transmitted to execution layer."
-            };
-          } catch (error) {
-            console.error("Finley Intake Tool Error:", error);
-            return {
-              success: false,
-              message: "An internal error occurred while saving the project."
-            };
+            const sow = `${input.projectSummary}\n\nScope\n${input.message}\n\nDeliverables\n${input.deliverables.map(d=>`- ${d}`).join('\n')}\n\nTimeline: ${input.timeline}\nBudget: ${input.budgetRange}\nOpen questions: ${input.missingInfo}`;
+            const project=await submitFinleyJob({...input,submissionId,sow},requestBody);
+            after(()=>deliverConfirmation(`confirmation:${project.id}`));
+            return {success:true,projectId:project.id,jobNumber:project.jobNumber,message:`${project.name} | ${project.jobNumber} is awaiting approval.`};
+          } catch(e) {
+            return {success:false,message:e instanceof WorkflowError?e.message:'Unable to save. Keep your draft and retry.'};
           }
         },
       }),

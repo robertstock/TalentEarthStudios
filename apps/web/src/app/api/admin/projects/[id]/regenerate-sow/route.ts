@@ -11,6 +11,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         }
 
         const { id } = await params;
+        if ((await db.project.findUnique({where:{id},select:{jobNumber:true}}))?.jobNumber) return NextResponse.json({message:'Review the latest saved SOW through the job workflow.'},{status:409});
 
         // Fetch the project with its notes and latest SOW
         const project = await db.project.findUnique({

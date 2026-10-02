@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const pending = await db.mobileSubmission.findMany({
-    where: { notificationSentAt: null },
+    where: { notificationSentAt: null, project: { jobNumber: null } },
     take: 25,
     orderBy: { createdAt: "asc" },
     select: { id: true },

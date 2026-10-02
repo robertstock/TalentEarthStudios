@@ -30,7 +30,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
         });
 
         // Update Project Status
-        if (decision === "APPROVED") {
+        if (decision === "APPROVED" && !sow.project.jobNumber) {
             await db.project.update({
                 where: { id: sow.projectId },
                 data: { status: 'APPROVED_FOR_SOW' } // Moving it forward

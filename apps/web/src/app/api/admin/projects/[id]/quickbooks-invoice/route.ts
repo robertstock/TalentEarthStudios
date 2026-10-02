@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { isActivePriceApprover, canApprovePrice, hasPriceApproval, projectPriceVersion } from "@/lib/price-approval";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
@@ -37,19 +37,13 @@ async function loadProject(id: string) {
   const pricing = calculateProjectPricing(
     project.vendorBills,
     project.retailMultiplier,
+    project.pricingPolicy,
   );
-  const pricingVersion = createHash("sha256")
-    .update(
-      JSON.stringify({
-        multiplier: project.retailMultiplier,
-        lines: pricing.customerLineItems,
-      }),
-    )
-    .digest("hex");
+  const pricingVersion = projectPriceVersion(project);
   return { project, pricing, pricingVersion };
 }
 export async function GET(req: Request, { params }: Context) {
-  const { error } = await requireAdmin();
+  const { error, session } = await requireAdmin();
   if (error) return error;
   try {
     const { id } = await params;
@@ -125,6 +119,8 @@ export async function GET(req: Request, { params }: Context) {
           }));
     return NextResponse.json(
       {
+        canApprovePrice: canApprovePrice(session!.user.id),
+        priceApproved: hasPriceApproval(project, pricingVersion),
         projectName: project.jobName || project.name,
         customerName:
           project.clientNameOverride ||
@@ -157,14 +153,14 @@ export async function GET(req: Request, { params }: Context) {
   }
 }
 export async function POST(req: Request, { params }: Context) {
-  const { error } = await requireAdmin();
+  const { error, session } = await requireAdmin();
   if (error) return error;
   try {
     requireSameOrigin(req);
     const { id } = await params;
     const body = await req.json();
-    if (!["draft", "create"].includes(body.action))
-      throw new InvoiceError("Choose save draft or create invoice.");
+    if (!["draft", "approve", "create"].includes(body.action))
+      throw new InvoiceError("Choose save draft, approve price, or create invoice.");
     const { project, pricing, pricingVersion } = await loadProject(id);
     if (project.status === "CANCELLED")
       throw new InvoiceError("Reopen the job before creating an invoice.", 409);
@@ -179,7 +175,7 @@ export async function POST(req: Request, { params }: Context) {
           where: { id: `invoice_${project.invoice.id}` },
         })
       : null;
-    if (previous && body.action === "draft")
+    if (previous && body.action !== "create")
       throw new InvoiceError(
         "A QuickBooks submission is pending. Retry it before editing the draft.",
         409,
@@ -200,6 +196,33 @@ export async function POST(req: Request, { params }: Context) {
         url: quickBooksUrl("Invoice", result.remoteId!),
       });
     }
+    if (body.action === "approve") {
+      if (!canApprovePrice(session!.user.id))
+        throw new InvoiceError("Robert must review and approve the selling price.", 403);
+      await db.$transaction(async (tx) => {
+        if(!await isActivePriceApprover(tx,session!.user.id)) throw new InvoiceError("An active configured approver must approve the selling price.",403);
+        await tx.$queryRaw`SELECT id FROM "Project" WHERE id = ${id} FOR UPDATE`;
+        const current = await tx.project.findUniqueOrThrow({
+          where: { id }, include: { vendorBills: true, invoice: true },
+        });
+        const version = projectPriceVersion(current);
+        const pending = current.invoice && await tx.quickBooksExport.findUnique({
+          where: { id: `invoice_${current.invoice.id}` },
+        });
+        if (current.status === "CANCELLED" || current.invoice?.qbInvoiceId || pending)
+          throw new InvoiceError("This job cannot accept a new price approval.", 409);
+        if (body.pricingVersion !== version || pricing.retailPrice <= 0)
+          throw new InvoiceError("The job costs or price changed. Reopen the preview before approving.", 409);
+        await tx.project.update({ where: { id }, data: {
+          priceApprovedVersion: version,
+          priceApprovedById: session!.user.id,
+          priceApprovedAt: new Date(),
+        } });
+      });
+      return NextResponse.json({ success: true });
+    }
+    if (body.action === "create" && !hasPriceApproval(project, pricingVersion))
+      throw new InvoiceError("Robert must approve this version of the job price before creating an invoice.", 409);
     const draft = customerDraftSchema.parse(body.draft);
     if (draft.pricingVersion !== pricingVersion)
       throw new InvoiceError(
@@ -218,6 +241,7 @@ export async function POST(req: Request, { params }: Context) {
     if (body.action === "draft") {
       await db.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+      await tx.$queryRaw`SELECT id FROM "Project" WHERE id = ${id} FOR UPDATE`;
         const saved = await tx.invoice.findUnique({ where: { projectId: id } });
         const exported =
           saved &&
@@ -265,6 +289,7 @@ export async function POST(req: Request, { params }: Context) {
     // cannot replace descriptions or totals after submission has started.
     const invoice = await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+      await tx.$queryRaw`SELECT id FROM "Project" WHERE id = ${id} FOR UPDATE`;
       const saved = await tx.invoice.findUnique({ where: { projectId: id } });
       const exported =
         saved &&
@@ -276,19 +301,8 @@ export async function POST(req: Request, { params }: Context) {
         where: { id },
         include: { vendorBills: { orderBy: { id: "asc" } } },
       });
-      const currentPricing = calculateProjectPricing(
-        current.vendorBills,
-        current.retailMultiplier,
-      );
-      const version = createHash("sha256")
-        .update(
-          JSON.stringify({
-            multiplier: current.retailMultiplier,
-            lines: currentPricing.customerLineItems,
-          }),
-        )
-        .digest("hex");
-      if (version !== pricingVersion)
+      const version = projectPriceVersion(current);
+      if (version !== pricingVersion || !hasPriceApproval(current, version) || !await isActivePriceApprover(tx,current.priceApprovedById) || current.status === "CANCELLED")
         throw new InvoiceError(
           "The job price changed during review. Reopen the preview.",
           409,

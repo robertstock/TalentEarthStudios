@@ -1,7 +1,9 @@
+import { requireAdmin } from "@/lib/auth-guards";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const auth=await requireAdmin();if(auth.error)return auth.error;
     try {
         const { id } = await params;
         const project = await db.project.findUnique({
@@ -34,8 +36,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const auth=await requireAdmin();if(auth.error)return auth.error;
     try {
         const { id } = await params;
+        if((await db.project.findUnique({where:{id},select:{jobNumber:true}}))?.jobNumber) return NextResponse.json({message:"Use the numbered job workflow for edits."},{status:409});
         const body = await req.json();
         const { name, answers, status, ...otherFields } = body;
 
@@ -57,7 +61,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             let processedAnswers = Object.entries(answers || {});
 
             // Check for fallback date ID and resolve to real ID
-            try {
+            const auth=await requireAdmin();if(auth.error)return auth.error;
+    try {
                 const fallbackDateEntry = processedAnswers.find(([key]) => key.startsWith('q_date_fallback'));
                 if (fallbackDateEntry) {
                     const currentProject = await db.project.findUnique({

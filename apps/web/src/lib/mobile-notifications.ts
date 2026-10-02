@@ -8,6 +8,7 @@ export async function deliverMobileNotification(submissionId: string) {
   });
   if (!submission || submission.notificationSentAt) return true;
   const project = submission.project;
+  if(project.jobNumber) return false; // Numbered jobs use the single durable confirmation outbox.
   const sent = await sendProjectRequestNotification(
     {
       requestId: submission.id,

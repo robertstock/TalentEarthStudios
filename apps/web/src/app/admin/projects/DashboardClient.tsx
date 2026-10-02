@@ -48,6 +48,7 @@ export interface DashboardProject {
   clientStatus: string;
   budgetRange: string;
   retailMultiplier: number;
+  pricingPolicy: string;
   vendorBills: { id: string, amount: number, vendorName: string, category: string, status: string, date: string, supplierInvoiceId?: string | null, documentUrl?: string | null }[];
   invoice: { amount: number, status: string } | null;
   meetingNotes: { id: string, title: string, content: string, createdAt: string }[];
@@ -160,10 +161,13 @@ export default function DashboardClient({ projects, initialProjectId, quickBooks
   const selectedVendorBills = selectedProject
     ? vendorBillsByProjectId[selectedProject.id] ?? selectedProject.vendorBills
     : [];
-  const projectPricing = calculateProjectPricing(selectedVendorBills, retailMultiplier);
+  const pricingPolicy = selectedProject?.pricingPolicy;
+  const allCosts = pricingPolicy === "ALL_COSTS";
+  const projectPricing = calculateProjectPricing(selectedVendorBills, retailMultiplier, pricingPolicy);
   const {
       customerLineItems,
       deliveryCosts,
+      passThroughCosts,
       grossMargin,
       grossProfit,
       markupEligibleCosts,
@@ -173,7 +177,7 @@ export default function DashboardClient({ projects, initialProjectId, quickBooks
   const retailPriceInput = selectedProject
     ? retailPriceInputs[selectedProject.id] ?? retailPrice.toFixed(2)
     : "";
-  const retailPriceRange = getRetailPriceRange(markupEligibleCosts, deliveryCosts);
+  const retailPriceRange = getRetailPriceRange(markupEligibleCosts, passThroughCosts);
 
   const statOnTrack = activeProjects.filter(p => p.health === "Green").length;
   const statAtRisk = activeProjects.filter(p => p.health === "Red").length;
@@ -264,7 +268,7 @@ export default function DashboardClient({ projects, initialProjectId, quickBooks
   const setPricingFromMultiplier = (multiplier: number) => {
       if (!selectedProject) return;
 
-      const nextRetailPrice = calculateProjectPricing(selectedVendorBills, multiplier).retailPrice;
+      const nextRetailPrice = calculateProjectPricing(selectedVendorBills, multiplier, pricingPolicy).retailPrice;
       setRetailMultipliers((current) => ({
           ...current,
           [selectedProject.id]: multiplier,
@@ -292,7 +296,7 @@ export default function DashboardClient({ projects, initialProjectId, quickBooks
       const nextMultiplier = calculateRetailMultiplier(
           requestedRetailPrice,
           markupEligibleCosts,
-          deliveryCosts,
+          passThroughCosts,
       );
       if (nextMultiplier === null) {
           setRetailPriceError(
@@ -314,7 +318,7 @@ export default function DashboardClient({ projects, initialProjectId, quickBooks
       const requestedRetailPrice = parseRetailPriceInput(retailPriceInput);
       const nextMultiplier = requestedRetailPrice === null
           ? null
-          : calculateRetailMultiplier(requestedRetailPrice, markupEligibleCosts, deliveryCosts);
+          : calculateRetailMultiplier(requestedRetailPrice, markupEligibleCosts, passThroughCosts);
       if (requestedRetailPrice === null || nextMultiplier === null) {
           setRetailPriceError(
               `Enter a retail price from ${currencyFormatter.format(retailPriceRange.minimumRetailPrice)} to ${currencyFormatter.format(retailPriceRange.maximumRetailPrice)}.`,
@@ -1251,7 +1255,7 @@ export default function DashboardClient({ projects, initialProjectId, quickBooks
                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-blue-700">
                             <div className="text-xs uppercase tracking-widest mb-2 ">Retail Price</div>
                             <div className="text-2xl font-bold">{currencyFormatter.format(retailPrice)}</div>
-                            <div className="text-xs mt-1 ">Marked costs × {formatMultiplier(retailMultiplier).replace("×", "")} + delivery at cost</div>
+                            <div className="text-xs mt-1 ">{allCosts ? "All costs" : "Marked costs"} × {formatMultiplier(retailMultiplier).replace("×", "")}{allCosts ? " (including delivery)" : " + delivery at cost"}</div>
                         </div>
                         <div className={`${grossProfit >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"} border rounded-xl p-5`}>
                             <div className="text-xs uppercase tracking-widest mb-2 ">Gross Profit</div>
@@ -1265,7 +1269,7 @@ export default function DashboardClient({ projects, initialProjectId, quickBooks
                             <div>
                                 <div className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700 mb-2">Retail Pricing Calculator</div>
                                 <h3 className="text-2xl font-light text-slate-900">Set an exact retail price or use the slider</h3>
-                                <p className="text-sm text-slate-600 mt-2 max-w-2xl">Enter the exact price you want, or move the slider. Both stay synchronized. Courier, delivery, and freight always pass through at the entered amount.</p>
+                                <p className="text-sm text-slate-600 mt-2 max-w-2xl">Enter the exact price you want, or move the slider. Both stay synchronized. {allCosts ? "All costs, including delivery and freight, use this multiplier." : "This existing job keeps delivery and freight at cost."}</p>
                             </div>
                             <div className="min-w-[150px] rounded-xl bg-white border border-slate-200 px-5 py-3 text-center">
                                 <div className="text-[10px] uppercase tracking-widest text-slate-600">Multiplier</div>
@@ -1301,7 +1305,7 @@ export default function DashboardClient({ projects, initialProjectId, quickBooks
                             <p id="retail-price-help" className={`text-xs mt-2 ${retailPriceError ? "text-red-700" : "text-slate-600"}`} role={retailPriceError ? "alert" : undefined}>
                                 {retailPriceError || (markupEligibleCosts > 0
                                     ? `Allowed range: ${currencyFormatter.format(retailPriceRange.minimumRetailPrice)} to ${currencyFormatter.format(retailPriceRange.maximumRetailPrice)}.`
-                                    : "Add a non-delivery cost to set retail pricing. Delivery remains at cost.")}
+                                    : (allCosts ? "Add a cost to set retail pricing." : "Add a non-delivery cost to set retail pricing. Delivery remains at cost."))}
                             </p>
                         </div>
 
@@ -1332,7 +1336,7 @@ export default function DashboardClient({ projects, initialProjectId, quickBooks
                                 <div className="text-xl text-slate-900 mt-1">{currencyFormatter.format(markupEligibleCosts)}</div>
                             </div>
                             <div className="bg-white border border-slate-200 rounded-xl p-4">
-                                <div className="text-[10px] uppercase tracking-widest text-slate-600">Delivery Pass-Through</div>
+                                <div className="text-[10px] uppercase tracking-widest text-slate-600">{allCosts ? "Delivery Cost (included in markup)" : "Delivery Pass-Through"}</div>
                                 <div className="text-xl text-slate-900 mt-1">{currencyFormatter.format(deliveryCosts)}</div>
                             </div>
                             <div className="bg-white border border-slate-200 rounded-xl p-4">

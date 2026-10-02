@@ -10,6 +10,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     try {
         const { id } = await params;
+        if ((await db.project.findUnique({where:{id},select:{jobNumber:true}}))?.jobNumber) return NextResponse.json({message:'Review the latest saved SOW through the job workflow.'},{status:409});
         const body = await req.json();
         const { recipientEmail, ccRPM, teamId, talentId, bodyRichText } = body;
 

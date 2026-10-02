@@ -12,6 +12,7 @@ export default function RequestForm() {
     const talentSlug = searchParams.get("talent");
 
     const [formData, setFormData] = useState({
+        projectName: "",
         name: "",
         email: "",
         company: "",
@@ -69,10 +70,14 @@ export default function RequestForm() {
         setStatus("SUBMITTING");
 
         try {
+            const draftKey="finley-form-submission-id";
+            let submissionId=sessionStorage.getItem(draftKey);
+            if(!submissionId){submissionId=crypto.randomUUID();sessionStorage.setItem(draftKey,submissionId);}
             const res = await fetch("/api/intake", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                    submissionId, projectName: formData.projectName,
                     name: formData.name,
                     email: formData.email,
                     company: formData.company,
@@ -85,9 +90,11 @@ export default function RequestForm() {
             });
 
             if (res.ok) {
+                sessionStorage.removeItem(draftKey);
                 setStatus("SUCCESS");
                 setFormData({
-                    name: "",
+                    projectName: "",
+        name: "",
                     email: "",
                     company: "",
                     projectType: "Film Production",
@@ -149,6 +156,7 @@ export default function RequestForm() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 {/* Left Side: The Form */}
                 <form onSubmit={startSimulation} className="space-y-8">
+<label className="block">Project name<input required value={formData.projectName} onChange={e=>setFormData({...formData,projectName:e.target.value})} className="block w-full text-black" /></label>
                     {/* Contact Information */}
                     <div className="bg-wme-base border border-wme-border/50 rounded-xl p-6 md:p-8 backdrop-blur-sm">
                         <h3 className="text-xs font-mono text-slate-500 mb-6 uppercase tracking-widest">01 // Contact Parameters</h3>

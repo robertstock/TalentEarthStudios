@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing identity params" }, { status: 400 });
         }
 
+        if((await db.project.findUnique({where:{id:projectId},select:{jobNumber:true}}))?.jobNumber) return NextResponse.json({error:'Owner approval of the latest saved SOW is required.'},{status:409});
         // 1. Move SOW to PUBLISHED
         await db.sOW.update({
             where: { id: sowId },
