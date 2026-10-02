@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "react", "react-dom"],
+    "allowImportingTsExtensions": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/types/**/*.d.ts",
+    "src/app/admin/projects/*.tsx",
+    "src/app/api/admin/quickbooks/**/*.ts",
+    "src/app/api/admin/projects/[id]/quickbooks-invoice/**/*.ts",
+    "src/app/api/admin/projects/[id]/supplier-invoices/**/*.ts",
+    "src/app/api/admin/projects/[id]/bills/**/*.ts",
+    "src/lib/invoice-*.ts",
+    "src/lib/quickbooks.ts",
+    "src/lib/supplier-extraction*.ts"
+  ],
+  "exclude": ["node_modules", "legacy_prototype"]
+}

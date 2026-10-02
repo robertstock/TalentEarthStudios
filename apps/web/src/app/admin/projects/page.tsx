@@ -42,7 +42,11 @@ function calculateProgress(status: string): number {
     }
 }
 
-export default async function AdminProjectsPage() {
+export default async function AdminProjectsPage({
+    searchParams,
+}: {
+    searchParams?: Promise<{ project?: string | string[]; quickbooks?: string }>;
+}) {
     const session = await getServerSession(authOptions);
 
     if (!(await canAccessAdmin(session))) {
@@ -55,7 +59,7 @@ export default async function AdminProjectsPage() {
             client: true,
             category: true,
             team: {
-                include: { members: { include: { user: true } } }
+                include: { members: { where: { status: "ACTIVE" }, include: { user: true } } }
             },
             talent: true,
             sows: {
@@ -137,6 +141,8 @@ export default async function AdminProjectsPage() {
                 category: bill.category,
                 status: bill.status,
                 date: bill.date.toISOString(),
+                supplierInvoiceId: bill.supplierInvoiceId,
+                documentUrl: bill.documentUrl,
             })),
             invoice: p.invoice ? {
                 amount: p.invoice.amount,
@@ -154,5 +160,13 @@ export default async function AdminProjectsPage() {
         };
     });
 
-    return <DashboardClient projects={formattedProjects} />;
+    const resolvedSearchParams = searchParams ? await searchParams : {};
+    const requestedProjectId = Array.isArray(resolvedSearchParams.project)
+        ? resolvedSearchParams.project[0]
+        : resolvedSearchParams.project;
+    const initialProjectId = formattedProjects.some((project) => project.id === requestedProjectId)
+        ? requestedProjectId
+        : undefined;
+
+    return <DashboardClient projects={formattedProjects} initialProjectId={initialProjectId} quickBooksStatus={resolvedSearchParams.quickbooks} />;
 }

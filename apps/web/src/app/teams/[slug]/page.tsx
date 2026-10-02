@@ -1,129 +1,232 @@
-
-import { MOCK_TEAMS } from "@/lib/mock-data";
+import { cache } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatPublicName } from "@/lib/talent-utils";
+import { db } from "@/lib/db";
 
-interface PageProps {
-    params: {
-        slug: string;
-    }
+export const dynamic = "force-dynamic";
+type Props = { params: Promise<{ slug: string }> };
+const getTeam = cache((slug: string) =>
+  db.team.findFirst({
+    where: { slug, status: "ACTIVE" },
+    select: {
+      name: true,
+      description: true,
+      leaderUserId: true,
+      members: {
+        where: { status: "ACTIVE", user: { status: "APPROVED" } },
+        orderBy: { user: { firstName: "asc" } },
+        select: {
+          userId: true,
+          roleInTeam: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              profile: {
+                select: {
+                  publicSlug: true,
+                  profileImage: true,
+                  headline: true,
+                  skills: true,
+                },
+              },
+              portfolio: {
+                where: { isPublic: true },
+                orderBy: { sortOrder: "asc" },
+                take: 6,
+                select: { id: true, type: true, title: true, assetUrl: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  }),
+);
+
+function safeAssetUrl(value: string) {
+  if (
+    /^https?:\/\//i.test(value) ||
+    /^\/uploads\//.test(value) ||
+    /^data:(image\/(png|jpeg|webp|gif)|application\/pdf);base64,/i.test(value)
+  )
+    return value;
+  return null;
+}
+const publicName = (user: { firstName: string; lastName: string }) =>
+  `${user.firstName}${user.lastName ? ` ${user.lastName[0]}.` : ""}`;
+
+export async function generateMetadata({ params }: Props) {
+  const team = await getTeam((await params).slug);
+  return {
+    title: team ? `${team.name} | TalentEarth` : "Team Not Found",
+    description: team?.description || "Meet the team and explore their work.",
+  };
 }
 
-export async function generateMetadata({ params }: PageProps) {
-    const { slug } = await params;
-    const team = MOCK_TEAMS.find((t) => t.slug === slug);
-    if (!team) return { title: "Team Not Found" };
-    return {
-        title: `${team.name} | Operational Unit`,
-        description: team.description,
-    };
-}
-
-export default async function TeamManifestPage({ params }: PageProps) {
-    const { slug } = await params;
-    const team = MOCK_TEAMS.find((t) => t.slug === slug);
-
-    if (!team) {
-        notFound();
-    }
-
-    return (
-        <div className="relative z-10 w-full min-h-screen pt-24 pb-20">
-            <div className="max-w-[1600px] mx-auto px-6">
-
-                {/* Header */}
-                <div className="mb-12 border-b border-slate-800 pb-8 flex justify-between items-end">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <span className="text-[10px] uppercase tracking-widest text-slate-500 font-mono">Operational Unit {team.id.slice(-4)}</span>
-                            <span className={`text-[10px] uppercase tracking-wider px-2 py-1 border ${team.status === 'Available' ? 'text-green-900 bg-green-900/20 border-green-900/30' : 'text-slate-400 bg-slate-800/50 border-slate-700'}`}>{team.status}</span>
-                        </div>
-                        <h1 className="text-4xl md:text-6xl font-light text-white mb-4">{team.name}</h1>
-                        <p className="text-xl text-slate-400 font-light max-w-2xl">{team.description}</p>
-                    </div>
-                    <Link href="/teams" className="hidden md:block text-xs font-mono text-slate-500 hover:text-white transition-colors">
-                        ← BACK TO UNITS
-                    </Link>
+export default async function TeamProfilePage({ params }: Props) {
+  const team = await getTeam((await params).slug);
+  if (!team) notFound();
+  const roster = [...team.members].sort(
+    (a, b) =>
+      Number(b.userId === team.leaderUserId) -
+      Number(a.userId === team.leaderUserId),
+  );
+  const skills = [
+    ...new Set(roster.flatMap((member) => member.user.profile?.skills || [])),
+  ].slice(0, 24);
+  const work = roster
+    .flatMap((member) =>
+      member.user.portfolio.map((item) => ({
+        ...item,
+        author: publicName(member.user),
+      })),
+    )
+    .filter((item) => safeAssetUrl(item.assetUrl))
+    .slice(0, 24);
+  return (
+    <main className="container mx-auto min-h-screen px-6 pb-16 pt-32 text-white">
+      <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
+        TalentEarth Team · {roster.length}{" "}
+        {roster.length === 1 ? "member" : "members"}
+      </p>
+      <h1 className="text-4xl font-bold md:text-5xl">{team.name}</h1>
+      {team.description && (
+        <p className="mt-5 max-w-3xl whitespace-pre-wrap break-words text-lg leading-relaxed text-gray-400">
+          {team.description}
+        </p>
+      )}
+      <div className="mt-12 grid gap-10 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <h2 className="mb-5 text-xl font-semibold">Selected work</h2>
+          <p className="mb-6 text-sm text-gray-500">
+            Public portfolio samples from the team.
+          </p>
+          <div className="grid gap-5 sm:grid-cols-2">
+            {work.map((item) => (
+              <article
+                key={item.id}
+                className="overflow-hidden rounded-xl border border-white/10 bg-white/5"
+              >
+                {item.type === "IMAGE" ? (
+                  <div className="relative aspect-video">
+                    <Image
+                      src={item.assetUrl}
+                      alt={item.title || "Portfolio sample"}
+                      fill
+                      unoptimized
+                      sizes="(max-width: 640px) 100vw, 40vw"
+                      className="object-cover"
+                    />
+                  </div>
+                ) : item.type === "VIDEO" ? (
+                  <video
+                    src={item.assetUrl}
+                    controls
+                    preload="none"
+                    className="aspect-video w-full bg-black"
+                    aria-label={item.title || "Portfolio video"}
+                  />
+                ) : (
+                  <div className="flex aspect-video items-center justify-center bg-black/20">
+                    <a
+                      href={item.assetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg border border-white/20 px-4 py-3 text-sm text-blue-300"
+                    >
+                      Open portfolio ↗
+                    </a>
+                  </div>
+                )}
+                <div className="p-4">
+                  <h3 className="font-medium">
+                    {item.title || "Portfolio sample"}
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-500">{item.author}</p>
                 </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-
-                    {/* Main Content: Manifest / Portfolio */}
-                    <div className="lg:col-span-8">
-                        <section>
-                            <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-6 border-b border-slate-800 pb-2">Manifest / Selected Works</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {team.portfolio && team.portfolio.map((item: any) => (
-                                    <div key={item.id} className="group cursor-pointer">
-                                        <div className="aspect-video bg-slate-900 overflow-hidden border border-slate-800 group-hover:border-slate-600 transition-all relative">
-                                            {/* We use standard img for simplicity with external URLs in mock data */}
-                                            <img src={item.image} alt={item.title} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-500 scale-100 group-hover:scale-105" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end">
-                                                <span className="text-xs font-mono text-green-400 mb-1">{item.type}</span>
-                                                <h4 className="text-white text-lg font-medium">{item.title}</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                                {(!team.portfolio || team.portfolio.length === 0) && (
-                                    <div className="col-span-full py-12 text-slate-600 font-mono text-sm border border-dashed border-slate-800 flex items-center justify-center">
-                                        NO MANIFEST DATA AVAILABLE
-                                    </div>
-                                )}
-                            </div>
-                        </section>
-
-                        <section className="mt-16">
-                            <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-6 border-b border-slate-800 pb-2">Capabilities</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {team.capabilities && team.capabilities.map((capability: string, i: number) => (
-                                    <div key={i} className="bg-slate-900/50 p-4 border border-slate-800">
-                                        <div className="w-1 h-1 bg-green-500 mb-2"></div>
-                                        <span className="text-sm text-slate-300">{capability}</span>
-                                    </div>
-                                ))}
-                                {(!team.capabilities || team.capabilities.length === 0) && (
-                                    <div className="col-span-full py-6 text-slate-600 font-mono text-sm border border-dashed border-slate-800 flex items-center justify-center">
-                                        NO CAPABILITIES DATA AVAILABLE
-                                    </div>
-                                )}
-                            </div>
-                        </section>
-                    </div>
-
-                    {/* Sidebar: Roster */}
-                    <aside className="lg:col-span-4">
-                        <div className="bg-wme-panel border border-wme-border p-6 sticky top-32">
-                            <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-6 border-b border-slate-800 pb-2">Team Roster</h3>
-
-                            <div className="space-y-4">
-                                {team.members.map((member: any) => (
-                                    <div key={member.id} className="flex items-center gap-4 group cursor-pointer hover:bg-slate-800/50 p-2 rounded -mx-2 transition-colors">
-                                        <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-700">
-                                            <img src={member.profile.profileImage} alt={formatPublicName(member.firstName, member.lastName)} className="w-full h-full object-cover" />
-                                        </div>
-                                        <div>
-                                            <div className="text-white font-medium group-hover:text-green-400 transition-colors">{formatPublicName(member.firstName, member.lastName)}</div>
-                                            <div className="text-xs text-slate-500 uppercase tracking-wide">{member.profile.primaryDiscipline || member.profile.headline}</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="mt-8 pt-8 border-t border-slate-800">
-                                <button className="w-full bg-white text-black py-3 text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors">
-                                    Book This Unit
-                                </button>
-                                <div className="mt-4 text-center">
-                                    <span className="text-[10px] text-slate-600">ID: {team.id}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </aside>
-                </div>
-
-            </div>
+              </article>
+            ))}
+          </div>
+          {work.length === 0 && (
+            <p className="rounded-xl border border-dashed border-white/15 p-10 text-center text-gray-500">
+              Portfolio samples will appear as team members add public work to
+              their profiles.
+            </p>
+          )}
+          {skills.length > 0 && (
+            <section className="mt-10">
+              <h2 className="mb-4 text-xl font-semibold">Capabilities</h2>
+              <div className="flex flex-wrap gap-2">
+                {skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="rounded-lg border border-white/10 px-3 py-2 text-sm text-gray-300"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
-    );
+        <aside className="h-fit rounded-2xl border border-white/10 bg-white/5 p-6">
+          <h2 className="mb-5 text-xl font-semibold">Team roster</h2>
+          <ul className="space-y-5">
+            {roster.map((member) => (
+              <li key={member.userId} className="flex items-center gap-3">
+                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-800 text-blue-300">
+                  {member.user.profile?.profileImage &&
+                  safeAssetUrl(member.user.profile.profileImage) ? (
+                    <Image
+                      src={member.user.profile.profileImage}
+                      alt=""
+                      fill
+                      unoptimized
+                      sizes="48px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    member.user.firstName[0]
+                  )}
+                </div>
+                <div className="min-w-0">
+                  {member.user.profile ? (
+                    <Link
+                      href={`/talent/${member.user.profile.publicSlug}`}
+                      className="font-medium hover:text-blue-300"
+                    >
+                      {publicName(member.user)}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">
+                      {publicName(member.user)}
+                    </span>
+                  )}
+                  {member.userId === team.leaderUserId && (
+                    <p className="text-xs text-blue-300">Team Leader</p>
+                  )}
+                  <p className="mt-1 text-xs text-gray-500">
+                    {member.roleInTeam ||
+                      member.user.profile?.headline ||
+                      "Member"}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {roster.length === 0 && (
+            <p className="text-sm text-gray-500">No public members yet.</p>
+          )}
+          <Link
+            href="/request"
+            className="mt-8 block rounded-lg bg-blue-600 px-5 py-3 text-center text-sm font-semibold hover:bg-blue-500"
+          >
+            Discuss a Project
+          </Link>
+        </aside>
+      </div>
+    </main>
+  );
 }

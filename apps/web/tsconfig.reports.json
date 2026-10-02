@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "react", "react-dom"],
+    "allowImportingTsExtensions": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/types/**/*.d.ts",
+    "src/app/admin/reports/**/*.tsx",
+    "src/lib/monthly-sales*.ts"
+  ],
+  "exclude": ["node_modules", "legacy_prototype"]
+}

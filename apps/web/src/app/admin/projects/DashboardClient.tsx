@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import InvoiceWorkflow from "./InvoiceWorkflow";
 import {
   getProjectCostCategoryLabel,
   isProjectCostCategory,
@@ -47,7 +48,7 @@ export interface DashboardProject {
   clientStatus: string;
   budgetRange: string;
   retailMultiplier: number;
-  vendorBills: { id: string, amount: number, vendorName: string, category: string, status: string, date: string }[];
+  vendorBills: { id: string, amount: number, vendorName: string, category: string, status: string, date: string, supplierInvoiceId?: string | null, documentUrl?: string | null }[];
   invoice: { amount: number, status: string } | null;
   meetingNotes: { id: string, title: string, content: string, createdAt: string }[];
   completedAt?: string | null;
@@ -57,13 +58,15 @@ export interface DashboardProject {
 
 interface DashboardClientProps {
     projects: DashboardProject[];
+    initialProjectId?: string;
+    quickBooksStatus?: string;
 }
 
 const getHealthStyles = (health: ProjectHealth) => {
   switch (health) {
-    case "Green": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-    case "Yellow": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-    case "Red": return "bg-red-500/20 text-red-400 border-red-500/30";
+    case "Green": return "bg-emerald-100 text-emerald-700 border-emerald-200";
+    case "Yellow": return "bg-yellow-100 text-amber-800 border-yellow-200";
+    case "Red": return "bg-red-100 text-red-700 border-red-200";
   }
 };
 
@@ -85,9 +88,9 @@ function formatMultiplier(multiplier: number) {
   return `${fixedMultiplier.includes(".") ? fixedMultiplier : `${fixedMultiplier}.0`}×`;
 }
 
-export default function DashboardClient({ projects }: DashboardClientProps) {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || "");
-  const [activeTab, setActiveTab] = useState<"SCOPE" | "FINANCIALS" | "MEETING_NOTES">("SCOPE");
+export default function DashboardClient({ projects, initialProjectId, quickBooksStatus }: DashboardClientProps) {
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(initialProjectId || projects[0]?.id || "");
+  const [activeTab, setActiveTab] = useState<"SCOPE" | "FINANCIALS" | "MEETING_NOTES">(quickBooksStatus ? "FINANCIALS" : "SCOPE");
   const [newNoteTitle, setNewNoteTitle] = useState("");
   const [newNoteContent, setNewNoteContent] = useState("");
   const [isSavingNote, setIsSavingNote] = useState(false);
@@ -96,7 +99,10 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   const [copiedLink, setCopiedLink] = useState(false);
 
 
-  const [sidebarTab, setSidebarTab] = useState<"ACTIVE" | "COMPLETED" | "CANCELLED">("ACTIVE");
+  const [sidebarTab, setSidebarTab] = useState<"ACTIVE" | "COMPLETED" | "CANCELLED">(() => {
+      const initialStatus = projects.find((project) => project.id === initialProjectId)?.status;
+      return initialStatus === "COMPLETED" || initialStatus === "CANCELLED" ? initialStatus : "ACTIVE";
+  });
   const [isCancellationModalOpen, setIsCancellationModalOpen] = useState(false);
   const [cancellationReasonInput, setCancellationReasonInput] = useState("");
   const [isCompleting, setIsCompleting] = useState(false);
@@ -622,27 +628,28 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
     return (
       <button
         key={project.id}
+        aria-pressed={isSelected}
         onClick={() => {
           setSelectedProjectId(project.id);
           setRetailPriceError("");
           setPricingSaveState("IDLE");
         }}
-        className={`text-left w-full p-5 rounded-xl border transition-all duration-300 relative overflow-hidden group ${
+        className={`text-left w-full p-5 rounded-xl border transition-all duration-300 relative overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-inset ${
           isSelected
-            ? "bg-blue-900/30 border-blue-500/50 shadow-[0_0_30px_-10px_rgba(59,130,246,0.3)]" 
-            : "bg-white/5 border-white/10 hover:bg-white/10"
+            ? "bg-blue-50 border-blue-500 shadow-md"
+            : "bg-[#f3f6fa] border-slate-200 hover:bg-white hover:border-blue-300 shadow-sm"
         }`}
       >
         {isSelected && (
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600"></div>
         )}
 
         <div className="flex justify-between items-start gap-3 mb-2">
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1 line-clamp-1">
+            <p className="text-[10px] uppercase tracking-wider text-slate-600 mb-1 line-clamp-1">
               {project.categoryName}
             </p>
-            <h3 className={`font-bold text-lg ${isSelected ? "text-white" : "text-gray-200"}`}>
+            <h3 className={`font-bold text-lg ${isSelected ? "text-slate-900" : "text-slate-800"}`}>
               {project.jobName || "Add Job Name"}
             </h3>
           </div>
@@ -652,19 +659,19 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
         </div>
         
         <div className="flex items-center gap-2 mb-4">
-            <p className="text-sm text-gray-400 line-clamp-1 flex-1">{project.client}</p>
+            <p className="text-sm text-slate-600 line-clamp-1 flex-1">{project.client}</p>
             {project.requiresRpmReview && (
-                <span title="Action Required by RPM" className="bg-blue-500 text-white text-[9px] uppercase px-1.5 rounded animate-pulse">RPM</span>
+                <span title="Action Required by RPM" className="bg-blue-600 text-white text-[9px] uppercase px-1.5 rounded animate-pulse">RPM</span>
             )}
         </div>
         
         <div className="flex justify-between items-end">
           <div className="w-full mr-4">
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-gray-500">Progress</span>
-              <span className={isSelected ? "text-blue-300" : "text-gray-400"}>{project.progress}%</span>
+              <span className="text-slate-600">Progress</span>
+              <span className={isSelected ? "text-blue-700" : "text-slate-600"}>{project.progress}%</span>
             </div>
-            <div className="w-full h-1.5 bg-black/50 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
               <div 
                 className={`h-full rounded-full ${getProgressBarColor(project.health)}`}
                 style={{ width: `${project.progress}%` }}
@@ -673,11 +680,11 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
           </div>
           <div className="flex -space-x-2">
             {project.teamMembers.length > 0 ? project.teamMembers.slice(0, 3).map((member, i) => (
-              <div key={i} className="w-6 h-6 rounded-full bg-slate-700 border border-[#030508] flex items-center justify-center text-[8px] font-bold text-white z-10" title={member.name}>
+              <div key={i} className="w-6 h-6 rounded-full bg-slate-700 border-2 border-white flex items-center justify-center text-[8px] font-bold text-white z-10" title={member.name}>
                 {member.avatar}
               </div>
             )) : (
-               <div className="w-6 h-6 rounded-full bg-slate-800 border border-[#030508] flex items-center justify-center text-[8px] font-bold text-gray-500 z-10" title="Unassigned">
+               <div className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[8px] font-bold text-slate-600 z-10" title="Unassigned">
                   ?
                 </div>
             )}
@@ -689,9 +696,9 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
 
   if (projects.length === 0) {
       return (
-          <div className="container mx-auto pt-32 pb-12 px-6 text-white min-h-screen">
+          <div className="container mx-auto pt-32 pb-12 px-6 text-slate-900 [color-scheme:light] min-h-screen">
               <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-white">Active Projects Tracker</h1>
-              <div className="mt-12 text-center text-gray-500 bg-white/5 border border-white/10 rounded-2xl p-12">
+              <div className="mt-12 text-center text-slate-600 bg-white border border-slate-200 rounded-2xl p-12">
                   No active projects found. Monitor new intakes via the Request portal.
               </div>
           </div>
@@ -796,49 +803,55 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
   };
 
   return (
-    <div className="container mx-auto pt-32 pb-12 px-6 text-white min-h-screen flex flex-col">
+    <div className="container mx-auto pt-32 pb-12 px-6 text-slate-900 [color-scheme:light] min-h-screen flex flex-col">
       {/* Header section */}
       <div className="mb-8">
-        <Link href="/admin" className="text-sm text-gray-400 hover:text-white transition flex items-center gap-2 mb-4 w-fit">
-          <i className="ph ph-arrow-left"></i> Back to Dashboard
-        </Link>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <Link href="/admin" className="text-sm text-gray-400 hover:text-white transition flex items-center gap-2 w-fit">
+            <i className="ph ph-arrow-left"></i> Back to Dashboard
+          </Link>
+          <Link href="/admin/reports/monthly-sales" className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400">
+            <i className="ph ph-chart-bar" aria-hidden="true"></i> Monthly Sales &amp; Margin
+          </Link>
+        </div>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-white">Active Projects Tracker</h1>
             <p className="text-gray-400 mt-2">Manage ongoing engagements, team allocation, and project health.</p>
           </div>
           <div className="flex flex-wrap gap-4">
-            <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-lg text-center">
-              <span className="block text-2xl font-bold text-white">{activeProjects.length}</span>
-              <span className="text-[10px] uppercase tracking-wider text-gray-400">Active</span>
+            <div className="bg-white border border-slate-200 px-4 py-2 rounded-lg text-center">
+              <span className="block text-2xl font-bold text-slate-900">{activeProjects.length}</span>
+              <span className="text-[10px] uppercase tracking-wider text-slate-600">Active</span>
             </div>
-            <div className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-lg text-center">
-              <span className="block text-2xl font-bold text-emerald-400">{statOnTrack}</span>
-              <span className="text-[10px] uppercase tracking-wider text-emerald-500/70">On Track</span>
+            <div className="bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-lg text-center">
+              <span className="block text-2xl font-bold text-emerald-700">{statOnTrack}</span>
+              <span className="text-[10px] uppercase tracking-wider text-emerald-700">On Track</span>
             </div>
-            <div className="bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-lg text-center">
-              <span className="block text-2xl font-bold text-red-400">{statAtRisk}</span>
-              <span className="text-[10px] uppercase tracking-wider text-red-500/70">At Risk</span>
+            <div className="bg-red-50 border border-red-200 px-4 py-2 rounded-lg text-center">
+              <span className="block text-2xl font-bold text-red-700">{statAtRisk}</span>
+              <span className="text-[10px] uppercase tracking-wider text-red-700">At Risk</span>
             </div>
-            <div className="bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-lg text-center shadow-[0_0_15px_-3px_rgba(59,130,246,0.5)]">
-              <span className="block text-2xl font-bold text-blue-400">{statRPMReview}</span>
-              <span className="text-[10px] uppercase tracking-wider text-blue-500/70">Needs RPM</span>
+            <div className="bg-blue-50 border border-blue-200 px-4 py-2 rounded-lg text-center shadow-sm">
+              <span className="block text-2xl font-bold text-blue-700">{statRPMReview}</span>
+              <span className="text-[10px] uppercase tracking-wider text-blue-700">Needs RPM</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Split Layout */}
+      {quickBooksStatus && <p role="status" className={`mb-5 rounded-xl border p-4 text-sm ${quickBooksStatus === "connected" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-amber-50 border-amber-200 text-amber-800"}`}>{quickBooksStatus === "connected" ? "QuickBooks connected. Open a supplier invoice or prepare your customer invoice to continue." : "QuickBooks was not connected. Try again and choose the same company as any existing connection."}</p>}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
         
         {/* LEFT COLUMN: Project List */}
         <div className="lg:col-span-4 flex flex-col gap-4">
           {/* Sidebar Tab Switcher */}
-          <div className="grid grid-cols-3 bg-white/5 border border-white/10 rounded-lg p-1 text-xs">
+          <div className="grid grid-cols-3 bg-[#f3f6fa] border border-slate-200 rounded-lg p-1 text-xs">
             <button
               onClick={() => handleTabChange("ACTIVE")}
               className={`py-2 rounded font-bold uppercase tracking-wider text-center transition-colors ${
-                sidebarTab === "ACTIVE" ? "bg-blue-600 text-white shadow" : "text-gray-400 hover:text-white"
+                sidebarTab === "ACTIVE" ? "bg-blue-600 text-white shadow" : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
               }`}
             >
               Active ({activeProjects.length})
@@ -846,7 +859,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
             <button
               onClick={() => handleTabChange("COMPLETED")}
               className={`py-2 rounded font-bold uppercase tracking-wider text-center transition-colors ${
-                sidebarTab === "COMPLETED" ? "bg-emerald-600 text-white shadow" : "text-gray-400 hover:text-white"
+                sidebarTab === "COMPLETED" ? "bg-emerald-700 text-white shadow" : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
               }`}
             >
               Completed ({completedProjects.length})
@@ -854,7 +867,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
             <button
               onClick={() => handleTabChange("CANCELLED")}
               className={`py-2 rounded font-bold uppercase tracking-wider text-center transition-colors ${
-                sidebarTab === "CANCELLED" ? "bg-red-600 text-white shadow" : "text-gray-400 hover:text-white"
+                sidebarTab === "CANCELLED" ? "bg-red-600 text-white shadow" : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
               }`}
             >
               Cancelled ({cancelledProjects.length})
@@ -867,7 +880,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
               activeProjects.length > 0 ? (
                 activeProjects.map((project) => renderProjectCard(project))
               ) : (
-                <div className="text-center py-8 text-gray-500 text-sm bg-white/5 border border-white/10 rounded-xl">
+                <div className="text-center py-8 text-slate-600 text-sm bg-white border border-slate-200 rounded-xl">
                   No active projects.
                 </div>
               )
@@ -877,14 +890,14 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
               completedGroups.length > 0 ? (
                 completedGroups.map((group) => (
                   <div key={group.monthYear} className="space-y-2">
-                    <div className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2 pt-2 pb-1 border-b border-white/5">
+                    <div className="text-xs font-bold text-slate-300 uppercase tracking-widest px-2 pt-2 pb-1 border-b border-white/15">
                       {group.monthYear}
                     </div>
                     {group.projects.map((project) => renderProjectCard(project))}
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8 text-gray-500 text-sm bg-white/5 border border-white/10 rounded-xl">
+                <div className="text-center py-8 text-slate-600 text-sm bg-white border border-slate-200 rounded-xl">
                   No completed projects.
                 </div>
               )
@@ -894,14 +907,14 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
               cancelledGroups.length > 0 ? (
                 cancelledGroups.map((group) => (
                   <div key={group.monthYear} className="space-y-2">
-                    <div className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2 pt-2 pb-1 border-b border-white/5">
+                    <div className="text-xs font-bold text-slate-300 uppercase tracking-widest px-2 pt-2 pb-1 border-b border-white/15">
                       {group.monthYear}
                     </div>
                     {group.projects.map((project) => renderProjectCard(project))}
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8 text-gray-500 text-sm bg-white/5 border border-white/10 rounded-xl">
+                <div className="text-center py-8 text-slate-600 text-sm bg-white border border-slate-200 rounded-xl">
                   No cancelled projects.
                 </div>
               )
@@ -912,33 +925,31 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
         {/* RIGHT COLUMN: Project Details */}
         <div className="lg:col-span-8">
           {selectedProject && (
-          <div className="bg-[#0B0F15]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 h-full shadow-2xl relative overflow-hidden flex flex-col">
+          <div className="bg-[#f3f6fa] border border-slate-200 rounded-2xl p-6 md:p-8 h-full shadow-2xl relative overflow-hidden flex flex-col">
             
-            {/* Ambient Background Glow based on health */}
-            <div className={`absolute top-0 right-0 w-96 h-96 opacity-10 blur-[120px] rounded-full pointer-events-none ${getProgressBarColor(selectedProject.health)} translate-x-1/3 -translate-y-1/3`}></div>
 
             {/* Header Details */}
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 relative z-10 border-b border-white/5 pb-8">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 relative z-10 border-b border-slate-200 pb-8">
               <div>
                 <div className="flex items-start gap-3 mb-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-blue-400 font-semibold mb-1">Job Name</p>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-blue-700 font-semibold mb-1">Job Name</p>
                     <div className="flex items-center gap-2">
-                      <h2 className={`text-3xl font-bold ${selectedProject.jobName ? "text-white" : "text-gray-500"}`}>
+                      <h2 className={`text-3xl font-bold ${selectedProject.jobName ? "text-slate-900" : "text-slate-600"}`}>
                         {selectedProject.jobName || "Add Job Name"}
                       </h2>
                       <button
                         type="button"
                         onClick={openJobNameModal}
-                        className="p-1.5 rounded-md text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
+                        className="p-1.5 rounded-md text-blue-700 hover:text-blue-900 hover:bg-blue-700/10 transition-colors"
                         aria-label={`Edit job name for ${selectedProject.name}`}
                         title="Edit job name"
                       >
                         <i className="ph ph-pencil-simple"></i>
                       </button>
                     </div>
-                    <p className="text-xs uppercase tracking-wider text-gray-500 mt-2">
-                      Category: <span className="normal-case tracking-normal text-gray-400">{selectedProject.categoryName}</span>
+                    <p className="text-xs uppercase tracking-wider text-slate-600 mt-2">
+                      Category: <span className="normal-case tracking-normal text-slate-600">{selectedProject.categoryName}</span>
                     </p>
                   </div>
                   <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full border ${getHealthStyles(selectedProject.health)}`}>
@@ -946,11 +957,11 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="text-lg text-gray-400">Client: <span className="text-gray-200">{selectedProject.client}</span></p>
+                  <p className="text-lg text-slate-600">Client: <span className="text-slate-800">{selectedProject.client}</span></p>
                   <button
                     type="button"
                     onClick={openClientNameModal}
-                    className="p-1.5 rounded-md text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
+                    className="p-1.5 rounded-md text-blue-700 hover:text-blue-900 hover:bg-blue-700/10 transition-colors"
                     aria-label={`Edit client name for ${selectedProject.name}`}
                     title="Edit client name for this project"
                   >
@@ -961,8 +972,8 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
 
               <div className="flex flex-col items-start md:items-end gap-3 text-sm md:text-right">
                 <div>
-                  <span className="text-gray-500 block text-xs uppercase tracking-wider mb-1">Due / Target</span>
-                  <span className="text-white font-mono bg-white/5 px-3 py-1.5 rounded">{selectedProject.dueDate}</span>
+                  <span className="text-slate-600 block text-xs uppercase tracking-wider mb-1">Due / Target</span>
+                  <span className="text-slate-900 font-mono bg-white px-3 py-1.5 rounded">{selectedProject.dueDate}</span>
                 </div>
 
                 {/* Project Status Actions (Visible only for Active projects) */}
@@ -971,14 +982,14 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                     <button
                       onClick={handleCompleteProject}
                       disabled={isCompleting}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition duration-200"
+                      className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition duration-200"
                     >
                       {isCompleting ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-check-circle"></i>}
                       Complete
                     </button>
                     <button
                       onClick={() => setIsCancellationModalOpen(true)}
-                      className="px-3 py-1.5 bg-red-950/40 border border-red-500/30 hover:bg-red-900/30 text-red-400 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition duration-200"
+                      className="px-3 py-1.5 bg-red-50 border border-red-200 hover:bg-red-100 text-red-700 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition duration-200"
                     >
                       <i className="ph ph-x-circle"></i>
                       Cancel
@@ -990,11 +1001,11 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
 
             {/* Completion / Cancellation Notice Banners */}
             {selectedProject.status === "COMPLETED" && (
-              <div className="mb-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3 text-emerald-400 relative z-10">
+              <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3 text-emerald-700 relative z-10">
                 <i className="ph ph-check-circle text-2xl"></i>
                 <div>
                   <div className="font-bold text-sm uppercase tracking-wider">Project Completed</div>
-                  <div className="text-xs text-emerald-500/80">
+                  <div className="text-xs text-emerald-700">
                     This project was marked completed on {selectedProject.completedAt ? new Date(selectedProject.completedAt).toLocaleDateString(undefined, { dateStyle: 'full' }) : 'Unknown Date'}.
                   </div>
                 </div>
@@ -1003,25 +1014,25 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
 
             {selectedProject.status === "CANCELLED" && (
               <div className="mb-6 space-y-4 relative z-10">
-                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center gap-3 text-red-400">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 text-red-700">
                   <i className="ph ph-x-circle text-2xl"></i>
                   <div>
                     <div className="font-bold text-sm uppercase tracking-wider">Project Cancelled</div>
-                    <div className="text-xs text-red-500/80">
+                    <div className="text-xs text-red-700">
                       This project was marked cancelled on {selectedProject.cancelledAt ? new Date(selectedProject.cancelledAt).toLocaleDateString(undefined, { dateStyle: 'full' }) : 'Unknown Date'}.
                     </div>
                   </div>
                 </div>
                 {selectedProject.cancellationReason && (
-                  <div className="bg-black/30 border border-white/5 rounded-xl p-5">
-                    <h4 className="text-xs uppercase text-gray-500 font-bold tracking-widest mb-2">Reason for Cancellation</h4>
-                    <p className="text-sm text-gray-300 italic">&ldquo;{selectedProject.cancellationReason}&rdquo;</p>
+                  <div className="bg-white border border-slate-200 rounded-xl p-5">
+                    <h4 className="text-xs uppercase text-slate-600 font-bold tracking-widest mb-2">Reason for Cancellation</h4>
+                    <p className="text-sm text-slate-700 italic">&ldquo;{selectedProject.cancellationReason}&rdquo;</p>
                   </div>
                 )}
-                <div className="bg-red-950/20 border border-red-500/20 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div>
-                    <h4 className="text-sm font-bold text-white mb-1">Archive, then delete</h4>
-                    <p className="text-xs text-gray-400 max-w-2xl">
+                    <h4 className="text-sm font-bold text-slate-900 mb-1">Archive, then delete</h4>
+                    <p className="text-xs text-slate-600 max-w-2xl">
                       Export the customer invoice PDF first if you need a permanent copy. Deleting removes this project and all of its related records and cannot be undone.
                     </p>
                   </div>
@@ -1030,7 +1041,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                       type="button"
                       onClick={handleExportInvoicePdf}
                       disabled={customerLineItems.length === 0 || retailPrice <= 0}
-                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-1.5"
+                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-1.5"
                       title={customerLineItems.length === 0 || retailPrice <= 0 ? "No invoice line items are available to export" : "Download customer invoice PDF"}
                     >
                       <i className="ph ph-file-pdf"></i>
@@ -1039,7 +1050,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                     <button
                       type="button"
                       onClick={openDeleteProjectModal}
-                      className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-1.5"
+                      className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-1.5"
                     >
                       <i className="ph ph-trash"></i>
                       Delete Project
@@ -1050,26 +1061,26 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
             )}
 
             {/* Tabs */}
-            <div className="flex gap-6 mb-8 border-b border-white/10">
+            <div className="flex gap-6 mb-8 overflow-x-auto border-b border-slate-200">
                 <button 
                    onClick={() => setActiveTab("SCOPE")}
-                   className={`pb-3 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === "SCOPE" ? 'text-white border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-300'}`}
+                   className={`pb-3 shrink-0 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === "SCOPE" ? 'text-slate-900 border-b-2 border-blue-500' : 'text-slate-600 hover:text-slate-900'}`}
                 >
                    Scope & SOW
                 </button>
                 <button 
                    onClick={() => setActiveTab("FINANCIALS")}
-                   className={`pb-3 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === "FINANCIALS" ? 'text-white border-b-2 border-emerald-500' : 'text-gray-500 hover:text-gray-300'}`}
+                   className={`pb-3 shrink-0 text-sm font-bold uppercase tracking-widest transition-colors ${activeTab === "FINANCIALS" ? 'text-slate-900 border-b-2 border-emerald-500' : 'text-slate-600 hover:text-slate-900'}`}
                 >
                    Financial Ledger
                 </button>
                 <button 
                    onClick={() => setActiveTab("MEETING_NOTES")}
-                   className={`pb-3 text-sm font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${activeTab === "MEETING_NOTES" ? 'text-white border-b-2 border-purple-500' : 'text-gray-500 hover:text-gray-300'}`}
+                   className={`pb-3 shrink-0 text-sm font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${activeTab === "MEETING_NOTES" ? 'text-slate-900 border-b-2 border-purple-500' : 'text-slate-600 hover:text-slate-900'}`}
                 >
                    Meeting Notes
                    {selectedProject.meetingNotes?.length > 0 && (
-                       <span className="bg-white/10 text-[10px] px-1.5 py-0.5 rounded-full">{selectedProject.meetingNotes.length}</span>
+                       <span className="bg-slate-100 text-[10px] px-1.5 py-0.5 rounded-full">{selectedProject.meetingNotes.length}</span>
                    )}
                 </button>
             </div>
@@ -1078,13 +1089,13 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                 <>
                 {/* AI & Routing Panel (NEW) */}
                 <div className="mb-8 relative z-10 flex gap-4 overflow-x-auto">
-                     <div className="bg-black/40 border border-white/5 rounded-lg p-3 flex-1 min-w-[200px]">
-                          <div className="text-[10px] uppercase text-gray-500 mb-1">AI Confidence</div>
-                          <div className="text-xl text-white font-light">{selectedProject.aiConfidenceScore > 0 ? selectedProject.aiConfidenceScore + '%' : 'Pending'}</div>
+                     <div className="bg-white border border-slate-200 rounded-lg p-3 flex-1 min-w-[200px]">
+                          <div className="text-[10px] uppercase text-slate-600 mb-1">AI Confidence</div>
+                          <div className="text-xl text-slate-900 font-light">{selectedProject.aiConfidenceScore > 0 ? selectedProject.aiConfidenceScore + '%' : 'Pending'}</div>
                      </div>
-                     <div className="bg-black/40 border border-white/5 rounded-lg p-3 flex-1 min-w-[200px]">
-                          <div className="text-[10px] uppercase text-gray-500 mb-1">Routing Mode</div>
-                          <div className="text-xl text-white font-light flex items-center gap-2">
+                     <div className="bg-white border border-slate-200 rounded-lg p-3 flex-1 min-w-[200px]">
+                          <div className="text-[10px] uppercase text-slate-600 mb-1">Routing Mode</div>
+                          <div className="text-xl text-slate-900 font-light flex items-center gap-2">
                               {selectedProject.isAutoRouted ? (
                                   <><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Auto-Routed</>
                               ) : (
@@ -1100,48 +1111,48 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                   {/* Main Info */}
                   <div className="md:col-span-2 flex flex-col gap-6">
                     <div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center justify-between">
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600 mb-4 flex items-center justify-between">
                         <span className="flex items-center gap-2"><i className="ph ph-file-text"></i> Scope Definition</span>
                         {selectedProject.sow.length > 0 && (
                             <span className="flex items-center gap-3">
                                 {selectedProject.clientStatus === 'APPROVED' && (
-                                    <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-[10px] tracking-widest font-bold border border-emerald-500/30 flex items-center gap-1">
+                                    <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] tracking-widest font-bold border border-emerald-200 flex items-center gap-1">
                                         <i className="ph ph-check-circle"></i> CLIENT APPROVED
                                     </span>
                                 )}
                                 {selectedProject.clientStatus === 'REVISION_REQUESTED' && (
-                                    <span className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-[10px] tracking-widest font-bold border border-yellow-500/30 flex items-center gap-1">
+                                    <span className="bg-yellow-100 text-amber-800 px-2 py-1 rounded text-[10px] tracking-widest font-bold border border-yellow-200 flex items-center gap-1">
                                         <i className="ph ph-warning-circle"></i> REVISION REQUESTED
                                     </span>
                                 )}
-                                <span className="bg-blue-500/20 border border-blue-500/30 text-blue-400 px-2 py-1 rounded text-[10px] tracking-widest shadow-inner">
+                                <span className="bg-blue-100 border border-blue-200 text-blue-700 px-2 py-1 rounded text-[10px] tracking-widest shadow-inner">
                                     VERSION 1.{selectedProject.sowVersion - 1}
                                 </span>
                             </span>
                         )}
                       </h3>
-                      <div className="bg-black/30 border border-white/5 rounded-xl p-5 space-y-4">
+                      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
                         {selectedProject.sow.map((paragraph, index) => (
-                          <p key={index} className="text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
+                          <p key={index} className="text-slate-700 leading-relaxed text-sm whitespace-pre-wrap">
                             {paragraph}
                           </p>
                         ))}
                         {selectedProject.sow.length === 0 && (
-                            <p className="text-gray-500 italic">No AI Statement of Work generated for this job yet.</p>
+                            <p className="text-slate-600 italic">No AI Statement of Work generated for this job yet.</p>
                         )}
                       </div>
                     </div>
 
                     <div>
-                       <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
+                       <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600 mb-4 flex items-center gap-2">
                         <i className="ph ph-chart-line-up"></i> Completion Details
                       </h3>
-                       <div className="bg-black/30 border border-white/5 rounded-xl p-6">
+                       <div className="bg-white border border-slate-200 rounded-xl p-6">
                           <div className="flex justify-between items-end mb-2">
-                            <span className="text-3xl font-light text-white">{selectedProject.progress}<span className="text-lg text-gray-500">%</span></span>
-                            <span className="text-sm text-gray-400">{selectedProject.status.replace("_", " ")}</span>
+                            <span className="text-3xl font-light text-slate-900">{selectedProject.progress}<span className="text-lg text-slate-600">%</span></span>
+                            <span className="text-sm text-slate-600">{selectedProject.status.replace("_", " ")}</span>
                           </div>
-                          <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden mt-4">
+                          <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden mt-4">
                             <div 
                               className={`h-full rounded-full transition-all duration-1000 ease-out ${getProgressBarColor(selectedProject.health)}`}
                               style={{ width: `${selectedProject.progress}%` }}
@@ -1154,22 +1165,22 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                     {/* Sidebar Info */}
                   <div className="flex flex-col gap-6">
                      <div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600 mb-4 flex items-center gap-2">
                         <i className="ph ph-users"></i> Project Team
                       </h3>
-                      <div className="bg-black/30 border border-white/5 rounded-xl p-4 flex flex-col gap-3 min-h-[150px]">
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col gap-3 min-h-[150px]">
                         {selectedProject.teamMembers.length > 0 ? selectedProject.teamMembers.map((member, idx) => (
-                          <div key={idx} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-default">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-900 to-indigo-900 border border-blue-500/30 flex items-center justify-center font-bold text-blue-200">
+                          <div key={idx} className="flex items-center gap-3 p-2 hover:bg-slate-100 rounded-lg transition-colors cursor-default">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 border border-blue-200 flex items-center justify-center font-bold text-blue-700">
                               {member.avatar}
                             </div>
                             <div>
-                              <div className="text-sm font-medium text-white">{member.name}</div>
-                              <div className="text-xs text-blue-400/80">{member.role}</div>
+                              <div className="text-sm font-medium text-slate-900">{member.name}</div>
+                              <div className="text-xs text-blue-700">{member.role}</div>
                             </div>
                           </div>
                         )) : (
-                            <div className="text-center text-gray-500 text-sm mt-4">
+                            <div className="text-center text-slate-600 text-sm mt-4">
                                 Routing engine has not assigned talent.
                             </div>
                         )}
@@ -1178,7 +1189,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                     
                     {selectedProject.requiresRpmReview && (
                          <div className="mt-auto">
-                            <button className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg shadow-[0_0_20px_rgba(37,99,235,0.4)] transition duration-300 text-sm font-bold uppercase tracking-widest">
+                            <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-[0_0_20px_rgba(37,99,235,0.4)] transition duration-300 text-sm font-bold uppercase tracking-widest">
                                 Review AI Generation
                             </button>
                         </div>
@@ -1187,7 +1198,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                         <div className="mt-auto flex flex-col gap-3">
                             <button 
                                 onClick={handleDownloadSow}
-                                className="w-full py-3 bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-lg transition duration-300 text-sm font-medium flex items-center justify-center gap-2"
+                                className="w-full py-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-900 rounded-lg transition duration-300 text-sm font-medium flex items-center justify-center gap-2"
                             >
                                 <i className="ph ph-download-simple"></i> Download SOW (.txt)
                             </button>
@@ -1195,7 +1206,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                             <button 
                                 onClick={handleShareSow}
                                 disabled={isSharing}
-                                className={`w-full py-4 rounded-lg shadow transition duration-300 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2 ${copiedLink ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_20px_rgba(147,51,234,0.4)]'}`}
+                                className={`w-full py-4 rounded-lg shadow transition duration-300 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2 ${copiedLink ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.4)]'}`}
                             >
                                 {isSharing ? <i className="ph ph-spinner animate-spin"></i> : (copiedLink ? <i className="ph ph-check"></i> : <i className="ph ph-link"></i>)}
                                 {copiedLink ? "Link Copied!" : "Share Client SOW"}
@@ -1210,45 +1221,62 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
 
             {activeTab === "FINANCIALS" && (
                 <div className="flex-1 flex flex-col gap-8 relative z-10 animate-fade-in">
+                    <InvoiceWorkflow
+                        key={selectedProject.id}
+                        projectId={selectedProject.id}
+                        projectName={selectedProject.name}
+                        retailPrice={retailPrice}
+                        pricingValid={!retailPriceError && Boolean(retailPriceInput.trim())}
+                        pricingDirty={retailPriceInputs[selectedProject.id] !== undefined}
+                        cancelled={selectedProject.status === "CANCELLED"}
+                        onCostsChanged={(bills) => {
+                            setVendorBillsByProjectId((current) => ({ ...current, [selectedProject.id]: bills }));
+                            setRetailPriceInputs((current) => {
+                                const next = { ...current };
+                                delete next[selectedProject.id];
+                                return next;
+                            });
+                        }}
+                    />
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="bg-black/40 border border-white/5 rounded-xl p-5">
-                            <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">Estimated Budget</div>
-                            <div className="text-2xl font-light text-white">{selectedProject.budgetRange || "Pending"}</div>
+                        <div className="bg-white border border-slate-200 rounded-xl p-5">
+                            <div className="text-xs text-slate-600 uppercase tracking-widest mb-2">Estimated Budget</div>
+                            <div className="text-2xl font-light text-slate-900">{selectedProject.budgetRange || "Pending"}</div>
                         </div>
-                        <div className="bg-black/40 border border-white/5 rounded-xl p-5">
-                            <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">Total COGS</div>
-                            <div className="text-2xl font-light text-white">{currencyFormatter.format(totalCosts)}</div>
-                            <div className="text-xs mt-1 text-gray-500">{selectedVendorBills.length} cost item{selectedVendorBills.length === 1 ? "" : "s"}</div>
+                        <div className="bg-white border border-slate-200 rounded-xl p-5">
+                            <div className="text-xs text-slate-600 uppercase tracking-widest mb-2">Total COGS</div>
+                            <div className="text-2xl font-light text-slate-900">{currencyFormatter.format(totalCosts)}</div>
+                            <div className="text-xs mt-1 text-slate-600">{selectedVendorBills.length} cost item{selectedVendorBills.length === 1 ? "" : "s"}</div>
                         </div>
-                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-5 text-blue-300">
-                            <div className="text-xs uppercase tracking-widest mb-2 opacity-80">Retail Price</div>
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-blue-700">
+                            <div className="text-xs uppercase tracking-widest mb-2 ">Retail Price</div>
                             <div className="text-2xl font-bold">{currencyFormatter.format(retailPrice)}</div>
-                            <div className="text-xs mt-1 opacity-70">Marked costs × {formatMultiplier(retailMultiplier).replace("×", "")} + delivery at cost</div>
+                            <div className="text-xs mt-1 ">Marked costs × {formatMultiplier(retailMultiplier).replace("×", "")} + delivery at cost</div>
                         </div>
-                        <div className={`${grossProfit >= 0 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400"} border rounded-xl p-5`}>
-                            <div className="text-xs uppercase tracking-widest mb-2 opacity-80">Gross Profit</div>
+                        <div className={`${grossProfit >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"} border rounded-xl p-5`}>
+                            <div className="text-xs uppercase tracking-widest mb-2 ">Gross Profit</div>
                             <div className="text-2xl font-bold">{currencyFormatter.format(grossProfit)}</div>
-                            <div className="text-xs mt-1 opacity-70">{retailPrice > 0 ? `${grossMargin.toFixed(1)}% margin` : "Add costs to calculate"}</div>
+                            <div className="text-xs mt-1 ">{retailPrice > 0 ? `${grossMargin.toFixed(1)}% margin` : "Add costs to calculate"}</div>
                         </div>
                     </div>
 
-                    <section className="bg-gradient-to-br from-emerald-950/30 to-blue-950/20 border border-emerald-500/20 rounded-2xl p-6 md:p-8 shadow-[0_0_35px_-20px_rgba(16,185,129,0.6)]">
+                    <section className="bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-200 rounded-2xl p-6 md:p-8 shadow-[0_0_35px_-20px_rgba(16,185,129,0.6)]">
                         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
                             <div>
-                                <div className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400 mb-2">Retail Pricing Calculator</div>
-                                <h3 className="text-2xl font-light text-white">Set an exact retail price or use the slider</h3>
-                                <p className="text-sm text-gray-400 mt-2 max-w-2xl">Enter the exact price you want, or move the slider. Both stay synchronized. Courier, delivery, and freight always pass through at the entered amount.</p>
+                                <div className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700 mb-2">Retail Pricing Calculator</div>
+                                <h3 className="text-2xl font-light text-slate-900">Set an exact retail price or use the slider</h3>
+                                <p className="text-sm text-slate-600 mt-2 max-w-2xl">Enter the exact price you want, or move the slider. Both stay synchronized. Courier, delivery, and freight always pass through at the entered amount.</p>
                             </div>
-                            <div className="min-w-[150px] rounded-xl bg-black/30 border border-white/10 px-5 py-3 text-center">
-                                <div className="text-[10px] uppercase tracking-widest text-gray-500">Multiplier</div>
-                                <div className="text-3xl font-bold text-emerald-400">{formatMultiplier(retailMultiplier)}</div>
+                            <div className="min-w-[150px] rounded-xl bg-white border border-slate-200 px-5 py-3 text-center">
+                                <div className="text-[10px] uppercase tracking-widest text-slate-600">Multiplier</div>
+                                <div className="text-3xl font-bold text-emerald-700">{formatMultiplier(retailMultiplier)}</div>
                             </div>
                         </div>
 
                         <div className="max-w-sm mb-7">
-                            <label htmlFor="retail-price-input" className="block text-xs uppercase tracking-widest text-gray-400 font-semibold mb-2">Exact Retail Price</label>
-                            <div className={`flex items-center rounded-xl bg-black/30 border ${retailPriceError ? "border-red-500/60" : "border-white/10 focus-within:border-emerald-500"} transition-colors`}>
-                                <span className="pl-4 text-lg text-gray-500" aria-hidden="true">$</span>
+                            <label htmlFor="retail-price-input" className="block text-xs uppercase tracking-widest text-slate-600 font-semibold mb-2">Exact Retail Price</label>
+                            <div className={`flex items-center rounded-xl bg-white border ${retailPriceError ? "border-red-500/60" : "border-slate-200 focus-within:border-emerald-500"} transition-colors`}>
+                                <span className="pl-4 text-lg text-slate-600" aria-hidden="true">$</span>
                                 <input
                                     id="retail-price-input"
                                     type="text"
@@ -1267,10 +1295,10 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                     disabled={selectedProject.status === "COMPLETED" || selectedProject.status === "CANCELLED" || markupEligibleCosts <= 0}
                                     aria-invalid={Boolean(retailPriceError)}
                                     aria-describedby="retail-price-help"
-                                    className="min-w-0 w-full bg-transparent px-2 py-3 text-xl font-semibold text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="min-w-0 w-full bg-transparent px-2 py-3 text-xl font-semibold text-slate-900 outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                 />
                             </div>
-                            <p id="retail-price-help" className={`text-xs mt-2 ${retailPriceError ? "text-red-400" : "text-gray-500"}`} role={retailPriceError ? "alert" : undefined}>
+                            <p id="retail-price-help" className={`text-xs mt-2 ${retailPriceError ? "text-red-700" : "text-slate-600"}`} role={retailPriceError ? "alert" : undefined}>
                                 {retailPriceError || (markupEligibleCosts > 0
                                     ? `Allowed range: ${currencyFormatter.format(retailPriceRange.minimumRetailPrice)} to ${currencyFormatter.format(retailPriceRange.maximumRetailPrice)}.`
                                     : "Add a non-delivery cost to set retail pricing. Delivery remains at cost.")}
@@ -1289,7 +1317,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                             disabled={selectedProject.status === "COMPLETED" || selectedProject.status === "CANCELLED" || markupEligibleCosts <= 0}
                             className="w-full h-3 rounded-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 accent-emerald-500"
                         />
-                        <div className="flex justify-between text-[10px] text-gray-500 font-mono mt-2" aria-hidden="true">
+                        <div className="flex justify-between text-[10px] text-slate-600 font-mono mt-2" aria-hidden="true">
                             <span>0×</span>
                             <span>2×</span>
                             <span>4×</span>
@@ -1299,27 +1327,27 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-7">
-                            <div className="bg-black/25 border border-white/5 rounded-xl p-4">
-                                <div className="text-[10px] uppercase tracking-widest text-gray-500">Costs Marked Up</div>
-                                <div className="text-xl text-white mt-1">{currencyFormatter.format(markupEligibleCosts)}</div>
+                            <div className="bg-white border border-slate-200 rounded-xl p-4">
+                                <div className="text-[10px] uppercase tracking-widest text-slate-600">Costs Marked Up</div>
+                                <div className="text-xl text-slate-900 mt-1">{currencyFormatter.format(markupEligibleCosts)}</div>
                             </div>
-                            <div className="bg-black/25 border border-white/5 rounded-xl p-4">
-                                <div className="text-[10px] uppercase tracking-widest text-gray-500">Delivery Pass-Through</div>
-                                <div className="text-xl text-white mt-1">{currencyFormatter.format(deliveryCosts)}</div>
+                            <div className="bg-white border border-slate-200 rounded-xl p-4">
+                                <div className="text-[10px] uppercase tracking-widest text-slate-600">Delivery Pass-Through</div>
+                                <div className="text-xl text-slate-900 mt-1">{currencyFormatter.format(deliveryCosts)}</div>
                             </div>
-                            <div className="bg-black/25 border border-white/5 rounded-xl p-4">
-                                <div className="text-[10px] uppercase tracking-widest text-gray-500">Retail Price</div>
-                                <div className="text-xl text-blue-300 mt-1">{currencyFormatter.format(retailPrice)}</div>
+                            <div className="bg-white border border-slate-200 rounded-xl p-4">
+                                <div className="text-[10px] uppercase tracking-widest text-slate-600">Retail Price</div>
+                                <div className="text-xl text-blue-700 mt-1">{currencyFormatter.format(retailPrice)}</div>
                             </div>
-                            <div className="bg-black/25 border border-white/5 rounded-xl p-4">
-                                <div className="text-[10px] uppercase tracking-widest text-gray-500">Gross Profit</div>
-                                <div className={`text-xl mt-1 ${grossProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>{currencyFormatter.format(grossProfit)}</div>
+                            <div className="bg-white border border-slate-200 rounded-xl p-4">
+                                <div className="text-[10px] uppercase tracking-widest text-slate-600">Gross Profit</div>
+                                <div className={`text-xl mt-1 ${grossProfit >= 0 ? "text-emerald-700" : "text-red-700"}`}>{currencyFormatter.format(grossProfit)}</div>
                             </div>
                         </div>
 
                         {selectedProject.status !== "COMPLETED" && selectedProject.status !== "CANCELLED" && (
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-6">
-                                <div className={`text-xs ${pricingSaveState === "ERROR" ? "text-red-400" : "text-gray-500"}`} role="status">
+                                <div className={`text-xs ${pricingSaveState === "ERROR" ? "text-red-700" : "text-slate-600"}`} role="status">
                                     {pricingSaveState === "SAVING" && "Saving pricing…"}
                                     {pricingSaveState === "SAVED" && "Pricing saved to this project."}
                                     {pricingSaveState === "ERROR" && "Pricing could not be saved. Please try again."}
@@ -1329,7 +1357,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                     type="button"
                                     onClick={handleSavePricing}
                                     disabled={pricingSaveState === "SAVING" || Boolean(retailPriceError) || markupEligibleCosts <= 0}
-                                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+                                    className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
                                 >
                                     {pricingSaveState === "SAVING" ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-floppy-disk"></i>}
                                     Save Retail Price
@@ -1340,23 +1368,23 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
 
                     <section>
                         <div className="flex justify-between items-end mb-4">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
                                 <i className="ph ph-receipt"></i> Project Cost Ledger
                             </h3>
                             {selectedProject.status !== "COMPLETED" && selectedProject.status !== "CANCELLED" && (
                                 <button 
                                     onClick={openAddBillModal}
-                                    className="text-[10px] uppercase font-bold tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+                                    className="text-[10px] uppercase font-bold tracking-widest text-blue-700 hover:text-blue-900 transition-colors"
                                 >
                                     + Add Cost
                                 </button>
                             )}
                         </div>
-                        <div className="bg-black/30 border border-white/5 rounded-xl p-4 overflow-x-auto">
+                        <div className="bg-white border border-slate-200 rounded-xl p-4 overflow-x-auto">
                             {selectedVendorBills.length > 0 ? (
                                 <table className="w-full min-w-[720px] text-left text-sm">
                                     <thead>
-                                        <tr className="text-gray-500 border-b border-white/5">
+                                        <tr className="text-slate-600 border-b border-slate-200">
                                             <th className="pb-3 font-medium">Date</th>
                                             <th className="pb-3 font-medium">Category</th>
                                             <th className="pb-3 font-medium">Cost Name</th>
@@ -1367,17 +1395,17 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                     </thead>
                                     <tbody>
                                         {selectedVendorBills.map((bill) => (
-                                            <tr key={bill.id} className="border-b border-white/5 last:border-0 text-gray-300">
+                                            <tr key={bill.id} className="border-b border-slate-200 last:border-0 text-slate-700">
                                                 <td className="py-3 font-mono text-xs">
                                                     {bill.date ? new Date(bill.date).toLocaleDateString(undefined, { timeZone: "UTC" }) : 'N/A'}
                                                 </td>
-                                                <td className="py-3 text-gray-400">{getProjectCostCategoryLabel(bill.category || "OTHER")}</td>
-                                                <td className="py-3">{bill.vendorName}</td>
+                                                <td className="py-3 text-slate-600">{getProjectCostCategoryLabel(bill.category || "OTHER")}</td>
+                                                <td className="py-3">{bill.vendorName}{bill.supplierInvoiceId && <a href={`/api/admin/projects/${selectedProject.id}/supplier-invoices/${bill.supplierInvoiceId}`} target="_blank" rel="noreferrer" className="ml-2 text-xs text-blue-700 hover:underline">Original</a>}</td>
                                                 <td className="py-3">
                                                     <span className={`px-2 py-1 rounded text-[10px] uppercase font-bold border ${
                                                         bill.status === "PAID" 
-                                                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
-                                                            : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                            : "bg-yellow-50 text-amber-800 border-yellow-200"
                                                     }`}>
                                                         {bill.status}
                                                     </span>
@@ -1388,9 +1416,9 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                                         <button
                                                             type="button"
                                                             onClick={() => openEditBillModal(bill)}
-                                                            disabled={deletingBillId === bill.id}
-                                                            className="text-blue-400 hover:text-blue-300 disabled:opacity-40 p-1.5 rounded transition-colors"
-                                                            title="Edit cost"
+                                                            disabled={deletingBillId === bill.id || Boolean(bill.supplierInvoiceId)}
+                                                            className="text-blue-700 hover:text-blue-900 disabled:opacity-40 p-1.5 rounded transition-colors"
+                                                            title={bill.supplierInvoiceId ? "Linked to an approved supplier invoice" : "Edit cost"}
                                                             aria-label={`Edit ${bill.vendorName}`}
                                                         >
                                                             <i className="ph ph-pencil-simple"></i>
@@ -1398,8 +1426,8 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                                         <button
                                                             type="button"
                                                             onClick={() => void handleDeleteBill(bill.id)}
-                                                            disabled={deletingBillId === bill.id}
-                                                            className="text-red-400 hover:text-red-300 disabled:opacity-40 p-1.5 rounded transition-colors"
+                                                            disabled={deletingBillId === bill.id || Boolean(bill.supplierInvoiceId)}
+                                                            className="text-red-700 hover:text-red-900 disabled:opacity-40 p-1.5 rounded transition-colors"
                                                             title="Delete cost"
                                                             aria-label={`Delete ${bill.vendorName}`}
                                                         >
@@ -1409,15 +1437,15 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                                 </td>
                                             </tr>
                                         ))}
-                                        <tr className="text-white border-t border-white/10">
-                                            <td colSpan={4} className="pt-4 text-xs font-bold uppercase tracking-widest text-gray-500">Total COGS</td>
+                                        <tr className="text-slate-900 border-t border-slate-200">
+                                            <td colSpan={4} className="pt-4 text-xs font-bold uppercase tracking-widest text-slate-600">Total COGS</td>
                                             <td className="pt-4 text-right font-bold text-lg">{currencyFormatter.format(totalCosts)}</td>
                                             <td></td>
                                         </tr>
                                     </tbody>
                                 </table>
                             ) : (
-                                <div className="text-center text-gray-500 py-8 text-sm">
+                                <div className="text-center text-slate-600 py-8 text-sm">
                                     <i className="ph ph-receipt text-3xl block mb-2 opacity-50"></i>
                                     No project costs yet. Add the first cost to begin calculating COGS.
                                 </div>
@@ -1425,17 +1453,17 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                         </div>
                     </section>
 
-                    <div className="mt-auto border-t border-white/10 pt-6">
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-blue-900/10 border border-blue-500/20 p-5 rounded-xl">
+                    <div className="mt-auto border-t border-slate-200 pt-6">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-blue-50 border border-blue-200 p-5 rounded-xl">
                             <div>
-                                <div className="text-sm font-bold text-white mb-1"><i className="ph ph-file-pdf text-blue-500 mr-2"></i> Customer Invoice PDF</div>
-                                <div className="text-xs text-gray-400">Downloads every customer-facing line item at its retail amount. Internal costs, COGS, margin, and multiplier are never included.</div>
+                                <div className="text-sm font-bold text-slate-900 mb-1"><i className="ph ph-file-pdf text-blue-500 mr-2"></i> Customer Invoice PDF</div>
+                                <div className="text-xs text-slate-600">Downloads every customer-facing line item at its retail amount. Internal costs, COGS, margin, and multiplier are never included.</div>
                             </div>
                             <button
                                 type="button"
                                 onClick={handleExportInvoicePdf}
                                 disabled={customerLineItems.length === 0 || retailPrice <= 0}
-                                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] md:text-xs font-bold uppercase tracking-widest rounded transition-colors shadow whitespace-nowrap"
+                                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] md:text-xs font-bold uppercase tracking-widest rounded transition-colors shadow whitespace-nowrap"
                                 title={customerLineItems.length === 0 || retailPrice <= 0 ? "Add line items and set a retail price above $0 before exporting" : "Download customer invoice PDF"}
                             >
                                 Export Invoice PDF
@@ -1449,8 +1477,8 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                 <div className="flex-1 flex flex-col gap-6 relative z-10 overflow-y-auto animate-fade-in pr-2">
                     
                     {/* Add Note Form */}
-                    <div className="bg-black/40 border border-white/5 rounded-xl p-5 mb-4">
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-purple-400 mb-4 flex items-center gap-2">
+                    <div className="bg-white border border-slate-200 rounded-xl p-5 mb-4">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-purple-700 mb-4 flex items-center gap-2">
                             <i className="ph ph-plus-circle"></i> Add Meeting Note or Update
                         </h3>
                         <div className="space-y-4">
@@ -1459,19 +1487,19 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                                 placeholder="e.g. Meeting 1, Client Email, etc."
                                 value={newNoteTitle}
                                 onChange={(e) => setNewNoteTitle(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500 transition-colors"
+                                className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:border-purple-500 transition-colors"
                             />
                             <textarea 
                                 placeholder="Paste client emails, text messages, or meeting transcripts here..."
                                 value={newNoteContent}
                                 onChange={(e) => setNewNoteContent(e.target.value)}
                                 rows={4}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors resize-none"
+                                className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:border-purple-500 transition-colors resize-none"
                             ></textarea>
                             <button 
                                 onClick={handleSaveNote}
                                 disabled={isSavingNote || !newNoteTitle || !newNoteContent}
-                                className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold uppercase tracking-widest rounded shadow disabled:opacity-50 flex items-center gap-2"
+                                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold uppercase tracking-widest rounded shadow disabled:opacity-50 flex items-center gap-2"
                             >
                                 {isSavingNote ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-floppy-disk"></i>}
                                 Save to Project Log
@@ -1481,15 +1509,15 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
 
                     {/* SOW Regeneration Prompt */}
                     {selectedProject.meetingNotes?.length > 0 && (
-                        <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-5 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 flex flex-col md:flex-row justify-between items-center gap-4">
                             <div>
-                                <h4 className="text-white font-bold mb-1"><i className="ph ph-magic-wand text-blue-400 mr-2"></i> Update Statement of Work</h4>
-                                <p className="text-xs text-blue-200/70">Use the AI engine to generate a NEW version of the SOW incorporating all meeting notes below.</p>
+                                <h4 className="text-slate-900 font-bold mb-1"><i className="ph ph-magic-wand text-blue-700 mr-2"></i> Update Statement of Work</h4>
+                                <p className="text-xs text-blue-800">Use the AI engine to generate a NEW version of the SOW incorporating all meeting notes below.</p>
                             </div>
                             <button 
                                 onClick={handleRegenerateSow}
                                 disabled={isRegenerating}
-                                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-widest rounded shadow-[0_0_15px_rgba(37,99,235,0.4)] disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
+                                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-widest rounded shadow-[0_0_15px_rgba(37,99,235,0.4)] disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
                             >
                                 {isRegenerating ? <i className="ph ph-spinner animate-spin"></i> : null}
                                 Regenerate SOW
@@ -1501,16 +1529,16 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                     <div className="space-y-4">
                         {selectedProject.meetingNotes?.length > 0 ? (
                             selectedProject.meetingNotes.map((note) => (
-                                <div key={note.id} className="bg-white/5 border border-white/10 rounded-xl p-5">
+                                <div key={note.id} className="bg-white border border-slate-200 rounded-xl p-5">
                                     <div className="flex justify-between items-start mb-3">
-                                        <h4 className="text-white font-bold">{note.title}</h4>
-                                        <span className="text-xs text-gray-500">{new Date(note.createdAt).toLocaleDateString()}</span>
+                                        <h4 className="text-slate-900 font-bold">{note.title}</h4>
+                                        <span className="text-xs text-slate-600">{new Date(note.createdAt).toLocaleDateString()}</span>
                                     </div>
-                                    <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{note.content}</p>
                                 </div>
                             ))
                         ) : (
-                            <div className="text-center py-10 text-gray-500 bg-black/20 rounded-xl border border-dashed border-white/10">
+                            <div className="text-center py-10 text-slate-600 bg-white rounded-xl border border-dashed border-slate-200">
                                 <i className="ph ph-note-blank text-3xl mb-2 block opacity-50"></i>
                                 No meeting notes saved yet.
                             </div>
@@ -1528,12 +1556,12 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       {/* Cancellation Reason Modal */}
       {isCancellationModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-[#0B0F15] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in">
-            <h3 className="text-xl font-bold text-white mb-2">Cancel Project</h3>
-            <p className="text-sm text-gray-400 mb-4 font-light">Please specify the reason for cancelling this project. It will be saved in the Cancelled Archive.</p>
+          <div className="bg-[#f3f6fa] border border-slate-200 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Cancel Project</h3>
+            <p className="text-sm text-slate-600 mb-4 font-light">Please specify the reason for cancelling this project. It will be saved in the Cancelled Archive.</p>
             
             <textarea
-              className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-red-500 transition-colors mb-4 resize-none"
+              className="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-red-500 transition-colors mb-4 resize-none"
               rows={4}
               placeholder="Reason for cancellation (required)..."
               value={cancellationReasonInput}
@@ -1546,14 +1574,14 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                   setIsCancellationModalOpen(false);
                   setCancellationReasonInput("");
                 }}
-                className="px-4 py-2 border border-white/10 rounded text-sm text-gray-300 hover:bg-white/5 transition"
+                className="px-4 py-2 border border-slate-200 rounded text-sm text-slate-700 hover:bg-slate-100 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmCancel}
                 disabled={isCancelling || !cancellationReasonInput.trim()}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
               >
                 {isCancelling ? <i className="ph ph-spinner animate-spin"></i> : null}
                 Confirm Cancellation
@@ -1566,17 +1594,17 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       {/* Permanently Delete Cancelled Project Modal */}
       {isDeleteProjectModalOpen && selectedProject?.status === "CANCELLED" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#0B0F15] border border-red-500/30 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
-            <div className="w-11 h-11 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 text-xl mb-4">
+          <div className="bg-[#f3f6fa] border border-red-200 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
+            <div className="w-11 h-11 rounded-full bg-red-50 border border-red-200 flex items-center justify-center text-red-700 text-xl mb-4">
               <i className="ph ph-warning"></i>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Permanently Delete Project?</h3>
-            <p className="text-sm text-gray-400 font-light">
-              <span className="text-white font-medium">{selectedProject.name}</span> and all related costs, invoices, SOWs, notes, recordings, and attachments will be removed. This cannot be undone.
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Permanently Delete Project?</h3>
+            <p className="text-sm text-slate-600 font-light">
+              <span className="text-slate-900 font-medium">{selectedProject.name}</span> and all related costs, invoices, SOWs, notes, recordings, and attachments will be removed. This cannot be undone.
             </p>
-            <p className="text-xs text-amber-400/90 mt-3">Export the invoice PDF before continuing if you need an archive copy.</p>
+            <p className="text-xs text-amber-800 mt-3">Export the invoice PDF before continuing if you need an archive copy.</p>
 
-            <label htmlFor="delete-project-confirmation" className="block text-xs uppercase tracking-wider text-gray-500 mt-6 mb-1.5 font-semibold">
+            <label htmlFor="delete-project-confirmation" className="block text-xs uppercase tracking-wider text-slate-600 mt-6 mb-1.5 font-semibold">
               Type DELETE to confirm
             </label>
             <input
@@ -1594,9 +1622,9 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                   void handleDeleteProject();
                 }
               }}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-red-500 transition-colors"
+              className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:border-red-500 transition-colors"
             />
-            {deleteProjectError && <p className="text-xs text-red-400 mt-2" role="alert">{deleteProjectError}</p>}
+            {deleteProjectError && <p className="text-xs text-red-700 mt-2" role="alert">{deleteProjectError}</p>}
 
             <div className="flex justify-end gap-3 mt-8">
               <button
@@ -1607,7 +1635,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                   setDeleteProjectError("");
                 }}
                 disabled={isDeletingProject}
-                className="px-4 py-2 border border-white/10 rounded text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50 transition"
+                className="px-4 py-2 border border-slate-200 rounded text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50 transition"
               >
                 Keep Project
               </button>
@@ -1615,7 +1643,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                 type="button"
                 onClick={() => void handleDeleteProject()}
                 disabled={isDeletingProject || deleteProjectConfirmation.trim().toUpperCase() !== "DELETE"}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
               >
                 {isDeletingProject ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-trash"></i>}
                 Delete Permanently
@@ -1628,13 +1656,13 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       {/* Project Job Name Modal */}
       {isJobNameModalOpen && selectedProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-[#0B0F15] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
-            <h3 className="text-xl font-bold text-white mb-2">Edit Job Name</h3>
-            <p className="text-sm text-gray-400 mb-6 font-light">
+          <div className="bg-[#f3f6fa] border border-slate-200 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Edit Job Name</h3>
+            <p className="text-sm text-slate-600 mb-6 font-light">
               This is the main title shown in the tracker and customer exports. The category remains {selectedProject.categoryName}.
             </p>
 
-            <label htmlFor="project-job-name" className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Job Name</label>
+            <label htmlFor="project-job-name" className="block text-xs uppercase tracking-wider text-slate-600 mb-1.5 font-semibold">Job Name</label>
             <input
               id="project-job-name"
               type="text"
@@ -1649,16 +1677,16 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                 if (event.key === "Enter" && jobNameInput.trim()) void handleSaveJobName();
               }}
               placeholder="Enter the job name"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:border-blue-500 transition-colors"
             />
-            {jobNameError && <p className="text-xs text-red-400 mt-2" role="alert">{jobNameError}</p>}
+            {jobNameError && <p className="text-xs text-red-700 mt-2" role="alert">{jobNameError}</p>}
 
             <div className="flex justify-end gap-3 mt-8">
               <button
                 type="button"
                 onClick={() => setIsJobNameModalOpen(false)}
                 disabled={isSavingJobName}
-                className="px-4 py-2 border border-white/10 rounded text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50 transition"
+                className="px-4 py-2 border border-slate-200 rounded text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50 transition"
               >
                 Cancel
               </button>
@@ -1666,7 +1694,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                 type="button"
                 onClick={() => void handleSaveJobName()}
                 disabled={isSavingJobName || !jobNameInput.trim()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
               >
                 {isSavingJobName ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-floppy-disk"></i>}
                 Save Job Name
@@ -1679,13 +1707,13 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       {/* Project-specific Client Name Modal */}
       {isClientNameModalOpen && selectedProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-[#0B0F15] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
-            <h3 className="text-xl font-bold text-white mb-2">Edit Client Name</h3>
-            <p className="text-sm text-gray-400 mb-6 font-light">
+          <div className="bg-[#f3f6fa] border border-slate-200 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Edit Client Name</h3>
+            <p className="text-sm text-slate-600 mb-6 font-light">
               This changes the client name on this project and its invoice export only. Other projects linked to {selectedProject.linkedClientName} will not change.
             </p>
 
-            <label htmlFor="project-client-name" className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Client Name</label>
+            <label htmlFor="project-client-name" className="block text-xs uppercase tracking-wider text-slate-600 mb-1.5 font-semibold">Client Name</label>
             <input
               id="project-client-name"
               type="text"
@@ -1699,9 +1727,9 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
               onKeyDown={(event) => {
                 if (event.key === "Enter" && clientNameInput.trim()) void handleSaveClientName();
               }}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:border-blue-500 transition-colors"
             />
-            {clientNameError && <p className="text-xs text-red-400 mt-2" role="alert">{clientNameError}</p>}
+            {clientNameError && <p className="text-xs text-red-700 mt-2" role="alert">{clientNameError}</p>}
 
             <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-8">
               <div>
@@ -1710,7 +1738,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                     type="button"
                     onClick={() => void handleSaveClientName(null)}
                     disabled={isSavingClientName}
-                    className="px-4 py-2 text-sm text-gray-400 hover:text-white disabled:opacity-50 transition-colors"
+                    className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 disabled:opacity-50 transition-colors"
                   >
                     Use linked name: {selectedProject.linkedClientName}
                   </button>
@@ -1721,7 +1749,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                   type="button"
                   onClick={() => setIsClientNameModalOpen(false)}
                   disabled={isSavingClientName}
-                  className="px-4 py-2 border border-white/10 rounded text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50 transition"
+                  className="px-4 py-2 border border-slate-200 rounded text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50 transition"
                 >
                   Cancel
                 </button>
@@ -1729,7 +1757,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                   type="button"
                   onClick={() => void handleSaveClientName()}
                   disabled={isSavingClientName || !clientNameInput.trim()}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
                 >
                   {isSavingClientName ? <i className="ph ph-spinner animate-spin"></i> : <i className="ph ph-floppy-disk"></i>}
                   Save Client Name
@@ -1743,9 +1771,9 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
       {/* Add Project Cost Modal */}
       {isLogBillModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-[#0B0F15] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
-            <h3 className="text-xl font-bold text-white mb-2">{editingBillId ? "Edit Project Cost" : "Add Project Cost"}</h3>
-            <p className="text-sm text-gray-400 mb-6 font-light">
+          <div className="bg-[#f3f6fa] border border-slate-200 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-fade-in text-left">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">{editingBillId ? "Edit Project Cost" : "Add Project Cost"}</h3>
+            <p className="text-sm text-slate-600 mb-6 font-light">
               {editingBillId
                 ? "Update this cost item. COGS and retail calculations will refresh immediately."
                 : "Record a cost as the job progresses. It will be included in total COGS immediately."}
@@ -1753,15 +1781,15 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
             
             <div className="space-y-4">
               <div>
-                <label htmlFor="cost-category" className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Cost Category</label>
+                <label htmlFor="cost-category" className="block text-xs uppercase tracking-wider text-slate-600 mb-1.5 font-semibold">Cost Category</label>
                 <select
                   id="cost-category"
                   value={billCategory}
                   onChange={(event) => setBillCategory(event.target.value as ProjectCostCategory)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:border-blue-500 transition-colors appearance-none"
                 >
                   {PROJECT_COST_CATEGORIES.map((category) => (
-                    <option key={category.value} value={category.value} className="bg-[#0B0F15]">
+                    <option key={category.value} value={category.value} className="bg-[#f3f6fa]">
                       {category.label}
                     </option>
                   ))}
@@ -1769,8 +1797,8 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
               </div>
 
               <div>
-                <label htmlFor="cost-name" className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">
-                  Custom Cost Name {billCategory === "OTHER" ? "" : <span className="normal-case tracking-normal text-gray-600">(optional)</span>}
+                <label htmlFor="cost-name" className="block text-xs uppercase tracking-wider text-slate-600 mb-1.5 font-semibold">
+                  Custom Cost Name {billCategory === "OTHER" ? "" : <span className="normal-case tracking-normal text-slate-500">(optional)</span>}
                 </label>
                 <input
                   id="cost-name"
@@ -1778,16 +1806,16 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                   placeholder={billCategory === "OTHER" ? "e.g. Permit fee" : "e.g. Lobby banner printing"}
                   value={billCostName}
                   onChange={(e) => setBillCostName(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:border-blue-500 transition-colors"
                 />
-                <p className="text-[11px] text-gray-600 mt-1.5">
+                <p className="text-[11px] text-slate-500 mt-1.5">
                   {billCategory === "OTHER" ? "A name is required for custom costs." : `Leave blank to use “${getProjectCostCategoryLabel(billCategory)}”.`}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Amount (USD)</label>
+                  <label className="block text-xs uppercase tracking-wider text-slate-600 mb-1.5 font-semibold">Amount (USD)</label>
                   <input
                     type="number"
                     min="0.01"
@@ -1802,42 +1830,42 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                       const normalizedAmount = normalizeProjectCostAmountInput(billAmount);
                       if (normalizedAmount) setBillAmount(normalizedAmount);
                     }}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:border-blue-500 transition-colors"
                   />
-                  <p className="text-[11px] text-gray-600 mt-1.5">Whole dollars are accepted and shown with two decimals.</p>
+                  <p className="text-[11px] text-slate-500 mt-1.5">Whole dollars are accepted and shown with two decimals.</p>
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Payment Status</label>
+                  <label className="block text-xs uppercase tracking-wider text-slate-600 mb-1.5 font-semibold">Payment Status</label>
                   <select
                     value={billStatus}
                     onChange={(e) => setBillStatus(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:border-blue-500 transition-colors appearance-none"
                   >
-                    <option value="UNPAID" className="bg-[#0B0F15]">UNPAID</option>
-                    <option value="PAID" className="bg-[#0B0F15]">PAID</option>
+                    <option value="UNPAID" className="bg-[#f3f6fa]">UNPAID</option>
+                    <option value="PAID" className="bg-[#f3f6fa]">PAID</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Bill Date</label>
+                <label className="block text-xs uppercase tracking-wider text-slate-600 mb-1.5 font-semibold">Bill Date</label>
                 <input
                   type="date"
                   value={billDate}
                   onChange={(e) => setBillDate(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
             </div>
 
-            {billFormError && <p className="text-xs text-red-400 mt-4" role="alert">{billFormError}</p>}
+            {billFormError && <p className="text-xs text-red-700 mt-4" role="alert">{billFormError}</p>}
             
             <div className="flex justify-end gap-3 mt-8">
               <button
                 type="button"
                 onClick={closeBillModal}
                 disabled={isSavingBill}
-                className="px-4 py-2 border border-white/10 rounded text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50 transition"
+                className="px-4 py-2 border border-slate-200 rounded text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50 transition"
               >
                 Cancel
               </button>
@@ -1845,7 +1873,7 @@ export default function DashboardClient({ projects }: DashboardClientProps) {
                 type="button"
                 onClick={() => void handleSaveBill()}
                 disabled={isSavingBill || (billCategory === "OTHER" && !billCostName.trim()) || parseProjectCostAmount(billAmount) === null}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded text-sm font-bold transition flex items-center gap-1.5"
               >
                 {isSavingBill ? <i className="ph ph-spinner animate-spin"></i> : null}
                 {editingBillId ? "Save Changes" : "Add Cost"}

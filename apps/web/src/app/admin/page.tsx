@@ -118,7 +118,7 @@ export default async function AdminDashboard() {
                             <i className="ph ph-kanban text-lg"></i>
                             Project Tracker
                         </Link>
-                        <Link href="/admin/reports" className="flex w-full items-center justify-center gap-2 py-3 border border-white/15 hover:border-emerald-500/40 hover:bg-emerald-900/20 rounded text-white transition-colors">
+                        <Link href="/admin/reports/monthly-sales" className="flex w-full items-center justify-center gap-2 py-3 border border-white/15 hover:border-emerald-500/40 hover:bg-emerald-900/20 rounded text-white transition-colors">
                             <i className="ph ph-chart-line-up text-lg"></i>
                             Financial Reports
                         </Link>

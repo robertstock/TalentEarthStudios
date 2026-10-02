@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import crypto from "crypto";
 import { specialtyData, SpecialtySlug } from "@/lib/specialty-data";
 import { normalizeSubmittedProjectClientName } from "@/lib/project-client";
+import { sendProjectRequestNotification } from "@/lib/email";
 
 // Set max duration for edge functions (if deployed to Vercel edge)
 export const maxDuration = 60;
@@ -212,6 +213,20 @@ ${missingInfo !== "None" ? `**Pending Clarification:** ${missingInfo}` : "All st
               });
 
               return savedProject;
+            });
+
+            await sendProjectRequestNotification({
+              requestId: project.id,
+              projectId: project.id,
+              projectName: project.name,
+              clientName: company || name,
+              contactName: name,
+              contactEmail: email,
+              projectType,
+              timeline,
+              budgetRange,
+              description: message,
+              status: project.status,
             });
 
             return {

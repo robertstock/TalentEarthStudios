@@ -5,6 +5,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import crypto from "crypto"; 
 import { normalizeSubmittedProjectClientName } from "@/lib/project-client";
+import { sendProjectRequestNotification } from "@/lib/email";
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -164,6 +165,20 @@ ${aiResult.missingInfo !== "None" ? `**Pending Clarification:** ${aiResult.missi
                 createdById: createdById,
                 shareToken: shareToken,
             }
+        });
+
+        await sendProjectRequestNotification({
+            requestId: project.id,
+            projectId: project.id,
+            projectName: project.name,
+            clientName: company || name,
+            contactName: name,
+            contactEmail: email,
+            projectType,
+            timeline,
+            budgetRange: aiResult.estimatedBudget,
+            description: message,
+            status: project.status,
         });
 
         // Note: For Phase 2 we return the shareToken to the client so the redirect/test can use it

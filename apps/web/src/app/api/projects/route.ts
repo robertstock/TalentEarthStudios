@@ -4,6 +4,7 @@ import {
     normalizeSubmittedProjectClientName,
     UNASSIGNED_PROJECT_CLIENT_NAME,
 } from "@/lib/project-client";
+import { sendProjectRequestNotification } from "@/lib/email";
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
         let processedAnswers = Object.entries(answers || {});
         let clientNameFromAnswers: string | null = null;
         let projectNameFromAnswers: string | null = null;
+        let categoryName: string | null = null;
 
         // Fetch category for Date Mapping
         if (categoryId) {
@@ -76,6 +78,7 @@ export async function POST(req: Request) {
                 where: { id: categoryId },
                 include: { questionSets: { include: { questions: true } } }
             });
+            categoryName = category?.name || null;
             const activeSet = category?.questionSets.find(qs => qs.active);
 
             if (activeSet) {
@@ -206,6 +209,17 @@ export async function POST(req: Request) {
             console.error("Failed to create notification:", notifError);
             // Don't fail the request if notification fails
         }
+
+        await sendProjectRequestNotification({
+            requestId: project.id,
+            projectId: project.id,
+            projectName: project.name,
+            clientName: submittedClientName,
+            projectType: categoryName,
+            description: project.description,
+            timeline: project.timeline,
+            status: project.status,
+        });
 
         return NextResponse.json(project);
     } catch (error) {

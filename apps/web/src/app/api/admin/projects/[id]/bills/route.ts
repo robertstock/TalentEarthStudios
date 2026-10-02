@@ -118,10 +118,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
         const existingBill = await db.vendorBill.findFirst({
             where: { id: billId, projectId: id },
-            select: { id: true },
+            select: { id: true, supplierInvoiceId: true },
         });
         if (!existingBill) {
             return NextResponse.json({ message: "Cost item not found" }, { status: 404 });
+        }
+        if (existingBill.supplierInvoiceId) {
+            return NextResponse.json({ message: "This cost belongs to an approved supplier invoice. Review its original invoice before making accounting corrections." }, { status: 409 });
         }
 
         const bill = await db.vendorBill.update({
@@ -157,7 +160,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         }
 
         const deleted = await db.vendorBill.deleteMany({
-            where: { id: billId, projectId: id },
+            where: { id: billId, projectId: id, supplierInvoiceId: null },
         });
 
         if (deleted.count === 0) {

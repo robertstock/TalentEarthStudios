@@ -290,8 +290,12 @@ model Project {
   adminReviews    AdminReview[]
   sows            SOW[]
   vendorBills     VendorBill[]
+  supplierInvoices SupplierInvoice[]
+  quickBooksCustomerId String?
+  quickBooksRealmId String?
   invoice         Invoice?
   meetingNotes    MeetingNote[]
+  mobileSubmission MobileSubmission?
 
   completedAt       DateTime?
   cancelledAt       DateTime?
@@ -507,6 +511,8 @@ model VendorBill {
   status      String   @default("UNPAID") // UNPAID, PAID
   date        DateTime
   documentUrl String?
+  supplierInvoiceId String?
+  supplierInvoice SupplierInvoice? @relation(fields: [supplierInvoiceId], references: [id])
   
   createdAt   DateTime @default(now())
 }
@@ -520,8 +526,55 @@ model Invoice {
   status          String   @default("DRAFT") // DRAFT, SENT, PAID
   sentAt          DateTime?
   paidAt          DateTime?
+  draft           Json?
   
   createdAt       DateTime @default(now())
+}
+
+// Originals are private database records, never public upload URLs.
+model SupplierInvoice {
+  id            String @id @default(cuid())
+  projectId     String
+  project       Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fileName      String
+  mimeType      String
+  fileData      Bytes
+  sha256        String @unique
+  details       Json
+  warning       String?
+  status        String @default("DRAFT")
+  duplicateKey  String? @unique
+  approvedAt    DateTime?
+  uploadedById  String
+  vendorBills   VendorBill[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model QuickBooksConnection {
+  id             String @id @default("company")
+  realmId        String
+  environment    String
+  accessToken    String
+  refreshToken   String
+  expiresAt      DateTime
+  defaults       Json?
+  updatedAt      DateTime @updatedAt
+}
+
+// A persisted, immutable request makes retries safe after timeouts or restarts.
+model QuickBooksExport {
+  id             String @id
+  realmId        String
+  entity         String
+  payload        Json
+  remoteId       String?
+  attachmentId   String?
+  lockedAt       DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model MeetingNote {
@@ -531,4 +584,56 @@ model MeetingNote {
   title       String
   content     String   @db.Text
   createdAt   DateTime @default(now())
+}
+
+// Customer app identities are separate from staff/talent website accounts.
+model MobileAccount {
+  id          String @id @default(cuid())
+  email       String @unique
+  name        String
+  verifiedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  sessions    MobileSession[]
+  submissions MobileSubmission[]
+}
+
+model MobileChallenge {
+  id        String @id
+  email     String
+  name      String
+  codeHash  String
+  attempts  Int @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model MobileSession {
+  tokenHash String @id
+  accountId String
+  account   MobileAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([accountId])
+  @@index([expiresAt])
+}
+
+model MobileRateLimit {
+  key       String @id
+  count     Int @default(1)
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+
+model MobileSubmission {
+  id                 String @id
+  accountId          String?
+  account            MobileAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  projectId          String @unique
+  project            Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  notificationSentAt DateTime?
+  createdAt          DateTime @default(now())
+  @@index([accountId])
+  @@index([notificationSentAt])
 }

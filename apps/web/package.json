@@ -9,9 +9,14 @@
     "start": "next start",
     "lint": "eslint",
     "test:password-reset": "node --test src/lib/password-reset.test.ts",
+    "test:mobile": "node --test src/lib/mobile-security.test.ts src/lib/email.test.ts",
+    "check-types:mobile": "tsc --noEmit -p tsconfig.mobile.json",
+    "test:project-request-email": "node --test src/lib/email.test.ts",
     "test:admin-management": "node --test src/lib/admin-management.test.ts",
     "test:user-account-management": "node --test src/lib/user-account-management.test.ts",
-    "test:project-costs": "node --test src/lib/project-client.test.ts src/lib/project-costs.test.ts src/lib/project-pricing.test.ts"
+    "test:project-costs": "node --test src/lib/project-client.test.ts src/lib/project-costs.test.ts src/lib/project-pricing.test.ts",
+    "test:invoices": "node --test src/lib/invoice-workflow.test.ts src/lib/project-pricing.test.ts src/lib/project-costs.test.ts src/lib/project-client.test.ts",
+    "check-types:invoices": "tsc --noEmit -p tsconfig.invoices.json"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -32,7 +37,7 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^12.24.12",
     "lucide-react": "^0.309.0",
-    "next": "^16.2.6",
+    "next": "16.2.6",
     "next-auth": "^4.24.5",
     "pdf-parse": "^2.4.5",
     "prisma": "^5.10.2",

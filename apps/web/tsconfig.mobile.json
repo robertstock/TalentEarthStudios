@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "incremental": false
+  },
+  "include": [
+    "src/app/api/mobile/**/*.ts",
+    "src/app/api/cron/mobile-notifications/**/*.ts",
+    "src/app/mobile/**/*.tsx",
+    "src/lib/mobile*.ts",
+    "src/lib/email.ts"
+  ]
+}
